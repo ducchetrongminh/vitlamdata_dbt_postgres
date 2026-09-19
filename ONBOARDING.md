@@ -17,13 +17,17 @@ cd ~/projects/vitlamdata_dbt_postgres
 ./scripts/bootstrap-wsl.sh
 ```
 
-Installs, in order: curl, Node.js, the Claude Code CLI, and this repo's plugins (`caveman`, `ponytail`). Node.js is required because the `ponytail` plugin's hooks run through `/bin/sh` and call `node` directly — without it you'll see `UserPromptSubmit hook error ... node: not found` on every prompt. Plugin install doesn't need a login — only running `claude` interactively does.
+Installs, in order: curl, Node.js, the Claude Code CLI, this repo's plugins (`caveman`, `ponytail`), and `uv` plus the project's `.venv` (`uv sync`). Node.js is required because the `ponytail` plugin's hooks run through `/bin/sh` and call `node` directly — without it you'll see `UserPromptSubmit hook error ... node: not found` on every prompt. Plugin install doesn't need a login — only running `claude` interactively does.
 
 If this is a fresh Claude Code install, log in once it finishes:
 
 ```bash
 claude
 ```
+
+## Python / dbt
+
+Managed by `uv` (`pyproject.toml`, `uv.lock`, `.venv/`). Run `uv run dbt ...`, or `source .venv/bin/activate` once per shell and use `dbt ...` directly. Add deps with `uv add <pkg>`; commit `uv.lock`.
 
 ## 3. Set up the sandbox (optional but recommended, separate script)
 
@@ -61,7 +65,7 @@ Normal work should still run fine: `dbt debug`, `dbt parse`, `uv sync`, `git fet
 
 | Script | Purpose |
 |---|---|
-| `scripts/bootstrap-wsl.sh` | curl, Node.js, Claude Code CLI, this repo's plugins (caveman, ponytail) |
+| `scripts/bootstrap-wsl.sh` | curl, Node.js, Claude Code CLI, this repo's plugins (caveman, ponytail), uv + `.venv` |
 | `scripts/setup-claude-sandbox.sh` | OS-level sandbox dependencies: bubblewrap, socat, AppArmor profile |
 
 Both are safe to re-run.

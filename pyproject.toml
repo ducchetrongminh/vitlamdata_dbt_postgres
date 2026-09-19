@@ -1,0 +1,9 @@
+[project]
+name = "vitlamdata-dbt-postgres"
+version = "0.1.0"
+requires-python = ">=3.12"
+# dbt v2 (GA Sept 2026) does not support Postgres yet; stay on v1 (<2) until it does.
+dependencies = [
+    "dbt-core>=1.9,<2",
+    "dbt-postgres>=1.9,<2",
+]

@@ -21,6 +21,10 @@
 #      require being logged in — only running `claude` interactively does.
 #      See: https://code.claude.com/docs/en/discover-plugins#configure-team-marketplaces
 #
+#   5. uv (Python env manager), then `uv sync` to build .venv from
+#      pyproject.toml/uv.lock (dbt-core + dbt-postgres). Run dbt with
+#      `uv run dbt ...` or `source .venv/bin/activate`.
+#
 # For the OS-level sandbox (bubblewrap/socat/AppArmor), see
 # scripts/setup-claude-sandbox.sh — run it too if you want sandboxing.
 #
@@ -75,6 +79,16 @@ echo
 echo "== Step 4: Claude Code plugins (caveman, ponytail) =="
 claude plugin install caveman@caveman
 claude plugin install ponytail@ponytail
+
+echo
+echo "== Step 5: uv + Python env =="
+export PATH="$HOME/.local/bin:$PATH"
+if command -v uv >/dev/null 2>&1; then
+  echo "uv already installed: $(uv --version)"
+else
+  curl -LsSf https://astral.sh/uv/install.sh | sh
+fi
+(cd "$(dirname "$0")/.." && uv sync)
 
 echo
 echo "Done. Log in with 'claude' if this is a fresh install, then start a new"
