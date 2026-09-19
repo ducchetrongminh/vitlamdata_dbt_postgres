@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "blockReadsOutsideWorkingDirectories": true,
+    "disableBypassPermissionsMode": "disable"
+  },
+  "sandbox": {
+    "enabled": true,
+    "failIfUnavailable": true,
+    "allowUnsandboxedCommands": false,
+    "excludedCommands": ["docker *"],
+    "credentials": {
+      "files": [
+        { "path": "~/.dbt/profiles.yml", "mode": "deny" },
+        { "path": "~/.ssh", "mode": "deny" },
+        { "path": "~/.aws", "mode": "deny" },
+        { "path": "~/.config/gcloud", "mode": "deny" }
+      ]
+    },
+    "network": {
+      "allowedDomains": ["*"]
+    }
+  }
+}
