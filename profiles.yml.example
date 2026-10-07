@@ -1,0 +1,14 @@
+# Copy to ~/.dbt/profiles.yml (kept outside the repo) and fill in.
+# Password comes from the environment: export DBT_PG_PASSWORD=...
+vitlamdata_dbt_postgres:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5432
+      user: your_user
+      password: "{{ env_var('DBT_PG_PASSWORD') }}"
+      dbname: your_db
+      schema: dbt_dev
+      threads: 4
