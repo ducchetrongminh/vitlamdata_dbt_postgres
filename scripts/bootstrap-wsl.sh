@@ -13,7 +13,10 @@
 #      hook shells skip.
 #   3. The Claude Code CLI itself, via the official native installer.
 #   4. The plugins this repo's .claude/settings.json declares under
-#      `enabledPlugins`/`extraKnownMarketplaces` (caveman, ponytail).
+#      `enabledPlugins`/`extraKnownMarketplaces` (caveman, ponytail,
+#      superpowers). superpowers comes from the built-in
+#      claude-plugins-official marketplace, so it needs no
+#      extraKnownMarketplaces entry, only the install.
 #      Registering a marketplace in settings.json auto-registers it once you
 #      trust the folder, but does NOT install a plugin that comes from an
 #      external source (a GitHub repo, here) — Claude Code shows it as "not
@@ -69,16 +72,17 @@ else
   export PATH="$HOME/.local/bin:$PATH"
   if ! command -v claude >/dev/null 2>&1; then
     echo "claude was installed but isn't on PATH yet. Open a new shell and re-run this script" >&2
-    echo "to finish Step 4, or run the two plugin-install lines below yourself." >&2
+    echo "to finish Step 4, or run the plugin-install lines below yourself." >&2
     exit 1
   fi
   claude --version
 fi
 
 echo
-echo "== Step 4: Claude Code plugins (caveman, ponytail) =="
+echo "== Step 4: Claude Code plugins (caveman, ponytail, superpowers) =="
 claude plugin install caveman@caveman
 claude plugin install ponytail@ponytail
+claude plugin install superpowers@claude-plugins-official
 
 echo
 echo "== Step 5: uv + Python env =="
