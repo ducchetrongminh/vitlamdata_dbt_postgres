@@ -31,24 +31,34 @@ Metabase can read; the whole warehouse can be rebuilt from code and sources alon
 
 ## 2. System overview
 
-```
-GCE VM vitlamdata-vm-2609 (asia-southeast1-c)                    GitHub Actions (ubuntu-latest)
-┌─────────────────────────────────────────────────────┐          ┌──────────────────────────────┐
-│ mariadb (wp_internal)   wordpress   127.0.0.1:3306 ◄─┼── SSH ───┤ gcloud compute ssh -L 3306   │
-│ postgres (apps)         metabase_db 127.0.0.1:5432 ◄─┼── tunnel ┤                  -L 5432     │
-│ postgres-dw (warehouse) vitlamdata_dw 127.0.0.1:5433◄┼──────────┤                  -L 5433     │
-│        ▲                                            │          │  dlt → dbt → docs → Lark     │
-│        │ data network                               │          └──────────────────────────────┘
-│ metabase (public) ── reads mart_* as reporter_public│
-└─────────────────────────────────────────────────────┘
-Google Sheets ── dlt (Sheets API, service-account auth) ──► raw_sheets
+```mermaid
+flowchart LR
+  subgraph GHA["GitHub Actions (ubuntu-latest)"]
+    job["dlt → dbt → docs → Lark"]
+  end
+  subgraph VM["GCE VM vitlamdata-vm-2609 (asia-southeast1-c)"]
+    maria["mariadb (wp_internal)<br/>wordpress<br/>127.0.0.1:3306"]
+    apps["postgres (apps)<br/>metabase_db<br/>127.0.0.1:5432"]
+    dw["postgres-dw (warehouse)<br/>vitlamdata_dw<br/>127.0.0.1:5433"]
+    mb["metabase (public)"]
+  end
+  sheets["Google Sheets"]
+  job -- "SSH tunnel -L 3306" --> maria
+  job -- "SSH tunnel -L 5432" --> apps
+  job -- "SSH tunnel -L 5433" --> dw
+  job -- "Sheets API (service-account auth)" --> sheets
+  mb -- "data network: reads mart_* as reporter_public" --> dw
 ```
 
 Data flow:
 
-```
-sources ──dlt──► raw_<source> ──dbt──► staging ──► intermediate ──► mart_<domain> ──► Metabase
-                 (loader)              (transformer)                                  (reporter_public)
+```mermaid
+flowchart LR
+  src["sources"] -- dlt --> raw["raw_#lt;source#gt;<br/>(loader)"]
+  raw -- dbt --> stg["staging<br/>(transformer)"]
+  stg --> int["intermediate<br/>(transformer)"]
+  int --> mart["mart_#lt;domain#gt;<br/>(transformer)"]
+  mart --> mb["Metabase<br/>(reporter_public)"]
 ```
 
 ## 3. Sources and extract-load (dlt)
