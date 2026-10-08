@@ -32,22 +32,23 @@ Metabase can read; the whole warehouse can be rebuilt from code and sources alon
 ## 2. System overview
 
 ```mermaid
-flowchart LR
-  subgraph GHA["GitHub Actions (ubuntu-latest)"]
-    job["dlt → dbt → docs → Lark"]
-  end
-  subgraph VM["GCE VM vitlamdata-vm-2609 (asia-southeast1-c)"]
-    maria["mariadb (wp_internal)<br/>wordpress<br/>127.0.0.1:3306"]
-    apps["postgres (apps)<br/>metabase_db<br/>127.0.0.1:5432"]
-    dw["postgres-dw (warehouse)<br/>vitlamdata_dw<br/>127.0.0.1:5433"]
-    mb["metabase (public)"]
-  end
+flowchart TB
+  gha["GitHub Actions runner<br/>dlt → dbt → docs → Lark"]
   sheets["Google Sheets"]
-  job -- "SSH tunnel -L 3306" --> maria
-  job -- "SSH tunnel -L 5432" --> apps
-  job -- "SSH tunnel -L 5433" --> dw
-  job -- "Sheets API (service-account auth)" --> sheets
-  mb -- "data network: reads mart_* as reporter_public" --> dw
+  subgraph VM["GCE VM vitlamdata-vm-2609"]
+    sshd["sshd"]
+    maria["MariaDB<br/>wordpress :3306"]
+    apps["Postgres (apps)<br/>metabase_db :5432"]
+    dw["Postgres (DW)<br/>vitlamdata_dw :5433"]
+    mb["Metabase (public)"]
+  end
+  gha -->|SSH tunnel| sshd
+  gha -->|Sheets API| sheets
+  sshd --> maria
+  sshd --> apps
+  sshd --> dw
+  mb -->|reads mart_*| dw
+  linkStyle default stroke-width:2px
 ```
 
 Data flow:
@@ -59,6 +60,7 @@ flowchart LR
   stg --> int["intermediate<br/>(transformer)"]
   int --> mart["mart_#lt;domain#gt;<br/>(transformer)"]
   mart --> mb["Metabase<br/>(reporter_public)"]
+  linkStyle default stroke-width:2px
 ```
 
 ## 3. Sources and extract-load (dlt)
