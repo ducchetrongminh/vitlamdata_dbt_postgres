@@ -16,9 +16,6 @@
         { "path": "~/.config/gcloud", "mode": "deny" }
       ]
     },
-    "filesystem": {
-      "allowRead": ["~/.config/gh"]
-    },
     "network": {
       "allowedDomains": ["*"]
     }
