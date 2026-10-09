@@ -7,7 +7,7 @@
     "enabled": true,
     "failIfUnavailable": true,
     "allowUnsandboxedCommands": false,
-    "excludedCommands": ["docker *"],
+    "excludedCommands": ["docker *", "gh *"],
     "credentials": {
       "files": [
         { "path": "~/.dbt/profiles.yml", "mode": "deny" },
