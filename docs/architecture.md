@@ -213,6 +213,7 @@ the tunnel:
 
 ```bash
 gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c --ssh-key-expire-after=30m \
+  --strict-host-key-checking=yes \
   -- -f -N -o ExitOnForwardFailure=yes \
   -L 3306:127.0.0.1:3306 -L 5432:127.0.0.1:5432 -L 5433:127.0.0.1:5433
 ```
@@ -222,7 +223,10 @@ keys in metadata do not work. The service accounts here hold `roles/compute.osLo
 which is a login **without sudo** and without the `docker` group. That is enough: the
 tunnel only forwards `127.0.0.1` ports.
 
-Do not copy the infras workflow's `--strict-host-key-checking=no`. Keep host-key checking on.
+Do not copy the infras workflow's `--strict-host-key-checking=no`. The VM publishes its
+SSH host keys as guest attributes, and `gcloud` writes them to the runner's `known_hosts`
+before it connects. Keep `--strict-host-key-checking=yes`: without the flag, `gcloud`
+falls back to no checking whenever it gets no keys.
 Local dev opens the same tunnel with your own gcloud login.
 
 ### GitHub Environments
@@ -253,7 +257,7 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 - `nightly` and `deploy` share `concurrency: prod`, so they never overlap.
 - Every DB job carries `if: github.event.pull_request.head.repo.full_name == github.repository`
   where it runs on PRs.
-- The prod manifest lives at `gs://vit-lam-data-tfstate/vitlamdata-dbt-postgres/dbt-state/`.
+- The prod manifest lives at `gs://vitlamdata_dbt_postgres/dbt-state/`.
   It is uploaded only by runs that actually built prod. A stale manifest is safe: CI then
   rebuilds a few extra models.
 - **Lark alerts are sent by nightly only.** They use a group custom bot with signature
@@ -264,7 +268,8 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 `terraform/` uses the `cyrilgdn/postgresql` provider, logged in as the `postgres-dw`
 superuser through the tunnel.
 
-- **State:** `gs://vit-lam-data-tfstate`, prefix `vitlamdata-dbt-postgres/warehouse`.
+- **State:** `gs://vitlamdata_dbt_postgres`, prefix `warehouse`. The bucket is this repo's
+  own, separate from the one holding infras' state.
 - **Superuser password:** comes from `PGPASSWORD`, which is read from Secret Manager. It is
   never a Terraform input and never in state.
 - **Role passwords:** read from Secret Manager as ephemeral values and set through
@@ -316,7 +321,9 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
    - `secretAccessor` for `dbt-runner` on the existing `vitlamdata-gsheets-key`
    - an OS Login without sudo on the VM (`roles/compute.osLogin`) for both service
      accounts
-   - write access to the `vitlamdata-dbt-postgres/` prefix of `vit-lam-data-tfstate`
+   - the bucket `vitlamdata_dbt_postgres`, read and write for both service accounts
+   - the VM publishing its SSH host keys as guest attributes, and a project role for
+     both service accounts to read them and the project (`gcloud compute ssh` needs both)
 4. **Metabase:** add a database connection to `vitlamdata_dw` as `reporter_public`. This is a
    manual step in the Metabase admin UI.
 5. **After cutover:** retire `duck_data`, `sales` and `sales_normalized` from infras
