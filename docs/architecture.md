@@ -72,7 +72,7 @@ a CLI flag to pick a source.
 |---|---|---|---|---|
 | WordPress + Tutor LMS (sales, enrollments, users) | MariaDB `wordpress` DB | tunnel `localhost:3306` | `dlt_reader` (read-only) | `raw_wordpress` |
 | Metabase app DB (questions, dashboards, usage) | app Postgres `metabase_db` | tunnel `localhost:5432` | `dlt_reader` (read-only) | `raw_metabase` |
-| Google Sheets | Google Sheets API | HTTPS | `dbt-runner` service account; each sheet is shared with its email | `raw_sheets` |
+| Google Sheets | Google Sheets API | HTTPS | the service-account key in the secret `vitlamdata-gsheets-key`; each sheet is shared with that account's email | `raw_sheets` |
 
 Write disposition is decided **per table**:
 
@@ -217,6 +217,11 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c --ssh-key-expire-
   -L 3306:127.0.0.1:3306 -L 5432:127.0.0.1:5432 -L 5433:127.0.0.1:5433
 ```
 
+The VM uses OS Login (infras ADR 0010): a login is an IAM role on the instance, and SSH
+keys in metadata do not work. The service accounts here hold `roles/compute.osLogin`,
+which is a login **without sudo** and without the `docker` group. That is enough: the
+tunnel only forwards `127.0.0.1` ports.
+
 Do not copy the infras workflow's `--strict-host-key-checking=no`. Keep host-key checking on.
 Local dev opens the same tunnel with your own gcloud login.
 
@@ -224,7 +229,7 @@ Local dev opens the same tunnel with your own gcloud login.
 
 | Environment | GCP service account | Secrets | Approval |
 |---|---|---|---|
-| `prod` | `dbt-runner` | `dw-loader`, `dw-transformer`, `dlt-reader-*`, Lark webhook and signing secret | none |
+| `prod` | `dbt-runner` | `dw-loader`, `dw-transformer`, `dlt-reader-*`, `vitlamdata-gsheets-key`, Lark webhook and signing secret | none |
 | `ci` | `dbt-runner` | `dw-ci`, `dlt-reader-*` | none |
 | `admin` | `dbt-terraform` | `dw-superuser`, role passwords, `dw-pii-key` | none (auto apply) |
 
@@ -308,7 +313,9 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
    - Secret Manager secrets `dw-superuser`, `dw-loader`, `dw-transformer`, `dw-ci`,
      `dw-reporter-public`, `dw-pii-key`, `dlt-reader-pg`, `dlt-reader-mariadb`
    - per-secret `secretAccessor`
-   - permission to `gcloud compute ssh` to the VM
+   - `secretAccessor` for `dbt-runner` on the existing `vitlamdata-gsheets-key`
+   - an OS Login without sudo on the VM (`roles/compute.osLogin`) for both service
+     accounts
    - write access to the `vitlamdata-dbt-postgres/` prefix of `vit-lam-data-tfstate`
 4. **Metabase:** add a database connection to `vitlamdata_dw` as `reporter_public`. This is a
    manual step in the Metabase admin UI.
@@ -317,10 +324,15 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 
 ## 12. Security notes
 
-- `gcloud compute ssh` with a metadata key gives the job a **sudo** login on the VM. The
-  safeguards are: WIF subject bindings, dedicated service accounts (not infras'
-  `GCP_TERRAFORM_SA`), and no OIDC token for fork PRs. Never use `pull_request_target`
-  with a checkout of PR code.
+- A job's SSH login on the VM has **no sudo** and is not in the `docker` group (§8). It
+  cannot read the VM's `.env`, and the VM refuses non-root users at the GCE metadata
+  server, so it cannot borrow the VM's own service account either. What it can do is
+  forward to any `127.0.0.1` port on the VM, where every service asks for its own login.
+- Who gets that login at all: WIF subject bindings, dedicated service accounts (not
+  infras' `GCP_TERRAFORM_SA`), and no OIDC token for fork PRs. Never use
+  `pull_request_target` with a checkout of PR code.
+- Because the login has no sudo, the split between `dbt-runner` and `dbt-terraform` holds:
+  a `prod` or `ci` job has no way to the superuser password or the PII key.
 - The superuser password reaches only the `admin` environment, from its own secret, never
   from the shared `vitlamdata-env`.
 - Metabase is public, so `reporter_public` can read only the listed marts. PII stops at
@@ -343,7 +355,8 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 |---|---|---|
 | EL tool | dlt | one tool for MariaDB, Postgres and Sheets; Python; portfolio value |
 | Runner | GitHub-hosted + SSH tunnel | PR code never runs on the VM; clean VMs; no runner to maintain |
-| Tunnel auth | `gcloud compute ssh` + WIF | same pattern as infras; keyless |
+| Tunnel auth | `gcloud compute ssh` + WIF, OS Login without sudo | keyless; a job gets a tunnel, not the VM |
+| Google Sheets auth | the existing `vitlamdata-gsheets-key` | the sheets are already shared with that account |
 | Warehouse IaC | Terraform in this repo, new objects only | plan/diff, declarative revoke, drift detection; no state migration |
 | GCP resources | infras `gcp/` | one owner for project-level IAM |
 | Database | new `vitlamdata_dw`, old ones retired later | clean cutover |
