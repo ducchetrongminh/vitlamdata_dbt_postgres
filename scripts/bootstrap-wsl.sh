@@ -28,8 +28,8 @@
 #      pyproject.toml/uv.lock (dbt-core + dbt-postgres). Run dbt with
 #      `uv run dbt ...` or `source .venv/bin/activate`.
 #
-# For the OS-level sandbox (bubblewrap/socat/AppArmor), see
-# scripts/setup-claude-sandbox.sh — run it too if you want sandboxing.
+# To keep this distro (and Claude Code) off the Windows disk, run
+# scripts/harden-wsl.sh afterwards (ONBOARDING.md step 3).
 #
 # Safe to re-run; every step is skipped if already satisfied.
 set -euo pipefail
