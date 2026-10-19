@@ -53,6 +53,59 @@ A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
 
 Hash PII in staging with `{{ hash_pii('column') }}`.
 
+## Extract-load (`el/load.py`)
+
+dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
+as `loader`. Sources: `wordpress_vitlamdata`.
+
+### Run one source load locally
+
+Your login cannot write `raw_*`, so load into a schema of your own. It needs
+the tunnel to forward 3306 too:
+
+```bash
+gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
+  -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
+```
+
+Set the `MARIADB_*` vars in `.env` (`.env.example`). Then:
+
+```bash
+source .venv/bin/activate
+set -a; . ./.env; set +a
+python el/load.py --source wordpress_vitlamdata --dataset dbt_duc_raw_wordpress_vitlamdata
+```
+
+dlt creates that schema and its `_staging` twin. Add `--full-refresh` to
+reload every table with replace and reset the incremental cursors. Drop both
+schemas when done.
+
+A source table that is empty gets no table in the warehouse until it has a row.
+
+### Add a table
+
+1. Add it to `WORDPRESS_VITLAMDATA_TABLES` in `el/load.py` with `None`
+   (replace).
+2. If it holds credentials (password hashes, tokens, keys), exclude those
+   columns or rows: `SECRET_COLUMNS`, `SECRET_USERMETA_KEYS`.
+3. Run a local load and check the table.
+
+### Switch a table from replace to merge
+
+Only when the table has a cursor column that changes on every update
+(architecture §3), and a primary key in the source (dlt reads it from there).
+
+1. Set the table's value in `el/load.py` to that column, for example
+   `"wp_posts": "post_modified_gmt"`.
+2. Run a local load twice, then check that the primary key has no duplicates:
+
+   ```sql
+   select count(*), count(distinct id) from dbt_duc_raw_wordpress_vitlamdata.wp_posts;
+   ```
+
+Merge does not see hard deletes. Nightly with `full_refresh` reloads every table
+with replace and catches them.
+
 ## Claude Code Remote Control
 
 Recommended. `.devcontainer/postCreate.sh` turns it on for all your sessions in
