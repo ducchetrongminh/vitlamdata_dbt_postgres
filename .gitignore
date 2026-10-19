@@ -232,3 +232,6 @@ logs/
 
 # Local scratch: keys, images to show Claude. Never committed (the repo is public).
 .tmp/
+
+# dbt writes its anonymous usage id next to profiles.yml
+.user.yml
