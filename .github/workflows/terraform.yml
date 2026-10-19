@@ -1,0 +1,154 @@
+name: terraform
+
+# Warehouse Terraform (terraform/, docs/architecture.md §9). Plan and apply run
+# only here, never locally (RUNBOOK.md):
+# - PR touching terraform/: plan, posted as a PR comment.
+# - Push to main touching terraform/: apply, then write private.pii_key and run
+#   the privilege check, both as postgres.
+# - Run workflow (workflow_dispatch) on main: the same apply. Use it to re-run.
+#
+# Every job runs in environment `admin`, whose OIDC subject is the only one the
+# dbt-terraform service account accepts. The superuser password comes from its
+# own secret dw-superuser, never from the shared vitlamdata-env.
+on:
+  pull_request:
+    branches: [main]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+  push:
+    branches: [main]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # WIF
+
+env:
+  WIF_PROVIDER: projects/541617847124/locations/global/workloadIdentityPools/github/providers/github-actions
+  SERVICE_ACCOUNT: dbt-terraform@vit-lam-data.iam.gserviceaccount.com
+  # For terraform's postgresql provider and for psql: the local end of the tunnel.
+  PGHOST: 127.0.0.1
+  PGPORT: "5433"
+  PGUSER: postgres
+
+jobs:
+  plan:
+    # Same-repo guard: fork PRs get no OIDC token anyway, and must never reach
+    # the database. Never switch this to pull_request_target.
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: admin
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write # the plan comment
+    defaults:
+      run:
+        working-directory: terraform
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # --ssh-key-expire-after: gcloud adds a key to the service account's OS
+      # Login profile on every run; without an expiry they pile up there.
+      # Host-key checking stays on: the VM publishes its host keys as guest
+      # attributes and gcloud writes them to known_hosts first (architecture §8).
+      - name: Open SSH tunnel to postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes -L 5433:127.0.0.1:5433
+
+      - name: Superuser password from dw-superuser
+        run: |
+          pw="$(gcloud secrets versions access latest --secret=dw-superuser)"
+          [ -n "$pw" ] || { echo "dw-superuser is empty"; exit 1; }
+          echo "::add-mask::$pw"
+          echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - run: terraform fmt -check
+      - run: terraform init -input=false
+      - run: terraform validate
+      # -parallelism=1: grants on one schema update the same catalog row and
+      # fail in parallel with `pq: tuple concurrently updated` (grants.tf).
+      # -lock-timeout: wait for a running apply instead of failing on its lock.
+      - run: terraform plan -input=false -no-color -parallelism=1 -lock-timeout=10m -out=tfplan
+      - run: terraform show -no-color tfplan > plan.txt
+
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const plan = require('fs').readFileSync('terraform/plan.txt', 'utf8');
+            // A comment holds at most 65536 characters.
+            const body = plan.length > 60000 ? plan.slice(0, 60000) + '\n… truncated, see the job log' : plan;
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `#### Terraform plan — \`${context.sha.slice(0, 7)}\`\n<details><summary>show</summary>\n\n\`\`\`\n${body}\n\`\`\`\n</details>`,
+            });
+
+  apply:
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: admin
+    # One apply at a time. A newer push replaces a waiting one, and both apply
+    # main's whole state, so nothing is skipped.
+    concurrency: terraform-apply
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Open SSH tunnel to postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes -L 5433:127.0.0.1:5433
+
+      - name: Superuser password from dw-superuser
+        run: |
+          pw="$(gcloud secrets versions access latest --secret=dw-superuser)"
+          [ -n "$pw" ] || { echo "dw-superuser is empty"; exit 1; }
+          echo "::add-mask::$pw"
+          echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - run: terraform init -input=false
+        working-directory: terraform
+      - run: terraform apply -input=false -auto-approve -parallelism=1 -lock-timeout=10m
+        working-directory: terraform
+
+      # Never overwrites an existing key, so a rebuilt warehouse gets the same
+      # key back (architecture §6).
+      - name: Write private.pii_key
+        env:
+          PGDATABASE: vitlamdata_dw
+        run: |
+          key="$(gcloud secrets versions access latest --secret=dw-pii-key)"
+          [ -n "$key" ] || { echo "dw-pii-key is empty"; exit 1; }
+          echo "::add-mask::$key"
+          psql -X -v key="$key" -f terraform/pii_key.sql
+
+      - name: Check privileges
+        env:
+          PGDATABASE: vitlamdata_dw
+        run: psql -X -f terraform/check_privileges.sql
