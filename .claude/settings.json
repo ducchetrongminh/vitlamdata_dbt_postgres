@@ -1,9 +1,6 @@
 {
   "permissions": {
-    "disableBypassPermissionsMode": "disable",
-    "ask": [
-      "Bash(docker *)"
-    ]
+    "disableBypassPermissionsMode": "disable"
   },
   "enabledPlugins": {
     "caveman@caveman": true,
