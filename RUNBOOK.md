@@ -26,8 +26,11 @@ terraform fmt -check
 
 ### Plan and apply (CI only)
 
-`terraform.yml` (#4) plans on every PR and posts the plan as a comment. On merge
-to `main` it applies, then runs `pii_key.sql` and `check_privileges.sql`.
+`.github/workflows/terraform.yml` plans on every PR that touches `terraform/` and
+posts the plan as a comment. On merge to `main` it applies, then runs
+`pii_key.sql` and `check_privileges.sql` as `postgres`. Every job runs in the
+GitHub Environment `admin`, the only one the `dbt-terraform` service account
+accepts. Fork PRs get no plan job.
 
 Never run `terraform plan` or `terraform apply` locally. A local apply skips
 review and races CI on the same state.
@@ -42,6 +45,44 @@ Role passwords come from the secrets `dw-loader`, `dw-transformer`, `dw-ci` and
 The PII key comes from `dw-pii-key`. `pii_key.sql` never overwrites an existing
 key. Changing the key changes every hash and needs a full refresh of all
 incremental models (architecture §6).
+
+### Read a plan comment
+
+Each push to the PR adds a comment titled with its short commit SHA. Read the
+newest one. Check the summary line `Plan: X to add, Y to change, Z to destroy`:
+
+- **destroy** above 0 needs a reason. A resource with `prevent_destroy` fails
+  the plan instead of showing up here.
+- **`must be replaced`** on a role, schema or database means a `DROP` and a
+  `CREATE`. Their contents and grants go with it. Do not merge that by accident.
+- Role passwords show as `(write-only attribute)`. They never appear in a plan.
+- `No changes.` is the normal result for a PR that does not touch the warehouse.
+
+Merging applies what you read, against `main` as it is at that moment.
+
+### Re-run a failed apply
+
+Find the cause in the job log first. A failure in `Write private.pii_key` or
+`Check privileges` happens after Terraform has already applied.
+
+Then run it again on `main`: **Actions → terraform → Run workflow**. It applies
+`main` as it is now. Use this rather than **Re-run jobs** on an old run. A re-run
+checks out that run's commit, so it can undo a newer merge.
+
+Every step is safe to repeat. Apply is a no-op once the warehouse matches the
+code. `pii_key.sql` leaves the existing key row as it is.
+
+A held state lock (`Error acquiring the state lock`) means another run is still
+going, or one was killed. Wait for the other run. If none is running, delete the
+lock object `gs://vitlamdata_dbt_postgres/warehouse/default.tflock`.
+
+### Rebuilt warehouse
+
+The warehouse has no backup (architecture §1). After the `postgres-dw` data is
+lost, run the apply again (Run workflow). It recreates the database, roles,
+schemas and grants. Then `pii_key.sql` inserts the same key from `dw-pii-key`,
+so every hash comes out as before. Then rebuild the data: nightly with
+`full_refresh`. Personal dev passwords are gone: set them again (below).
 
 ### Superuser on the VM
 
