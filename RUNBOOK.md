@@ -2,6 +2,51 @@
 
 How to operate this repo by hand. Design: [docs/architecture.md](docs/architecture.md).
 
+## Local dev
+
+dbt runs as your personal login and builds into your own schemas,
+`dbt_<login>_*` (for example `dbt_duc_staging`, `dbt_duc_mart_sales`). It can read
+prod but not write it.
+
+1. **Env vars.** Copy `.env.example` to `.env` once (git-ignored). Set `PGUSER`
+   to your login and `PGPASSWORD` to your dev password (see "Set a personal dev
+   password" below). `profiles.yml` reads both. Load them in each shell:
+
+   ```bash
+   source .venv/bin/activate
+   set -a; . ./.env; set +a
+   ```
+
+2. **Tunnel.** Open it in its own terminal and keep it running (see "Open the
+   tunnel" below). dbt connects to `localhost:5433`.
+
+3. **Check the connection.**
+
+   ```bash
+   dbt debug --profiles-dir . --target dev
+   ```
+
+   It ends with `All checks passed!`.
+
+4. **Build.**
+
+   ```bash
+   dbt build --profiles-dir .
+   ```
+
+   `dev` is the default target. To see where a model lands on prod without
+   running it: `dbt compile --profiles-dir . --target prod -s <model>`.
+
+5. **Lint.**
+
+   ```bash
+   sqlfluff lint models/
+   ```
+
+A mart with a column named like `email`, `phone`, `name` or `address` and no
+`_hash` suffix fails its own build (`macros/assert_no_pii_columns.sql`). Hash PII
+in staging with `{{ hash_pii('column') }}`.
+
 ## Warehouse Terraform (`terraform/`)
 
 Manages the `vitlamdata_dw` database on `postgres-dw`: roles, schemas, grants
