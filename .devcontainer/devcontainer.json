@@ -18,7 +18,9 @@
 	"containerEnv": { "CLAUDE_CONFIG_DIR": "/home/vscode/.claude" },
 	"mounts": [
 		"source=claude-config-dbt,target=/home/vscode/.claude,type=volume",
-		"source=gcloud-config-dbt,target=/home/vscode/.config/gcloud,type=volume"
+		"source=gcloud-config-dbt,target=/home/vscode/.config/gcloud,type=volume",
+		// Bash history, shared by every repo's devcontainer on this machine.
+		"source=bash-history,target=/commandhistory,type=volume"
 	],
 
 	"runArgs": [

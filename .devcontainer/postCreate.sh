@@ -6,6 +6,14 @@ set -euo pipefail
 # volume is root-owned unless the image already has the folder; only chown when needed.
 [ -O /home/vscode/.claude ] || sudo chown -R vscode:vscode /home/vscode/.claude
 [ -O /home/vscode/.config/gcloud ] || sudo chown -R vscode:vscode /home/vscode/.config/gcloud
+[ -O /commandhistory ] || sudo chown -R vscode:vscode /commandhistory
+
+# Bash history: keep it on the shared bash-history volume so it survives rebuilds, and
+# write each command right away so a killed terminal doesn't lose it.
+grep -q commandhistory ~/.bashrc || cat >> ~/.bashrc <<'EOF'
+export HISTFILE=/commandhistory/.bash_history
+export PROMPT_COMMAND="history -a${PROMPT_COMMAND:+; $PROMPT_COMMAND}"
+EOF
 
 # gcloud: local dev opens the SSH tunnel to the warehouse with `gcloud compute ssh`
 # (docs/architecture.md).
