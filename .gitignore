@@ -223,3 +223,6 @@ __marimo__/
 target/
 dbt_packages/
 logs/
+
+# Local scratch: keys, images to show Claude. Never committed (the repo is public).
+.tmp/
