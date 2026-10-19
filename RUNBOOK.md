@@ -80,14 +80,12 @@ dlt creates that schema and its `_staging` twin. Add `--full-refresh` to
 reload every table with replace and reset the incremental cursors. Drop both
 schemas when done.
 
-A source table that is empty gets no table in the warehouse until it has a row.
-
 ### Add a table
 
-1. Add it to `WORDPRESS_VITLAMDATA_TABLES` in `el/load.py` with `None`
-   (replace).
-2. If it holds credentials (password hashes, tokens, keys), exclude those
-   columns or rows: `SECRET_COLUMNS`, `SECRET_USERMETA_KEYS`.
+1. Add it to the `replace` list in `wordpress_vitlamdata()` in `el/load.py`.
+2. If it holds credentials (password hashes, tokens, keys), give it its own
+   `sql_table(...)` with `excluded_columns` or a `query_adapter_callback`, like
+   `wp_users` and `wp_usermeta`.
 3. Run a local load and check the table.
 
 ### Switch a table from replace to merge
@@ -95,8 +93,9 @@ A source table that is empty gets no table in the warehouse until it has a row.
 Only when the table has a cursor column that changes on every update
 (architecture §3), and a primary key in the source (dlt reads it from there).
 
-1. Set the table's value in `el/load.py` to that column, for example
-   `"wp_posts": "post_modified_gmt"`.
+1. Move it out of the `replace` list into its own `sql_table(...)` with
+   `write_disposition="merge"` and `incremental=dlt.sources.incremental("<column>")`,
+   like `wp_posts`.
 2. Run a local load twice, then check that the primary key has no duplicates:
 
    ```sql
