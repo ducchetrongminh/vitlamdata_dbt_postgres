@@ -1,12 +1,19 @@
 """WordPress + Tutor LMS (MariaDB) -> raw_wordpress_vitlamdata.
 
-Tables, write dispositions and cursors: .dlt/config.toml. Run from el/:
+Tables, write dispositions and cursors: .dlt/config.toml next to this file.
+Credentials: env vars (.env.example). From the repo root:
 
-    python wordpress_vitlamdata.py
+    python el/wordpress_vitlamdata/pipeline.py
 """
 
-import dlt
-from dlt.sources.sql_database import sql_database
+import os
+
+# dlt reads .dlt/ from the working directory; point it at this source's folder
+# instead, so the script runs from anywhere.
+os.environ.setdefault("DLT_PROJECT_DIR", os.path.dirname(os.path.abspath(__file__)))
+
+import dlt  # noqa: E402
+from dlt.sources.sql_database import sql_database  # noqa: E402
 
 
 def skip_login_sessions(query, table):

@@ -1,14 +1,12 @@
-# dlt config for every source in el/ (docs/architecture.md §3). dlt reads it from
-# .dlt/ in the working directory, so run the scripts from el/. Credentials are
-# in secrets.toml (git-ignored) or env vars, never here: dlt refuses them.
+# dlt config for wordpress_vitlamdata: WordPress + Tutor LMS (MariaDB),
+# architecture §3. pipeline.py points dlt at this folder. Credentials are env
+# vars (.env.example), never here: dlt refuses them in config.toml.
 #
 # Any key can be overridden with an env var: sections joined by __, upper case.
 # WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata
 
 [runtime]
 log_level = "WARNING"
-
-# --- wordpress_vitlamdata: WordPress + Tutor LMS (MariaDB) -------------------
 
 # The pipeline, named after the source. REFRESH=drop_data (nightly full_refresh)
 # truncates every table and resets the cursors, so the next load is complete and

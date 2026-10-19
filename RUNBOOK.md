@@ -56,11 +56,10 @@ Hash PII in staging with `{{ hash_pii('column') }}`.
 ## Extract-load (`el/`)
 
 dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
-as `loader`. One script per source, `el/<source>.py`; its tables, write
-dispositions and cursors are in `el/.dlt/config.toml`, one section per source.
-Sources: `wordpress_vitlamdata`.
+as `loader`. Each source is a folder, `el/<source>/`: `pipeline.py` runs it, and
+`.dlt/config.toml` holds its tables, write dispositions and cursors.
+Credentials are env vars, set in `.env` like dbt's. Sources: `wordpress_vitlamdata`.
 
-dlt reads `.dlt/` from the working directory, so run the scripts from `el/`.
 Its dependencies are the `el` group in `pyproject.toml`, in the same `.venv`.
 
 ### Run one source load locally
@@ -73,29 +72,28 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
   -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
 ```
 
-Once: copy `el/.dlt/secrets.toml.example` to `el/.dlt/secrets.toml`
-(git-ignored) and fill in your dev password and the `dlt_reader` password.
-Then:
+In `.env`, fill in `SOURCES__WORDPRESS_VITLAMDATA__CREDENTIALS__PASSWORD`
+(`.env.example`). The warehouse login reuses your `PG*` values. Then:
 
 ```bash
 source .venv/bin/activate
-cd el
-WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python wordpress_vitlamdata.py
+set -a; . ./.env; set +a
+WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python el/wordpress_vitlamdata/pipeline.py
 ```
 
 dlt creates that schema and its `_staging` twin. To reload every table and
-reset the cursors (what nightly `full_refresh` does), add
-`WORDPRESS_VITLAMDATA__REFRESH=drop_data`. When done, drop both schemas and the
-local pipeline state, `~/.dlt/pipelines/wordpress_vitlamdata`; otherwise its
-saved cursor makes the next load into a fresh schema skip rows.
+reset the cursors (what nightly `full_refresh` does), add `REFRESH=drop_data`.
+When done, drop both schemas and the local pipeline state,
+`~/.dlt/pipelines/wordpress_vitlamdata`; otherwise its saved cursor makes the
+next load into a fresh schema skip rows.
 
 ### Add a table
 
 1. Add it to `table_names` under `[sources.wordpress_vitlamdata]` in
-   `el/.dlt/config.toml`. It gets the default, `replace`.
+   `el/wordpress_vitlamdata/.dlt/config.toml`. It gets the default, `replace`.
 2. If it holds credentials (password hashes, tokens, keys), keep them out:
    columns with `excluded_columns` in the table's own section, like `wp_users`;
-   rows with a query filter in the script, like `wp_usermeta`.
+   rows with a query filter in `pipeline.py`, like `wp_usermeta`.
 3. Run a local load and check the table.
 
 ### Switch a table from replace to merge
@@ -103,7 +101,7 @@ saved cursor makes the next load into a fresh schema skip rows.
 Only when the table has a cursor column that changes on every update
 (architecture §3), and a primary key in the source (dlt reads it from there).
 
-1. Give the table its own section in `el/.dlt/config.toml`, like `wp_posts`:
+1. Give the table its own section in `el/wordpress_vitlamdata/.dlt/config.toml`, like `wp_posts`:
 
    ```toml
    [sources.wordpress_vitlamdata.wp_posts]

@@ -65,10 +65,10 @@ flowchart LR
 
 ## 3. Sources and extract-load (dlt)
 
-`el/` holds one dlt script per source, `el/<source>.py`, each running one pipeline. Tables,
-write dispositions and cursors live in `el/.dlt/config.toml`, one section per source;
-credentials come from `el/.dlt/secrets.toml` locally and from env vars in CI. Its dependencies
-are the `el` group in `pyproject.toml`, in the project's one `.venv`.
+Each source is a folder `el/<source>/`: `pipeline.py` runs one dlt pipeline, and its own
+`.dlt/config.toml` holds tables, write dispositions and cursors. Credentials are env vars
+(`.env` locally, secrets in CI). Its dependencies are the `el` group in `pyproject.toml`,
+in the project's one `.venv`.
 
 | Source | Where | Reached through | Login | Lands in |
 |---|---|---|---|---|
@@ -112,7 +112,7 @@ and CI side by side.
 ### Layout
 
 ```
-el/<source>.py, el/.dlt/config.toml
+el/<source>/pipeline.py, el/<source>/.dlt/config.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
 models/02_intermediate/<domain>/ int_<domain>__<verb>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
@@ -250,7 +250,7 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | tunnel → `el/<source>.py` for each source (`REFRESH=drop_data` on `full_refresh`) → `dbt source freshness` → `dbt build --target prod` → upload `manifest.json` → `dbt docs generate` → publish to GitHub Pages → Lark (success and failure) |
+| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | tunnel → `el/<source>/pipeline.py` for each source (`REFRESH=drop_data` on `full_refresh`) → `dbt source freshness` → `dbt build --target prod` → upload `manifest.json` → `dbt docs generate` → publish to GitHub Pages → Lark (success and failure) |
 | `deploy.yml` | push to `main` touching dbt paths | download manifest → `dbt build -s state:modified+ --state prod-state --target prod` → upload manifest |
 | `ci.yml` | `pull_request` | `lint`: `sqlfluff lint`, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
 | `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>_*` |
