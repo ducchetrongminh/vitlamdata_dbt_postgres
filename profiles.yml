@@ -1,0 +1,36 @@
+# Committed on purpose: every credential comes from the environment
+# (docs/architecture.md §5). Run dbt from the repo root with --profiles-dir .
+# Host and port are the local end of the SSH tunnel (RUNBOOK.md, "Open the tunnel").
+#
+# PGUSER, PGPASSWORD: the login. Your personal one on dev (.env); `ci` and
+# `transformer` in the workflows, from dw-ci and dw-transformer.
+vitlamdata_dbt_postgres:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      port: 5433
+      dbname: vitlamdata_dw
+      user: "{{ env_var('PGUSER') }}"
+      password: "{{ env_var('PGPASSWORD') }}"
+      schema: "dbt_{{ env_var('PGUSER') }}"
+      threads: 4
+    ci:
+      type: postgres
+      host: localhost
+      port: 5433
+      dbname: vitlamdata_dw
+      user: "{{ env_var('PGUSER') }}"
+      password: "{{ env_var('PGPASSWORD') }}"
+      schema: "ci_pr_{{ env_var('DBT_PR_NUMBER') }}"
+      threads: 4
+    prod:
+      type: postgres
+      host: localhost
+      port: 5433
+      dbname: vitlamdata_dw
+      user: "{{ env_var('PGUSER') }}"
+      password: "{{ env_var('PGPASSWORD') }}"
+      schema: staging # models without a custom schema; generate_schema_name
+      threads: 4
