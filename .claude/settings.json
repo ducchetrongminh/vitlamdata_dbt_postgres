@@ -1,24 +1,6 @@
 {
   "permissions": {
-    "blockReadsOutsideWorkingDirectories": true,
     "disableBypassPermissionsMode": "disable"
-  },
-  "sandbox": {
-    "enabled": true,
-    "failIfUnavailable": true,
-    "allowUnsandboxedCommands": false,
-    "excludedCommands": ["docker *", "gh *"],
-    "credentials": {
-      "files": [
-        { "path": "~/.dbt/profiles.yml", "mode": "deny" },
-        { "path": "~/.ssh", "mode": "deny" },
-        { "path": "~/.aws", "mode": "deny" },
-        { "path": "~/.config/gcloud", "mode": "deny" }
-      ]
-    },
-    "network": {
-      "allowedDomains": ["*"]
-    }
   },
   "enabledPlugins": {
     "caveman@caveman": true,
@@ -36,6 +18,12 @@
       "source": {
         "source": "github",
         "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
       }
     }
   }

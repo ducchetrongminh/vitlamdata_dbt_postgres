@@ -1,71 +1,49 @@
 # Onboarding
 
-One-time setup for a new machine (or a blank WSL2 distro) working on this repo with Claude Code.
+Work on this repo inside its devcontainer (`.devcontainer/`), with Claude Code
+running in the container.
 
-## 1. Clone under your Linux home directory
+## How Claude Code is contained here
 
-Not under `/mnt/c/...` (a Windows-mounted path) — the sandbox setup in step 3 refuses to run from there.
+The container is the boundary. It sees no host folder and has no Docker socket, so
+nothing in it, Claude Code included, can read or write your Windows or WSL files.
+Claude Code's own sandbox is off: Docker blocks the user namespaces its bubblewrap
+sandbox needs. Every command still goes through your permission mode (prompts, or
+the auto-mode classifier).
 
-```bash
-git clone <repo-url> ~/projects/vitlamdata_dbt_postgres
-cd ~/projects/vitlamdata_dbt_postgres
-```
+Inside the container Claude can read anything the `vscode` user can: the `gh`
+token, your gcloud login, `.env` and keys in `.tmp/`. Keep only credentials you
+are fine with it using.
 
-## 2. Bootstrap the machine
+## 1. Open the container
 
-```bash
-./scripts/bootstrap-wsl.sh
-```
+On Windows, first turn off the VS Code setting **Dev › Containers: Execute In WSL**
+(`dev.containers.executeInWSL`); with it on, the command below does not open the
+container in Docker.
 
-Installs, in order: curl, Node.js, the Claude Code CLI, this repo's plugins (`caveman`, `ponytail`, `superpowers`), and `uv` plus the project's `.venv` (`uv sync`). Node.js is required because the `ponytail` plugin's hooks run through `/bin/sh` and call `node` directly — without it you'll see `UserPromptSubmit hook error ... node: not found` on every prompt. Plugin install doesn't need a login — only running `claude` interactively does.
+Run **Dev Containers: Clone Repository in Container Volume** and pick this repo.
+The repo lives in a Docker volume.
 
-If this is a fresh Claude Code install, log in once it finishes:
+`.devcontainer/postCreate.sh` installs gcloud, uv and the `.venv`, and the plugins
+in `.claude/settings.json`, and logs `gh` in with the GitHub token VS Code already
+forwards.
+
+## 2. Log in
 
 ```bash
 claude
+gcloud auth login
 ```
+
+`claude` and `gcloud` print a URL to open in your browser. The logins live in the
+Docker volumes `claude-config-dbt` and `gcloud-config-dbt`, so they survive
+container rebuilds.
 
 ## Python / dbt
 
 Managed by `uv` (`pyproject.toml`, `uv.lock`, `.venv/`). Run `uv run dbt ...`, or `source .venv/bin/activate` once per shell and use `dbt ...` directly. Add deps with `uv add <pkg>`; commit `uv.lock`.
 
-## 3. Set up the sandbox (optional but recommended, separate script)
+## Verify
 
-```bash
-./scripts/setup-claude-sandbox.sh
-```
-
-Installs `bubblewrap`/`socat` and, if your distro's AppArmor policy requires it, a profile granting `bwrap` userns capability. This repo's `.claude/settings.json` already configures sandbox behavior (filesystem restrictions, credential-file denies, open network egress) — this script only handles the OS-level dependencies that can't live in a committed settings file.
-
-## 4. Start Claude Code and trust the folder
-
-```bash
-claude
-```
-
-On first run in this repo, Claude Code will ask to trust the folder — accept it so the marketplaces declared in `.claude/settings.json` (`caveman`, `ponytail`) register automatically.
-
-## 5. Verify
-
-Run `/sandbox` inside a session — it should show the sandbox active.
-
-Filesystem checks (should be denied):
-
-```
-echo x > ~/FAIL1
-python3 -c "open('/home/'+__import__('os').environ['USER']+'/FAIL2','w').write('x')"
-cat ~/.dbt/profiles.yml
-```
-
-If `FAIL2` gets created, stop and report — the sandbox isn't enforcing.
-
-Normal work should still run fine: `dbt debug`, `dbt parse`, `uv sync`, `git fetch`, and writes inside the repo.
-
-## What each script does
-
-| Script | Purpose |
-|---|---|
-| `scripts/bootstrap-wsl.sh` | curl, Node.js, Claude Code CLI, this repo's plugins (caveman, ponytail, superpowers), uv + `.venv` |
-| `scripts/setup-claude-sandbox.sh` | OS-level sandbox dependencies: bubblewrap, socat, AppArmor profile |
-
-Both are safe to re-run.
+Normal work should run fine: `uv run dbt debug`, `uv run dbt parse`, `uv sync`,
+`git fetch`, `gh pr list`.

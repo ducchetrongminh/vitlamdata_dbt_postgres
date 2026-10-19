@@ -1,0 +1,34 @@
+{
+	"name": "vitlamdata-dbt-postgres",
+	"image": "mcr.microsoft.com/devcontainers/base:trixie",
+
+	// No docker-in-docker / docker-outside-of-docker: either exposes the host Docker socket.
+	"features": {
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+        "ghcr.io/devcontainers/features/terraform:1": {}
+	},
+
+	// Open with "Dev Containers: Clone Repository in Container Volume" (ONBOARDING.md).
+	// The repo lives in a Docker volume; no host path is mounted.
+
+	// Claude Code auth/settings/history and the gcloud login. Fixed volume names, so
+	// they survive rebuilds, devcontainerId changes and default `docker volume prune`.
+	"containerEnv": { "CLAUDE_CONFIG_DIR": "/home/vscode/.claude" },
+	"mounts": [
+		"source=claude-config-dbt,target=/home/vscode/.claude,type=volume",
+		"source=gcloud-config-dbt,target=/home/vscode/.config/gcloud,type=volume"
+	],
+
+	"runArgs": [
+		"--cap-drop=NET_RAW",
+		"--cap-drop=MKNOD",
+		"--cap-drop=SYS_CHROOT",
+		"--pids-limit=1024"
+	],
+
+	// Installs gcloud, uv, the .venv and the Claude Code plugins; hands the volumes to vscode.
+	"postCreateCommand": "bash .devcontainer/postCreate.sh",
+	"remoteUser": "vscode"
+}

@@ -229,3 +229,6 @@ logs/
 *.tfstate
 *.tfstate.*
 *.tfvars
+
+# Local scratch: keys, images to show Claude. Never committed (the repo is public).
+.tmp/
