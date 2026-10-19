@@ -43,9 +43,15 @@ prod but not write it.
    sqlfluff lint models/
    ```
 
-A mart with a column named like `email`, `phone`, `name` or `address` and no
-`_hash` suffix fails its own build (`macros/assert_no_pii_columns.sql`). Hash PII
-in staging with `{{ hash_pii('column') }}`.
+A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
+
+- has a name containing `email`, `phone`, `address`, `first_name`, `last_name`,
+  `full_name`, `user_name`, `display_name` or `learner_name`, with no `_hash`
+  suffix. `course_name` and the like pass;
+- or is marked PII in the model's yml, whatever its name:
+  `meta: {pii: true}` (or under `config:`).
+
+Hash PII in staging with `{{ hash_pii('column') }}`.
 
 ## Warehouse Terraform (`terraform/`)
 
