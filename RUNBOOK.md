@@ -74,7 +74,7 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
   -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
 ```
 
-In `.env`, fill in `MARIADB_PASSWORD` (`.env.example`). The warehouse login
+In `.env`, set the `MARIADB_*` vars (`.env.example`). The warehouse login
 reuses your `PG*` values. Then, from the repo root:
 
 ```bash
