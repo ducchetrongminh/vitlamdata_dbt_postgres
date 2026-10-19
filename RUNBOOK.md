@@ -7,8 +7,41 @@ How to operate this repo by hand. Design: [docs/architecture.md](docs/architectu
 Manages the `vitlamdata_dw` database on `postgres-dw`: roles, schemas, grants
 (architecture §4, §7, §9). Tables belong to dbt and dlt.
 
-You need Terraform >= 1.11, `psql`, `gcloud`, an OS Login on the VM, and read
-access to the `dw-*` secrets and the `vitlamdata_dbt_postgres` bucket.
+Apply runs only in CI. Locally you validate the code and use `psql` through the
+tunnel.
+
+You need Terraform >= 1.11 and, for `psql`, `gcloud`, an OS Login on the VM and
+read access to the `dw-superuser` secret.
+
+### Validate locally
+
+```bash
+cd terraform
+terraform init -backend=false
+terraform validate
+terraform fmt -check
+```
+
+`-backend=false` skips the state bucket, so this needs no credentials.
+
+### Plan and apply (CI only)
+
+`terraform.yml` (#4) plans on every PR and posts the plan as a comment. On merge
+to `main` it applies, then runs `pii_key.sql` and `check_privileges.sql`.
+
+Never run `terraform plan` or `terraform apply` locally. A local apply skips
+review and races CI on the same state.
+
+CI runs both with `-parallelism=1`. Grants on one schema update the same catalog
+row, and in parallel they fail with `pq: tuple concurrently updated`.
+
+Role passwords come from the secrets `dw-loader`, `dw-transformer`, `dw-ci` and
+`dw-reporter-public`. To rotate one: add a new secret version, bump
+`password_version` in `terraform/roles.tf`, open a PR and merge it.
+
+The PII key comes from `dw-pii-key`. `pii_key.sql` never overwrites an existing
+key. Changing the key changes every hash and needs a full refresh of all
+incremental models (architecture §6).
 
 ### Open the tunnel
 
@@ -18,36 +51,16 @@ Keep this running in its own terminal:
 gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N -L 5433:127.0.0.1:5433
 ```
 
-### Plan and apply
+### Connect with psql
+
+Copy `.env.example` to `.env` (git-ignored) once. It holds the connection
+settings, not the password. In each shell:
 
 ```bash
-gcloud auth application-default login   # once; Terraform reads secrets and state with it
+set -a; . ./.env; set +a
 export PGPASSWORD="$(gcloud secrets versions access latest --secret=dw-superuser)"
-cd terraform
-terraform init
-terraform plan -parallelism=1
-terraform apply -parallelism=1
+psql
 ```
-
-`-parallelism=1` is required. Grants on one schema update the same catalog row,
-and in parallel they fail with `pq: tuple concurrently updated`.
-
-Role passwords come from the secrets `dw-loader`, `dw-transformer`, `dw-ci` and
-`dw-reporter-public`. To rotate one: add a new secret version, bump
-`password_version` in `terraform/roles.tf`, apply.
-
-### Write the PII key
-
-Run once after the first apply, and after any rebuild of the warehouse. It never
-overwrites an existing key.
-
-```bash
-export PGHOST=127.0.0.1 PGPORT=5433 PGUSER=postgres PGDATABASE=vitlamdata_dw
-psql -v key="$(gcloud secrets versions access latest --secret=dw-pii-key)" -f terraform/pii_key.sql
-```
-
-Changing the key changes every hash and needs a full refresh of all incremental
-models (architecture §6).
 
 ### Set a personal dev password
 
@@ -62,14 +75,14 @@ Keep it in your password manager. Terraform does not touch it.
 
 ### Check privileges
 
-With the `PG*` variables above:
+CI runs this after every apply. To run it by hand, connect as in "Connect with
+psql", then:
 
 ```bash
 psql -f terraform/check_privileges.sql
 ```
 
-It ends with `all privilege checks passed` and leaves nothing behind. Then a
-second `terraform plan -parallelism=1` must show no changes.
+It ends with `all privilege checks passed` and leaves nothing behind.
 
 ### Remove a protected resource
 
