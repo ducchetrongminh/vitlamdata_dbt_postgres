@@ -2028,28 +2028,33 @@ wheels = [
 name = "vitlamdata-dbt-postgres"
 version = "0.1.0"
 source = { virtual = "." }
+default-groups = ["dev", "el"]
 dependencies = [
     { name = "dbt-core" },
     { name = "dbt-postgres" },
-    { name = "dlt", extra = ["postgres", "sql-database"] },
-    { name = "pymysql" },
 ]
 
 [package.dev-dependencies]
 dev = [
     { name = "sqlfluff" },
 ]
+el = [
+    { name = "dlt", extra = ["postgres", "sql-database"] },
+    { name = "pymysql" },
+]
 
 [package.metadata]
 requires-dist = [
     { name = "dbt-core", specifier = ">=1.9,<2" },
     { name = "dbt-postgres", specifier = ">=1.9,<2" },
-    { name = "dlt", extras = ["postgres", "sql-database"], specifier = ">=1.31.0" },
-    { name = "pymysql", specifier = ">=1.2.3" },
 ]
 
 [package.metadata.requires-dev]
 dev = [{ name = "sqlfluff", specifier = ">=4.4.0" }]
+el = [
+    { name = "dlt", extras = ["postgres", "sql-database"], specifier = ">=1.31.0" },
+    { name = "pymysql", specifier = ">=1.2.3" },
+]
 
 [[package]]
 name = "win-precise-time"

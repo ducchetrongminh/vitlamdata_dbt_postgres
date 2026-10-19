@@ -53,10 +53,15 @@ A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
 
 Hash PII in staging with `{{ hash_pii('column') }}`.
 
-## Extract-load (`el/load.py`)
+## Extract-load (`el/`)
 
 dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
-as `loader`. Sources: `wordpress_vitlamdata`.
+as `loader`. One script per source, `el/<source>.py`; its tables, write
+dispositions and cursors are in `el/.dlt/config.toml`, one section per source.
+Sources: `wordpress_vitlamdata`.
+
+dlt reads `.dlt/` from the working directory, so run the scripts from `el/`.
+Its dependencies are the `el` group in `pyproject.toml`, in the same `.venv`.
 
 ### Run one source load locally
 
@@ -68,24 +73,29 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
   -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
 ```
 
-Set the `MARIADB_*` vars in `.env` (`.env.example`). Then:
+Once: copy `el/.dlt/secrets.toml.example` to `el/.dlt/secrets.toml`
+(git-ignored) and fill in your dev password and the `dlt_reader` password.
+Then:
 
 ```bash
 source .venv/bin/activate
-set -a; . ./.env; set +a
-python el/load.py --source wordpress_vitlamdata --dataset dbt_duc_raw_wordpress_vitlamdata
+cd el
+WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python wordpress_vitlamdata.py
 ```
 
-dlt creates that schema and its `_staging` twin. Add `--full-refresh` to
-reload every table with replace and reset the incremental cursors. Drop both
-schemas when done.
+dlt creates that schema and its `_staging` twin. To reload every table and
+reset the cursors (what nightly `full_refresh` does), add
+`WORDPRESS_VITLAMDATA__REFRESH=drop_data`. When done, drop both schemas and the
+local pipeline state, `~/.dlt/pipelines/wordpress_vitlamdata`; otherwise its
+saved cursor makes the next load into a fresh schema skip rows.
 
 ### Add a table
 
-1. Add it to the `replace` list in `wordpress_vitlamdata()` in `el/load.py`.
-2. If it holds credentials (password hashes, tokens, keys), give it its own
-   `sql_table(...)` with `excluded_columns` or a `query_adapter_callback`, like
-   `wp_users` and `wp_usermeta`.
+1. Add it to `table_names` under `[sources.wordpress_vitlamdata]` in
+   `el/.dlt/config.toml`. It gets the default, `replace`.
+2. If it holds credentials (password hashes, tokens, keys), keep them out:
+   columns with `excluded_columns` in the table's own section, like `wp_users`;
+   rows with a query filter in the script, like `wp_usermeta`.
 3. Run a local load and check the table.
 
 ### Switch a table from replace to merge
@@ -93,17 +103,22 @@ schemas when done.
 Only when the table has a cursor column that changes on every update
 (architecture §3), and a primary key in the source (dlt reads it from there).
 
-1. Move it out of the `replace` list into its own `sql_table(...)` with
-   `write_disposition="merge"` and `incremental=dlt.sources.incremental("<column>")`,
-   like `wp_posts`.
+1. Give the table its own section in `el/.dlt/config.toml`, like `wp_posts`:
+
+   ```toml
+   [sources.wordpress_vitlamdata.wp_posts]
+   write_disposition = { disposition = "merge" }
+   incremental = { cursor_path = "post_modified_gmt" }
+   ```
+
 2. Run a local load twice, then check that the primary key has no duplicates:
 
    ```sql
    select count(*), count(distinct id) from dbt_duc_raw_wordpress_vitlamdata.wp_posts;
    ```
 
-Merge does not see hard deletes. Nightly with `full_refresh` reloads every table
-with replace and catches them.
+Merge does not see hard deletes. Nightly with `full_refresh` truncates every
+table and reloads it, which catches them.
 
 ## Claude Code Remote Control
 

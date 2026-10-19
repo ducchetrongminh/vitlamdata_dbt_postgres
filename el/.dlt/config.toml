@@ -1,0 +1,54 @@
+# dlt config for every source in el/ (docs/architecture.md §3). dlt reads it from
+# .dlt/ in the working directory, so run the scripts from el/. Credentials are
+# in secrets.toml (git-ignored) or env vars, never here: dlt refuses them.
+#
+# Any key can be overridden with an env var: sections joined by __, upper case.
+# WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata
+
+[runtime]
+log_level = "WARNING"
+
+# --- wordpress_vitlamdata: WordPress + Tutor LMS (MariaDB) -------------------
+
+# The pipeline, named after the source. REFRESH=drop_data (nightly full_refresh)
+# truncates every table and resets the cursors, so the next load is complete and
+# catches hard deletes.
+[wordpress_vitlamdata]
+dataset_name = "raw_wordpress_vitlamdata"
+
+# Courses, enrollments, sales, users. Add more as models need them. Never
+# wp_options: it can hold API keys and SMTP passwords.
+[sources.wordpress_vitlamdata]
+table_names = [
+    "wp_posts",               # courses, topics, lessons, bundles, enrollments (tutor_enrolled), leads (vld_lead)
+    "wp_postmeta",
+    "wp_users",
+    "wp_usermeta",
+    "wp_terms",               # course categories and tags
+    "wp_term_taxonomy",
+    "wp_term_relationships",
+    "wp_tutor_orders",
+    "wp_tutor_order_items",
+    "wp_tutor_ordermeta",
+    "wp_tutor_coupons",
+    "wp_tutor_coupon_usages",
+    "wp_tutor_customers",
+    "wp_tutor_earnings",
+]
+# Default for every table. A table gets merge only when it has a cursor that
+# changes on every update (architecture §3). wp_tutor_orders and wp_tutor_coupons
+# have updated_at_gmt, but Tutor does not bump it: merge them after
+# vitlamdata_infras#156.
+write_disposition = { disposition = "replace" }
+
+[sources.wordpress_vitlamdata.wp_posts]
+write_disposition = { disposition = "merge" }
+incremental = { cursor_path = "post_modified_gmt" }
+
+[sources.wordpress_vitlamdata.wp_tutor_ordermeta]
+write_disposition = { disposition = "merge" }
+incremental = { cursor_path = "updated_at_gmt" }
+
+# Password hashes and reset keys stay in WordPress.
+[sources.wordpress_vitlamdata.wp_users]
+excluded_columns = ["user_pass", "user_activation_key"]

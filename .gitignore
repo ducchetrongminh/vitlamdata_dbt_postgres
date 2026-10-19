@@ -235,3 +235,6 @@ logs/
 
 # dbt writes its anonymous usage id next to profiles.yml
 .user.yml
+
+# dlt credentials (el/.dlt/secrets.toml.example)
+secrets.toml
