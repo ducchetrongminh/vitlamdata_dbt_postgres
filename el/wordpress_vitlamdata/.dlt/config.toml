@@ -1,6 +1,6 @@
 # dlt config for wordpress_vitlamdata: WordPress + Tutor LMS (MariaDB),
-# architecture §3. pipeline.py points dlt at this folder. Credentials are env
-# vars (.env.example), never here: dlt refuses them in config.toml.
+# architecture §3. pipeline.py points dlt at this folder. Credentials
+# are in el/credentials.toml, never here: dlt refuses them in config.toml.
 #
 # Any key can be overridden with an env var: sections joined by __, upper case.
 # WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata

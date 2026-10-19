@@ -58,7 +58,9 @@ Hash PII in staging with `{{ hash_pii('column') }}`.
 dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
 as `loader`. Each source is a folder, `el/<source>/`: `pipeline.py` runs it, and
 `.dlt/config.toml` holds its tables, write dispositions and cursors.
-Credentials are env vars, set in `.env` like dbt's. Sources: `wordpress_vitlamdata`.
+Credentials for all sources are in `el/credentials.toml` as `${VAR}`
+references to env vars, like `env_var()` in `profiles.yml`; `el/setup.py`
+fills them in. Sources: `wordpress_vitlamdata`.
 
 Its dependencies are the `el` group in `pyproject.toml`, in the same `.venv`.
 
@@ -72,13 +74,13 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
   -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
 ```
 
-In `.env`, fill in `SOURCES__WORDPRESS_VITLAMDATA__CREDENTIALS__PASSWORD`
-(`.env.example`). The warehouse login reuses your `PG*` values. Then:
+In `.env`, fill in `MARIADB_PASSWORD` (`.env.example`). The warehouse login
+reuses your `PG*` values. Then, from the repo root:
 
 ```bash
 source .venv/bin/activate
 set -a; . ./.env; set +a
-WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python el/wordpress_vitlamdata/pipeline.py
+WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python -m el.wordpress_vitlamdata.pipeline
 ```
 
 dlt creates that schema and its `_staging` twin. To reload every table and
