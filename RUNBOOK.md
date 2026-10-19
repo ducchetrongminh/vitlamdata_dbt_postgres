@@ -53,6 +53,15 @@ A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
 
 Hash PII in staging with `{{ hash_pii('column') }}`.
 
+## Claude Code Remote Control
+
+Recommended. `.devcontainer/postCreate.sh` turns it on for all your sessions in
+`~/.claude/settings.json` unless you already set it. To opt out, set `false`:
+
+```json
+{ "remoteControlAtStartup": false }
+```
+
 ## Warehouse Terraform (`terraform/`)
 
 Manages the `vitlamdata_dw` database on `postgres-dw`: roles, schemas, grants

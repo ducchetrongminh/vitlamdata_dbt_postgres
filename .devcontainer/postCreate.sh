@@ -50,3 +50,13 @@ node -e 'for (const m of Object.values(require(process.argv[1]).extraKnownMarket
 node -e 'for (const [k, v] of Object.entries(require(process.argv[1]).enabledPlugins || {})) if (v) console.log(k)' \
 	"$PWD/.claude/settings.json" |
 	while read -r plugin; do claude plugin install "$plugin"; done
+
+# Recommended: Remote Control on for every session. Written to user settings, since
+# project settings ignore a `true`. Leaves an existing choice (true or false) alone.
+node -e '
+const fs = require("fs"), p = process.argv[1];
+const s = fs.existsSync(p) ? JSON.parse(fs.readFileSync(p, "utf8")) : {};
+if (!("remoteControlAtStartup" in s)) {
+	s.remoteControlAtStartup = true;
+	fs.writeFileSync(p, JSON.stringify(s, null, 2) + "\n");
+}' "$HOME/.claude/settings.json"
