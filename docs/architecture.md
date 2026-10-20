@@ -106,7 +106,7 @@ and CI side by side.
 | `staging` | `transformer` | dbt views: rename, cast, hash PII |
 | `intermediate` | `transformer` | only intermediate models overridden to view/table |
 | `mart_<domain>` (e.g. `mart_sales`, `mart_metabase`) | `transformer` | `fact_*` / `dim_*` tables |
-| `snapshots` | `transformer` | dbt snapshots (history of source rows); the only backed-up schema |
+| `snapshots` | `transformer` | dbt snapshots of raw tables, 1:1 like `raw_*` (PII unhashed); the only backed-up schema |
 | `private` | superuser | `pii_key` table (one row), readable by `transformer` and `developer` |
 | `dbt_<user>_*` | that developer | dev builds |
 | `ci_pr_<n>_*` | `ci` | PR builds, kept until the PR closes |
@@ -120,7 +120,7 @@ ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/c
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
 models/02_intermediate/<domain>/ int_<entity>_<verb_phrase>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
-snapshots/<source>/              snap_<source>__<entity>.yml
+snapshots/<source>/              snap_<source>__<table>.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql
 tests/assert_no_pii_in_marts.sql
@@ -387,4 +387,4 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | Deploy | on merge | prod reflects `main` within minutes |
 | Terraform apply | automatic on merge, `prevent_destroy` guard | maintainer's choice; plan is visible in the PR |
 | Contracts | marts only | protects the public Metabase interface |
-| Snapshot history | own `snapshots` schema, dumped nightly by infras | the only data with no other copy; dlt history in raw would be wiped by `full_refresh` |
+| Snapshot history | raw tables, only for dims that need history; own `snapshots` schema, dumped nightly by infras | the only data with no other copy; dlt history in raw would be wiped by `full_refresh` |

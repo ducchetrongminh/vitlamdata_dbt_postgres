@@ -28,7 +28,7 @@ Every model belongs to exactly one layer. Data moves in one direction — source
 ### 2.1 Staging structural constraints
 Build exactly one view per source table, and never join nor aggregate.
 
-- **One model per source table** — every source table gets exactly one staging model, using `source()` exclusively. See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
+- **One model per source table** — every source table gets exactly one staging model, using `source()`, or `ref()` to the table's snapshot when it has one ([6](#6-snapshots)). See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
 - **View materialization** — always a view. Switch a model to table only when the view is measurably too slow downstream, and say why in a comment next to its `config()`.
 - **No joins** — staging models must not join other models.
 - **No aggregations** — grain must stay identical to the source table; aggregating changes grain and belongs downstream.
@@ -337,10 +337,10 @@ from {{ ref('dim_date') }}
 ## 5. Dependency Direction (ref() rules)
 
 ### 5.1 One-directional layering
-Data flows `01_staging` → `02_intermediate` → `03_mart`, never backward.
+Data flows `01_staging` → `02_intermediate` → `03_mart`, never backward. A snapshot, when one exists, sits between the raw source and its staging model.
 
 - **No backward refs** — a staging model must never `ref()` an intermediate or mart model. An intermediate model must never `ref()` a mart model.
-- **Snapshots** — a snapshot reads one staging model; intermediate and mart models may `ref()` a snapshot (see [6](#6-snapshots)).
+- **Snapshots** — a snapshot reads one raw source table; only that table's staging model may `ref()` the snapshot (see [6](#6-snapshots)).
 - **Same-layer refs** — intermediate models may `ref()` other intermediate models (see [3.1](#31-intermediate-structural-constraints)); mart models may `ref()` other mart models (dim/fact cross-refs, role-playing views).
 
 See [dbt Labs: How we structure](https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview?version=2.0) for the overall DAG shape ("narrow the DAG, widen the tables").
@@ -383,36 +383,37 @@ join {{ ref('stg_wordpress__order') }} o on i.order_id = o.order_id
 
 ## 6. Snapshots
 
-### 6.1 Snapshot the staging models behind dimensions
+### 6.1 Snapshot the raw source, only for dimensions that need history
 A dbt snapshot records how a row changes over time. It is the only source of [Type 2 history](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd): a source system only holds the current value.
 
 #### Definition
-A snapshot compares a model with what it saw last run and, for every changed row, closes the old version and inserts a new one (`dbt_valid_from`, `dbt_valid_to`).
+A snapshot compares a source table with what it saw last run and, for every changed row, closes the old version and inserts a new one (`dbt_valid_from`, `dbt_valid_to`). Downstream, the snapshot takes the place of the raw table: it is a source with history.
 
 #### Pros
 - Keeps history the source never stores, so a dimension can show the value that was true when a fact happened
-- Snapshotting the staging model, not the raw source, keeps PII out: staging has already hashed it ([Architecture §6](architecture.md#6-pii))
+- Snapshotting the raw source, not a staging model, keeps history independent of staging logic: a fix to staging applies to every version, past and future
+- Only dimensions that need history pay for it
 
 #### Cons
 - Snapshot history has no other copy. It is the one part of the warehouse that cannot be rebuilt, so it needs a backup ([Architecture §1](architecture.md#constraints))
-- A change to staging logic applies only to new versions; history already captured keeps the old logic. dbt Labs snapshots the raw source to avoid this, which PII rules out here
-- Rotating the PII key changes every hash, so a `check` snapshot then records a new version of every row
+- Like raw, it holds unhashed PII, and keeps old values after the source deletes them. Erasing a person means deleting their rows from the snapshot too
 
 #### Decision
-- **What** — snapshot every staging model a dimension is built from, since every dimension tracks Type 6 history. Don't snapshot staging models that feed only facts: a fact row records an event, not a changing state.
-- **Where** — `snapshots/<source>/snap_<source>__<entity>.yml`, built into the `snapshots` schema in prod (`dbt_<user>_snapshots` in dev, `ci_pr_<n>_snapshots` in CI). Infras backs up the prod schema nightly.
-- **Input** — `select *` from one staging model via `ref()`; no joins, no logic.
-- **Strategy** — `timestamp` on the staging model's updated timestamp when it changes on every update; otherwise `check` with `check_cols: all`.
+- **When** — only for a dimension that needs Type 2 history ([Dimensional Modeling Standards, SCD](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd)). Every other dimension is Type 1, and its staging model reads `source()` as usual.
+- **Input** — one raw source table via `source()`, all columns, no joins, no logic. PII is hashed later, in staging, as for any source ([Architecture §6](architecture.md#6-pii)).
+- **Downstream reads the snapshot** — once a source table has a snapshot, its staging model reads `ref('snap_<source>__<table>')` instead of `source()`. The staging model then has one row per version: test `unique` on `dbt_scd_id`, not on the natural key, and rename `dbt_valid_from` / `dbt_valid_to` to `row_effective_at` / `row_expiration_at`.
+- **Where** — `snapshots/<source>/snap_<source>__<table>.yml`, named after the raw table. Built into the `snapshots` schema in prod (`dbt_<user>_snapshots` in dev, `ci_pr_<n>_snapshots` in CI). Infras backs up the prod schema nightly.
+- **Strategy** — `timestamp` on the table's updated timestamp when it changes on every update; otherwise `check` with `check_cols: all`.
 - **Never drop** — `--full-refresh` does not touch snapshots. Never drop or truncate the `snapshots` schema; history lost there is lost for good.
 
 ```yaml
-# Yes: snapshots/wordpress/snap_wordpress__course.yml
+# Yes: snapshots/wordpress/snap_wordpress__wp_posts.yml
 snapshots:
-  - name: snap_wordpress__course
-    relation: ref('stg_wordpress__course')
+  - name: snap_wordpress__wp_posts
+    relation: source('wordpress', 'wp_posts')
     config:
       schema: snapshots
-      unique_key: course_id
+      unique_key: id
       strategy: timestamp
-      updated_at: updated_at
+      updated_at: post_modified_gmt
 ```

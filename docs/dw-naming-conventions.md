@@ -202,7 +202,7 @@ Never use these in models or columns; spell the full word instead.
 ## 3. Model File Naming
 
 ### 3.1 Layer prefix required
-Prefix every model file with its layer: `stg_`, `int_`, `dim_`, or `fact_`. Snapshots use `snap_<source>__<entity>`, in `snapshots/<source>/`.
+Prefix every model file with its layer: `stg_`, `int_`, `dim_`, or `fact_`. Snapshots use `snap_<source>__<table>`, named after the raw table they copy, in `snapshots/<source>/`.
 
 #### Definition
 The layer prefix identifies which stage of the dbt DAG a model belongs to.
