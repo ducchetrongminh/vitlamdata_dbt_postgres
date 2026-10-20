@@ -9,6 +9,7 @@ This guide covers the dbt DAG layers used in this project — `01_staging`, `02_
 3. [Intermediate Layer Rules (02_intermediate)](#3-intermediate-layer-rules-02_intermediate)
 4. [Mart Layer Rules (03_mart)](#4-mart-layer-rules-03_mart)
 5. [Dependency Direction (ref() rules)](#5-dependency-direction-ref-rules)
+6. [Snapshots](#6-snapshots)
 
 ---
 
@@ -28,7 +29,7 @@ Every model belongs to exactly one layer. Data moves in one direction — source
 Build exactly one view per source table, and never join nor aggregate.
 
 - **One model per source table** — every source table gets exactly one staging model, using `source()` exclusively. See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
-- **View materialization** — always a view, never a table or incremental model except clear intention.
+- **View materialization** — always a view. Switch a model to table only when the view is measurably too slow downstream, and say why in a comment next to its `config()`.
 - **No joins** — staging models must not join other models.
 - **No aggregations** — grain must stay identical to the source table; aggregating changes grain and belongs downstream.
 - **Tests** — `unique` + `not_null` on the primary key of every staging model ([Architecture §10](architecture.md#10-data-quality-and-docs)).
@@ -51,7 +52,7 @@ Staging-only transformations that turn a raw source table into a clean, business
 - Renaming decisions made this early are hard to walk back once dozens of downstream models `ref()` the new names
 
 #### Decision
-Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII).
+Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. Do not carry dlt's metadata columns (`_dlt_load_id`, `_dlt_id`) past staging: list only business columns in `renamed`.
 
 ```sql
 -- Yes:
@@ -82,6 +83,8 @@ casted as (
         cast(published_at as timestamp) as published_at
     from renamed
 )
+
+select * from casted
 ```
 
 ```sql
@@ -158,9 +161,10 @@ derived as (
 Build the join/transform layer here — ephemeral by default, chainable, and never exposed to BI.
 
 - **Ephemeral materialization** — ephemeral by default. Override to view or table only when justified, e.g. many models reuse it or it is slow to recompute. An overridden model lands in the `intermediate` schema.
-- **Folder grouping** — subfolders by business domain, the same domains as the marts (e.g. `02_intermediate/sales/`).
+- **Folder grouping** — subfolders by business domain, the same domains as the marts (e.g. `02_intermediate/sales/`), each with its own `_int_<domain>__models.yml`.
 - **Not exposed to BI/dashboards** — intermediate models are internal plumbing, not a consumption endpoint. `reporter_public` has no grant on `intermediate`.
 - **Chaining allowed** — an intermediate model may `ref()` other intermediate models to build a transformation in steps.
+- **Many inputs, few outputs** — an intermediate model may read many models. One intermediate model feeding many downstream models is a warning sign: the shared logic probably belongs in staging, or in a mart that the others `ref()`.
 
 See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-structure/3-intermediate?version=2.0) for full rationale.
 
@@ -187,6 +191,8 @@ inserted_unknown as (
     union all
     select * from unknown_product
 )
+
+select * from inserted_unknown
 ```
 
 - **Denormalize dimensions closer to mart shape** — `int_<entity>_denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
@@ -249,6 +255,25 @@ allocated as (
         order_discount * (line_amount / order_line_amount_total) as allocated_discount   -- avoids double-counting
     from joined_to_header
 )
+
+select * from allocated
+```
+
+- **Pivot key-value (meta) tables** — `int_<entity>_meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
+
+```sql
+-- Yes: meta_pivoted
+-- int_course_meta_pivoted.sql — one row per course, one column per meta key
+pivoted as (
+    select
+        post_id as course_id,
+        max(meta_value) filter (where meta_key = '_tutor_course_level') as course_level,
+        max(meta_value) filter (where meta_key = '_tutor_course_price_type') as course_price_type
+    from {{ ref('stg_wordpress__post_meta') }}
+    group by post_id
+)
+
+select * from pivoted
 ```
 
 - **Other dbt-recommended transformations** — joining staging models together, re-graining (fanning out or collapsing to a new grain), isolating complex/hard-to-read logic into its own step. See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-structure/3-intermediate?version=2.0).
@@ -260,6 +285,17 @@ allocated as (
 Materialize as table or incremental, grouped into subfolders by business domain, one dim/fact per file at entity grain.
 
 - **Materialization** — table for dimensions; transaction facts are `incremental` with `incremental_strategy: delete+insert` and a `unique_key` ([Architecture §5](architecture.md#materializations)); view for [role playing dimensions](dimensional-modeling-standards.md#17-role-playing-dimension), since a role-playing dimension is a thin wrapper aliasing the base dimension, not a table of its own.
+- **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `delete+insert` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
+
+```sql
+-- Yes: fact_order_item.sql
+select ...
+from {{ ref('int_order_item_joined_to_header') }}
+{% if is_incremental() %}
+where updated_at >= (select max(updated_at) from {{ this }})
+{% endif %}
+```
+
 - **Folder grouping** — subfolders by business domain (e.g. `03_mart/sales`, `03_mart/metabase`). Each domain builds into its own prod schema `mart_<domain>`, so grants to the public Metabase can be set per domain.
 - **Contracts** — `contract: {enforced: true}` on every mart model, with every column and type declared ([Architecture §10](architecture.md#10-data-quality-and-docs)).
 - **Entity grain** — one model per dimension or fact table; a model must not mix grains.
@@ -295,7 +331,7 @@ select
 from {{ ref('dim_date') }}
 ```
 
-- **Slowly Changing Dimensions (SCD)** — a mart dimension tracks attribute history as Type 6 (Type 2 row + Type 3 column maintained via Type 1 overwrite), per [Slowly Changing Dimensions (SCD)](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd).
+- **Slowly Changing Dimensions (SCD)** — a mart dimension tracks attribute history as Type 6 (Type 2 row + Type 3 column maintained via Type 1 overwrite), per [Slowly Changing Dimensions (SCD)](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd). The history comes from a snapshot, see [6](#6-snapshots).
 
 
 ## 5. Dependency Direction (ref() rules)
@@ -304,6 +340,7 @@ from {{ ref('dim_date') }}
 Data flows `01_staging` → `02_intermediate` → `03_mart`, never backward.
 
 - **No backward refs** — a staging model must never `ref()` an intermediate or mart model. An intermediate model must never `ref()` a mart model.
+- **Snapshots** — a snapshot reads one staging model; intermediate and mart models may `ref()` a snapshot (see [6](#6-snapshots)).
 - **Same-layer refs** — intermediate models may `ref()` other intermediate models (see [3.1](#31-intermediate-structural-constraints)); mart models may `ref()` other mart models (dim/fact cross-refs, role-playing views).
 
 See [dbt Labs: How we structure](https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview?version=2.0) for the overall DAG shape ("narrow the DAG, widen the tables").
@@ -342,4 +379,40 @@ from {{ ref('stg_wordpress__order_item') }} i
 join {{ ref('stg_wordpress__order') }} o on i.order_id = o.order_id
 -- should be: int_order_item_joined_to_header.sql in 02_intermediate,
 -- with fact_order_item.sql in 03_mart referencing that instead
+```
+
+## 6. Snapshots
+
+### 6.1 Snapshot the staging models behind dimensions
+A dbt snapshot records how a row changes over time. It is the only source of [Type 2 history](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd): a source system only holds the current value.
+
+#### Definition
+A snapshot compares a model with what it saw last run and, for every changed row, closes the old version and inserts a new one (`dbt_valid_from`, `dbt_valid_to`).
+
+#### Pros
+- Keeps history the source never stores, so a dimension can show the value that was true when a fact happened
+- Snapshotting the staging model, not the raw source, keeps PII out: staging has already hashed it ([Architecture §6](architecture.md#6-pii))
+
+#### Cons
+- Snapshot history has no other copy. It is the one part of the warehouse that cannot be rebuilt, so it needs a backup ([Architecture §1](architecture.md#constraints))
+- A change to staging logic applies only to new versions; history already captured keeps the old logic. dbt Labs snapshots the raw source to avoid this, which PII rules out here
+- Rotating the PII key changes every hash, so a `check` snapshot then records a new version of every row
+
+#### Decision
+- **What** — snapshot every staging model a dimension is built from, since every dimension tracks Type 6 history. Don't snapshot staging models that feed only facts: a fact row records an event, not a changing state.
+- **Where** — `snapshots/<source>/snap_<source>__<entity>.yml`, built into the `snapshots` schema in prod (`dbt_<user>_snapshots` in dev, `ci_pr_<n>_snapshots` in CI). Infras backs up the prod schema nightly.
+- **Input** — `select *` from one staging model via `ref()`; no joins, no logic.
+- **Strategy** — `timestamp` on the staging model's updated timestamp when it changes on every update; otherwise `check` with `check_cols: all`.
+- **Never drop** — `--full-refresh` does not touch snapshots. Never drop or truncate the `snapshots` schema; history lost there is lost for good.
+
+```yaml
+# Yes: snapshots/wordpress/snap_wordpress__course.yml
+snapshots:
+  - name: snap_wordpress__course
+    relation: ref('stg_wordpress__course')
+    config:
+      schema: snapshots
+      unique_key: course_id
+      strategy: timestamp
+      updated_at: updated_at
 ```

@@ -745,7 +745,7 @@ A dimension attribute's value in the source system changes over time (a customer
 
 #### Decision
 
-Track every dimension attribute as Type 6 — Type 2, Type 3, and Type 1 combined on the same row:
+Track every dimension attribute as Type 6 — Type 2, Type 3, and Type 1 combined on the same row. The Type 2 history comes from a dbt snapshot of the staging model — see [dbt Layers Conventions, Snapshots](dbt-layers-conventions.md#6-snapshots):
 
 - **Type 2 (issue a new row):** on a tracked change, close the prior row and insert a new row with its own surrogate key generated over the natural key plus `row_effective_date` — see [Dimension Surrogate Keys](#11-dimension-surrogate-keys). Carry the three standard tracking columns: `row_effective_date`, `row_expiration_date`, `current_row_indicator`.
 - **Type 3 (add a column to track the current assignment):** alongside the row's own historical value, add a `current_<attribute>` column holding today's value for that member.
