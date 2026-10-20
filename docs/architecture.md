@@ -115,7 +115,7 @@ and CI side by side.
 ```
 ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/credentials.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
-models/02_intermediate/<domain>/ int_<domain>__<verb>.sql
+models/02_intermediate/<domain>/ int_<entity>_<verb_phrase>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql
@@ -124,7 +124,9 @@ terraform/
 profiles.yml
 ```
 
-Naming follows the dbt Labs style guide, except marts use `fact_` (not `fct_`).
+Naming follows the dbt Labs style guide, except marts use `fact_` (not `fct_`). The full rules are in
+[DW Naming Conventions](dw-naming-conventions.md), [dbt Layers Conventions](dbt-layers-conventions.md)
+and [Dimensional Modeling Standards](dimensional-modeling-standards.md).
 
 ### Materializations
 
