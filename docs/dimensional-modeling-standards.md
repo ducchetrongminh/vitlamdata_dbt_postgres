@@ -660,26 +660,31 @@ A null foreign key is a fact table dimension reference with no value. Unlike a n
 - Every fact row remains joinable to its dimensions, so inner joins don't silently drop rows
 
 #### Cons
-- Requires the referenced dimension to ship a default "UNKNOWN" row (see [Null foreign keys](#12-null-foreign-keys)) for every not-applicable case
+- Requires the referenced dimension to ship a default row (see [Null foreign keys](#12-null-foreign-keys)) for every not-applicable case
 
 #### Decision
-Never leave a fact table foreign key null. Resolve it to the referenced dimension's default "UNKNOWN" row instead — see [Null foreign keys](#12-null-foreign-keys) for how that default row is built.
+Never leave a fact table foreign key null. Resolve it to the referenced dimension's default row instead — see [Null foreign keys](#12-null-foreign-keys) for how that default row is built. Do it at the natural key, in staging: fill a null natural foreign key with `-1` (`'UNKNOWN'` for text keys) — see [dbt Layers Conventions, Value-level transformations](dbt-layers-conventions.md#23-value-level-transformations). The fact then builds its foreign key from the natural key with the same formula as the dimension, and the `-1` hashes to the default row's key.
 
 ```sql
--- Yes: order placed with no salesperson assigned — salesperson_key resolves to dim_salesperson's default row
+-- Yes: order placed with no salesperson assigned — staging fills -1, the fact's key resolves to dim_salesperson's default row
+
+-- stg_shop__order_line.sql
+    coalesce(salesperson_id, -1) as salesperson_id
+
+-- fact_order_line.sql
 select
     order_no,
     line_no,
-    coalesce(salesperson_key, {{ dbt_utils.generate_surrogate_key(['-1']) }}) as salesperson_key   -- same hash as dim_salesperson's -1 row
+    {{ dbt_utils.generate_surrogate_key(['salesperson_id']) }} as salesperson_key   -- -1 hashes to the default row's key
 from {{ ref('stg_shop__order_line') }}
 ```
 
 ```sql
--- No: salesperson_key left null when no salesperson is assigned — violates referential integrity against dim_salesperson
+-- No: salesperson_id left null in staging — dbt_utils hashes a null as a placeholder string that matches no dim_salesperson row
 select
     order_no,
     line_no,
-    salesperson_key   -- null when unassigned: no dimension row resolves
+    {{ dbt_utils.generate_surrogate_key(['salesperson_id']) }} as salesperson_key
 from {{ ref('stg_shop__order_line') }}
 ```
 

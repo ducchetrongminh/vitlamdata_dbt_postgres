@@ -136,7 +136,10 @@ Continue the CTE chain from the last CTE of 2.2, one CTE per transformation type
   - Decode flags/indicators to readable text per [Flags and Indicators as Textual Attributes](dimensional-modeling-standards.md#14-flags-and-indicators-as-textual-attributes).
   - Resolve embedded-meaning attributes per [Attributes with Embedded Meaning](dimensional-modeling-standards.md#15-attributes-with-embedded-meaning).
   - Simple `case when` categorization.
-- **Null handling** — CTE `null_handled` — replace nulls with sentinel/default values per [Null Attributes in Dimensions](dimensional-modeling-standards.md#16-null-attributes-in-dimensions) / [Null Foreign Keys in Fact Tables](dimensional-modeling-standards.md#24-null-foreign-keys-in-fact-tables).
+- **Null handling** — CTE `null_handled`:
+  - Text attributes: null or empty → `'Unknown'`, per [Null Attributes in Dimensions](dimensional-modeling-standards.md#16-null-attributes-in-dimensions).
+  - Natural foreign keys: null → `-1` (`'UNKNOWN'` for text keys), the natural key of the dimension's unknown row, per [Null Foreign Keys in Fact Tables](dimensional-modeling-standards.md#24-null-foreign-keys-in-fact-tables). Every join and key hash downstream then lands on the unknown row, with no null left to special-case.
+  - Measures stay null, per [Null Measures](dimensional-modeling-standards.md#23-null-measures).
 - **Derived facts** — CTE `derived` — calculate derived additive facts per [Derived additive facts](dimensional-modeling-standards.md#22-derived-additive-facts).
 
 Postgres has no `select * replace (...)` or `select * except (...)`: list the columns in each CTE.
@@ -158,7 +161,8 @@ decoded as (
             when age between 35 and 54 then '35-54'
             else '55+'
         end as age_group,
-        membership_tier
+        membership_tier,
+        store_id
     from casted
 ),
 
@@ -167,7 +171,8 @@ null_handled as (
         customer_id,
         gender,
         age_group,
-        coalesce(membership_tier, 'Unknown') as membership_tier
+        coalesce(membership_tier, 'Unknown') as membership_tier,   -- text attribute
+        coalesce(store_id, -1) as store_id                         -- natural foreign key: the unknown store
     from decoded
 )
 ```
@@ -223,7 +228,7 @@ inserted_unknown as (
 select * from inserted_unknown
 ```
 
-- **Denormalize dimensions closer to mart shape** — `int_<entity>_denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
+- **Denormalize dimensions closer to mart shape** — `int_<entity>_denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
 
 ```mermaid
 flowchart LR
@@ -244,8 +249,8 @@ denormalized as (
     select
         b.brand_id,
         b.brand_name,
-        sc.subcategory_name,
-        c.category_name
+        coalesce(sc.subcategory_name, 'Unknown') as subcategory_name,   -- subcategory_id = -1 finds no row
+        coalesce(c.category_name, 'Unknown') as category_name
     from {{ ref('stg_shop__brand') }} b
     left join {{ ref('stg_shop__subcategory') }} sc on b.subcategory_id = sc.subcategory_id
     left join {{ ref('stg_shop__category') }} c on sc.category_id = c.category_id
