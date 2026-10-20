@@ -6,7 +6,7 @@
 # WORDPRESS__DATASET_NAME=dbt_duc_raw_wordpress
 
 [runtime]
-log_level = "WARNING"
+log_level = "INFO"
 
 # The pipeline, named after the source. REFRESH=drop_data (nightly full_refresh)
 # truncates every table and resets the cursors, so the next load is complete and

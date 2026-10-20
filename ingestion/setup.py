@@ -1,4 +1,4 @@
-"""Shared setup for ingestion/<source>/pipeline.py. Call setup(__file__) first."""
+"""Shared by ingestion/<source>/pipeline.py: setup(__file__) first, report() after the run."""
 
 import os
 import tomllib
@@ -27,3 +27,25 @@ def setup(pipeline_file):
     # each source keeps its config.toml and the script runs from anywhere.
     os.environ.setdefault("DLT_PROJECT_DIR", os.path.dirname(os.path.abspath(pipeline_file)))
     dlt.config.register_provider(CustomLoaderDocProvider("credentials.toml", _load_credentials, locations=[CREDENTIALS]))
+
+
+def report(pipeline, load_info):
+    """Print rows loaded per table, and add them to the GitHub Actions run summary."""
+    rows = pipeline.last_trace.last_normalize_info.row_counts
+    lines = [
+        f"### {pipeline.pipeline_name} → `{pipeline.dataset_name}`",
+        "",
+        "| Table | Write disposition | Rows |",
+        "|---|---|--:|",
+    ]
+    # Every table, so a merge table with no new rows shows 0 instead of vanishing.
+    for table in sorted(pipeline.default_schema.data_table_names()):
+        disposition = pipeline.default_schema.tables[table].get("write_disposition", "")
+        lines.append(f"| `{table}` | {disposition} | {rows.get(table, 0)} |")
+    text = "\n".join(lines) + "\n"
+
+    print(load_info)
+    print(text)
+    if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
+        with open(summary, "a") as f:
+            f.write(text + "\n")
