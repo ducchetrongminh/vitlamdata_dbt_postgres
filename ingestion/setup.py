@@ -30,22 +30,27 @@ def setup(pipeline_file):
 
 
 def report(pipeline, load_info):
-    """Print rows loaded per table, and add them to the GitHub Actions run summary."""
+    """Print rows loaded per table, and add them to the GitHub Actions run summary.
+
+    Every source in a job writes to the same summary, so the header goes in once
+    and each source adds its rows to one table.
+    """
     rows = pipeline.last_trace.last_normalize_info.row_counts
-    lines = [
-        f"### {pipeline.pipeline_name} → `{pipeline.dataset_name}`",
-        "",
-        "| Table | Write disposition | Rows |",
-        "|---|---|--:|",
-    ]
+    header = "| Source | Dataset | Table | Write disposition | Rows |\n|---|---|---|---|--:|\n"
+    body = ""
     # Every table, so a merge table with no new rows shows 0 instead of vanishing.
     for table in sorted(pipeline.default_schema.data_table_names()):
         disposition = pipeline.default_schema.tables[table].get("write_disposition", "")
-        lines.append(f"| `{table}` | {disposition} | {rows.get(table, 0)} |")
-    text = "\n".join(lines) + "\n"
+        body += (
+            f"| {pipeline.pipeline_name} | `{pipeline.dataset_name}` | `{table}` "
+            f"| {disposition} | {rows.get(table, 0)} |\n"
+        )
 
     print(load_info)
-    print(text)
+    print(header + body)
     if summary := os.environ.get("GITHUB_STEP_SUMMARY"):
-        with open(summary, "a") as f:
-            f.write(text + "\n")
+        with open(summary, "a+") as f:
+            f.seek(0)
+            if not f.read():
+                f.write("### Rows loaded\n\n" + header)
+            f.write(body)
