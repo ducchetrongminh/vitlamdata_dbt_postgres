@@ -9,7 +9,7 @@ Credentials: ingestion/credentials.toml. From the repo root:
 import dlt
 from dlt.sources.sql_database import sql_database
 
-from ingestion.setup import setup
+from ingestion.setup import report, setup
 
 
 def skip_login_sessions(query, table):
@@ -25,4 +25,4 @@ if __name__ == "__main__":
         query_adapter_callback=skip_login_sessions
     )
     pipeline = dlt.pipeline(pipeline_name="wordpress", destination="postgres")
-    print(pipeline.run(source))
+    report(pipeline, pipeline.run(source))

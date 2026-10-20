@@ -94,6 +94,10 @@ next load into a fresh schema skip rows.
 `nightly.yml` runs at 02:00 ICT: `ingest.yml` loads every source, then (#9)
 dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
 
+Each run's summary page lists, per source, the rows loaded into each table. A
+`merge` table shows only new or changed rows, often 0. The job log has dlt's
+step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
+
 - **Load now, without dbt:** Actions → ingest → Run workflow.
 - **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
   to repeat: merge tables update in place, replace tables are reloaded.
