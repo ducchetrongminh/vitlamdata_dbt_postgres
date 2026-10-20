@@ -86,7 +86,7 @@ casted as (
 
 ```sql
 -- Yes: hashed — the PII column keeps its business name plus a _hash suffix
--- stg_wordpress__users.sql
+-- stg_wordpress__user.sql
 hashed as (
     select
         user_id,
@@ -112,7 +112,7 @@ Postgres has no `select * replace (...)` or `select * except (...)`: list the co
 
 ```sql
 -- Yes:
--- stg_crm__customers.sql
+-- stg_crm__customer.sql
 decoded as (
     select
         customer_id,
@@ -143,7 +143,7 @@ null_handled as (
 
 ```sql
 -- Yes:
--- stg_shop__sales_lines.sql
+-- stg_shop__sales_line.sql
 derived as (
     select
         *,
@@ -171,9 +171,9 @@ Use the intermediate layer for joins, re-graining, and business-rule transformat
 
 ```sql
 -- Yes: inserted_unknown
--- int_products_inserted_unknown.sql
-products as (
-    select * from {{ ref('stg_shop__products') }}
+-- int_product_inserted_unknown.sql
+product as (
+    select * from {{ ref('stg_shop__product') }}
 ),
 
 unknown_product as (
@@ -183,7 +183,7 @@ unknown_product as (
 ),
 
 inserted_unknown as (
-    select * from products
+    select * from product
     union all
     select * from unknown_product
 )
@@ -193,37 +193,37 @@ inserted_unknown as (
 
 ```mermaid
 flowchart LR
-    stg_brands["stg_shop__brands"] --> int_brands["int_brands_denormalized"]
-    stg_subcategories["stg_shop__subcategories"] --> int_brands
-    stg_categories["stg_shop__categories"] --> int_brands
-    stg_vendors["stg_shop__vendors"] --> int_vendors["int_vendors_denormalized"]
-    stg_regions["stg_shop__regions"] --> int_vendors
-    stg_products["stg_shop__products"] --> dim["dim_products.sql (03_mart)"]
-    int_brands --> dim
-    int_vendors --> dim
+    stg_brand["stg_shop__brand"] --> int_brand["int_brand_denormalized"]
+    stg_subcategory["stg_shop__subcategory"] --> int_brand
+    stg_category["stg_shop__category"] --> int_brand
+    stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor_denormalized"]
+    stg_region["stg_shop__region"] --> int_vendor
+    stg_product["stg_shop__product"] --> dim["dim_product.sql (03_mart)"]
+    int_brand --> dim
+    int_vendor --> dim
 ```
 
 ```sql
 -- Yes: denormalized
--- int_brands_denormalized.sql
+-- int_brand_denormalized.sql
 denormalized as (
     select
         b.brand_id,
         b.brand_name,
         sc.subcategory_name,
         c.category_name
-    from {{ ref('stg_shop__brands') }} b
-    left join {{ ref('stg_shop__subcategories') }} sc on b.subcategory_id = sc.subcategory_id
-    left join {{ ref('stg_shop__categories') }} c on sc.category_id = c.category_id
+    from {{ ref('stg_shop__brand') }} b
+    left join {{ ref('stg_shop__subcategory') }} sc on b.subcategory_id = sc.subcategory_id
+    left join {{ ref('stg_shop__category') }} c on sc.category_id = c.category_id
 )
--- later we will denormalize this into dim_products, see 4.2 for example
+-- later we will denormalize this into dim_product, see 4.2 for example
 ```
 
 - **Header/line join and allocation** — `int_<entity>_joined_to_header` — bring header-level foreign keys and degenerate dimensions down onto the line grain, and allocate header-level measures (e.g. an order-level discount) across lines to avoid double-counting, per [Header/Line Fact Tables](dimensional-modeling-standards.md#21-headerline-fact-tables).
 
 ```sql
 -- Yes: joined_to_header, allocated
--- int_order_lines_joined_to_header.sql
+-- int_order_line_joined_to_header.sql
 joined_to_header as (
     select
         h.order_no,
@@ -234,8 +234,8 @@ joined_to_header as (
         l.product_id,
         l.line_amount,
         sum(l.line_amount) over (partition by h.order_no) as order_line_amount_total
-    from {{ ref('stg_shop__order_headers') }} h
-    join {{ ref('stg_shop__order_lines') }} l on h.order_no = l.order_no
+    from {{ ref('stg_shop__order_header') }} h
+    join {{ ref('stg_shop__order_line') }} l on h.order_no = l.order_no
 ),
 
 allocated as (
@@ -273,17 +273,17 @@ Most directly relevant to mart construction:
 - **Denormalized dimensions** — a mart dimension is where a flattened hierarchy from the intermediate layer lands as columns, per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
 
 ```sql
--- Yes: dim_products.sql — joins each flattened hierarchy onto the product grain
+-- Yes: dim_product.sql — joins each flattened hierarchy onto the product grain
 select
     p.product_id,
     p.product_name,
-    brands.brand_name,
-    brands.category_name,
-    vendors.vendor_name,
-    vendors.region_name
-from {{ ref('stg_shop__products') }} p
-left join {{ ref('int_brands_denormalized') }} brands on p.brand_id = brands.brand_id
-left join {{ ref('int_vendors_denormalized') }} vendors on p.vendor_id = vendors.vendor_id
+    brand.brand_name,
+    brand.category_name,
+    vendor.vendor_name,
+    vendor.region_name
+from {{ ref('stg_shop__product') }} p
+left join {{ ref('int_brand_denormalized') }} brand on p.brand_id = brand.brand_id
+left join {{ ref('int_vendor_denormalized') }} vendor on p.vendor_id = vendor.vendor_id
 ```
 
 - **Role playing dimensions** — a mart may expose the same base dimension multiple times under different roles (e.g. `dim_order_date`, `dim_ship_date` from one date dimension), per [Role playing dimension](dimensional-modeling-standards.md#17-role-playing-dimension).
@@ -326,20 +326,20 @@ Whether a mart model may reference a staging model directly, bypassing `02_inter
 A mart model may `ref()` a staging model directly only when none of [3.1](#31-intermediate-structural-constraints)'s or [3.2](#32-typical-intermediate-transformations)'s triggers apply — no join, no re-grain, no complex logic to isolate. The moment a mart model needs to join two or more staging models, or apply non-trivial business logic, that logic belongs in an intermediate model first.
 
 ```sql
--- Yes: dim_coupons.sql — one staging table, no joins, no re-grain
-select * from {{ ref('stg_wordpress__coupons') }}
+-- Yes: dim_coupon.sql — one staging table, no joins, no re-grain
+select * from {{ ref('stg_wordpress__coupon') }}
 ```
 
 ```sql
--- No: fact_order_items.sql — joining two staging models directly in a mart
+-- No: fact_order_item.sql — joining two staging models directly in a mart
 select
     i.order_item_id,
     o.order_date,
     o.customer_id,
     i.course_id,
     i.sale_amt
-from {{ ref('stg_wordpress__order_items') }} i
-join {{ ref('stg_wordpress__orders') }} o on i.order_id = o.order_id
--- should be: int_order_items_joined_to_header.sql in 02_intermediate,
--- with fact_order_items.sql in 03_mart referencing that instead
+from {{ ref('stg_wordpress__order_item') }} i
+join {{ ref('stg_wordpress__order') }} o on i.order_id = o.order_id
+-- should be: int_order_item_joined_to_header.sql in 02_intermediate,
+-- with fact_order_item.sql in 03_mart referencing that instead
 ```

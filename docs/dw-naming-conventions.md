@@ -15,7 +15,7 @@ Naming rules for models, columns, folders, and schemas in this dbt project. Read
    2. [Banned abbreviations](#22-banned-abbreviations)
 3. [Model File Naming](#3-model-file-naming)
    1. [Layer prefix required](#31-layer-prefix-required)
-   2. [Plural nouns for entity names](#32-plural-nouns-for-entity-names)
+   2. [Singular nouns for entity names](#32-singular-nouns-for-entity-names)
    3. [Staging naming](#33-staging-naming)
    4. [Intermediate naming](#34-intermediate-naming)
 4. [Column Naming](#4-column-naming)
@@ -59,7 +59,7 @@ select
     frequency_percentile,
     monetary_percentile,
     customer_rfm_segment
-from {{ ref('int_customers_scored_rfm') }}
+from {{ ref('int_customer_scored_rfm') }}
 ```
 
 ```sql
@@ -70,7 +70,7 @@ select
     frequency,
     monetary,
     rfm_segment
-from {{ ref('int_customers_scored_rfm') }}
+from {{ ref('int_customer_scored_rfm') }}
 ```
 
 ### 1.2 Abbreviations avoided
@@ -82,7 +82,7 @@ Never invent an abbreviation on the fly. If a term needs shortening, propose it 
 select
     customer_id,
     order_amt
-from {{ ref('stg_shop__orders') }}
+from {{ ref('stg_shop__order') }}
 ```
 
 ```sql
@@ -90,7 +90,7 @@ from {{ ref('stg_shop__orders') }}
 select
     cust_id,
     order_dt
-from {{ ref('stg_shop__orders') }}
+from {{ ref('stg_shop__order') }}
 ```
 
 ### 1.3 snake_case everywhere
@@ -107,7 +107,7 @@ Use lower_snake_case for every model, column, CTE, and alias.
 Rename every column to lower_snake_case at the staging layer, regardless of source casing. Never carry camelCase or PascalCase past `01_staging`.
 
 ```sql
--- Yes: stg_crm__customers.sql renames source camelCase to snake_case
+-- Yes: stg_crm__customer.sql renames source camelCase to snake_case
 select
     customerId as customer_id,
     customerLifetimeValue as customer_lifetime_value
@@ -121,7 +121,7 @@ Source systems often expose columns named after internal implementation details 
 Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in source-freshness documentation, never as the column name past `01_staging`.
 
 ```sql
--- Yes: stg_wordpress__courses.sql renames WordPress's generic post columns to their business meaning
+-- Yes: stg_wordpress__course.sql renames WordPress's generic post columns to their business meaning
 select
     id as course_id,
     post_title as course_title,
@@ -220,10 +220,10 @@ Marts use `fact_`, not dbt Labs' `fct_`.
 
 ```
 -- Yes:
-models/01_staging/wordpress/stg_wordpress__order_items.sql
-models/02_intermediate/sales/int_order_items_joined_to_header.sql
-models/03_mart/sales/dim_courses.sql
-models/03_mart/sales/fact_order_items.sql
+models/01_staging/wordpress/stg_wordpress__order_item.sql
+models/02_intermediate/sales/int_order_item_joined_to_header.sql
+models/03_mart/sales/dim_course.sql
+models/03_mart/sales/fact_order_item.sql
 ```
 
 ```
@@ -231,41 +231,44 @@ models/03_mart/sales/fact_order_items.sql
 models/03_mart/sales/sales_orders.sql
 ```
 
-### 3.2 Plural nouns for entity names
-Name a model after the entity it represents using the plural noun, across every layer.
+### 3.2 Singular nouns for entity names
+Name a model after the entity it represents using the singular noun, across every layer.
 
 #### Definition
-An entity name is the noun portion of a model name after its layer prefix — `customers` in `stg_crm__customers`, `customers` in `dim_customers`. Plural reflects that the model holds a set of rows, one per instance of that entity.
+An entity name is the noun portion of a model name after its layer prefix — `customer` in `stg_crm__customer`, `customer` in `dim_customer`. Singular names what one row is: one customer, one order line.
 
 #### Pros
-- Matches dbt community convention (staging and mart naming both use plural in the [dbt best practices guide](https://docs.getdbt.com/best-practices/how-we-structure/2-staging))
-- Reads naturally against what the model actually contains — a table of many customers, not one
+- Matches Kimball and the [Dimensional Modeling Standards](dimensional-modeling-standards.md) (`dim_product`, `fact_order_line`, `dim_date`)
+- Model name matches the column prefix from [4.4](#44-entity-prefix-on-common-column-names): `dim_customer` holds `customer_key`, `customer_id`, `customer_name`
+- No irregular plurals to look up (`category`/`categories`, `person`/`people`, `status`/`statuses`) and no exception for uncountable nouns (`inventory`, `equipment`)
+- A fact table is named after its grain, which is one row: `fact_order_line` — one row per order line
 
 #### Cons
-- A handful of entities read awkwardly pluralized and need judgment (e.g., `dim_inventory`, not `dim_inventories`)
+- Departs from the [dbt best practices guide](https://docs.getdbt.com/best-practices/how-we-structure/2-staging) and most dbt community examples, which use plural
+- Some intermediate names read less naturally (`int_payment_pivoted_to_order` vs. `int_payment_pivoted_to_order`)
 
 #### Decision
-Use the plural noun for the entity portion of a model name in every layer. Exception: uncountable nouns (`inventory`, `equipment`) stay singular — pluralizing them is ungrammatical, not clearer.
+Use the singular noun for the entity portion of a model name in every layer: `stg_`, `int_`, `dim_`, and `fact_`. Raw source table names keep their own spelling in `_<source>__sources.yml` and `source()`, since they must match the database — staging renames them.
 
 ```
 -- Yes:
-stg_crm__customers.sql
-dim_customers.sql
-fact_orders.sql
-```
-
-```
--- No: singular entity name
 stg_crm__customer.sql
 dim_customer.sql
 fact_order.sql
+```
+
+```
+-- No: plural entity name
+stg_crm__customers.sql
+dim_customers.sql
+fact_orders.sql
 ```
 
 ### 3.3 Staging naming
 Name staging models `stg_<source>__<entity>`, one model per source table.
 
 #### Definition
-The double underscore (`__`) separates the source system name from the entity name, disambiguating names where either part could itself contain an underscore (e.g., `stg_google_analytics__campaigns` vs. the ambiguous `stg_google_analytics_campaigns`).
+The double underscore (`__`) separates the source system name from the entity name, disambiguating names where either part could itself contain an underscore (e.g., `stg_google_analytics__campaign` vs. the ambiguous `stg_google_analytics_campaign`).
 
 #### Pros
 - Source system is visible in the name without opening the model
@@ -277,12 +280,12 @@ The double underscore (`__`) separates the source system name from the entity na
 - Source system name changes (e.g., a system migration) require renaming every staging model and downstream `ref()`
 
 #### Decision
-Name every staging model `stg_<source>__<entity>`, using the plural entity noun from [3.2](#32-plural-nouns-for-entity-names). The entity portion must be clear and business-friendly, not the raw source table name — apply [1.1](#11-descriptive-over-short) and [1.4](#14-business-language-not-source-jargon) at the model name itself, not just its columns. Build exactly one staging model per source table. Group staging models into subfolders by source system, e.g. `01_staging/wordpress/`, `01_staging/metabase/` — never by loader (dlt) or by business function (sales, marketing). Each folder holds `_<source>__sources.yml` and `_<source>__models.yml`.
+Name every staging model `stg_<source>__<entity>`, using the singular entity noun from [3.2](#32-singular-nouns-for-entity-names). The entity portion must be clear and business-friendly, not the raw source table name — apply [1.1](#11-descriptive-over-short) and [1.4](#14-business-language-not-source-jargon) at the model name itself, not just its columns. Build exactly one staging model per source table. Group staging models into subfolders by source system, e.g. `01_staging/wordpress/`, `01_staging/metabase/` — never by loader (dlt) or by business function (sales, marketing). Each folder holds `_<source>__sources.yml` and `_<source>__models.yml`.
 
 ```
 -- Yes:
-models/01_staging/wordpress/stg_wordpress__order_items.sql
-models/01_staging/metabase/stg_metabase__dashboards.sql
+models/01_staging/wordpress/stg_wordpress__order_item.sql
+models/01_staging/metabase/stg_metabase__dashboard.sql
 ```
 
 ```
@@ -298,7 +301,7 @@ An intermediate model exists to perform one transformation step — a pivot, a j
 
 #### Pros
 - A reader understands what the model does from its name alone, without opening the SQL
-- Distinguishes multiple intermediate models over the same entity by what each one does to it (`int_orders_joined_to_payments` vs. `int_orders_aggregated_to_customer`)
+- Distinguishes multiple intermediate models over the same entity by what each one does to it (`int_order_joined_to_payment` vs. `int_order_aggregated_to_customer`)
 
 #### Cons
 - Verb-phrase names run longer than a bare entity name
@@ -308,13 +311,13 @@ Name every intermediate model `int_<entity>_<verb_phrase>`, where the verb phras
 
 ```
 -- Yes:
-int_payments_pivoted_to_orders.sql
-int_orders_aggregated_to_customer.sql
+int_payment_pivoted_to_order.sql
+int_order_aggregated_to_customer.sql
 ```
 
 ```
 -- No: verb missing — model does an aggregation, but the name doesn't say so
-int_orders_customer.sql
+int_order_customer.sql
 ```
 
 ---
@@ -346,7 +349,7 @@ select
     customer_key,     -- DW-generated surrogate key
     customer_id,      -- natural key from CRM source
     coupon_code       -- natural key, alphanumeric code from source
-from {{ ref('dim_customers') }}
+from {{ ref('dim_customer') }}
 ```
 
 ```sql
@@ -354,7 +357,7 @@ from {{ ref('dim_customers') }}
 select
     customer_key,       -- correct: DW-generated surrogate key
     crm_customer_key     -- wrong: this is CRM's natural id — should be crm_customer_id
-from {{ ref('dim_customers') }}
+from {{ ref('dim_customer') }}
 ```
 
 ### 4.2 Role-playing foreign key naming
@@ -374,13 +377,13 @@ See [Dimensional Modeling Standards, Role playing dimension](dimensional-modelin
 When a fact table references the same dimension in more than one role, name each foreign key `<passive_verb>_by_<entity>_key`. Never point two foreign keys at the same conformed dimension without a role prefix.
 
 ```sql
--- Yes: each foreign key to dim_employees names its role
+-- Yes: each foreign key to dim_employee names its role
 select
     order_key,
     created_by_employee_key,   -- employee who created the order
     updated_by_employee_key,   -- employee who last updated the order
     approved_by_employee_key   -- employee who approved the order
-from {{ ref('fact_orders') }}
+from {{ ref('fact_order') }}
 ```
 
 ```sql
@@ -389,7 +392,7 @@ select
     order_key,
     created_employee,
     updated_by
-from {{ ref('fact_orders') }}
+from {{ ref('fact_order') }}
 ```
 
 ### 4.3 Degenerate dimension suffix
@@ -402,12 +405,12 @@ A degenerate dimension is a source-system identifier (an order number, invoice n
 Suffix every degenerate dimension column with `_no`, not `_id` or `_code` — `_no` marks it as a fact-table-resident identifier with no dimension table behind it.
 
 ```sql
--- Yes: document_no is a degenerate dimension, no dim_documents table exists
+-- Yes: document_no is a degenerate dimension, no dim_document table exists
 select
     order_key,
     document_no,
     order_amt
-from {{ ref('fact_orders') }}
+from {{ ref('fact_order') }}
 ```
 
 ```sql
@@ -416,7 +419,7 @@ select
     order_key,
     document_id,
     order_amt
-from {{ ref('fact_orders') }}
+from {{ ref('fact_order') }}
 ```
 
 ### 4.4 Entity prefix on common column names
@@ -494,7 +497,7 @@ select
     order_date,         -- date only
     order_time,         -- time only
     order_at            -- date and time together
-from {{ ref('stg_shop__orders') }}
+from {{ ref('stg_shop__order') }}
 ```
 
 ### 4.7 Standard fact prefixes and suffixes

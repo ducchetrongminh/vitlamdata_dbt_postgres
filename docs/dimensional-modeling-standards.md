@@ -124,12 +124,12 @@ Every dimension must ship a default row for the "no dimension attached" case. Ge
 -- Yes:
 with
 
-customers as (
+customer as (
     select
         {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
         customer_id,
         customer_name
-    from {{ ref('stg_shop__customers') }}
+    from {{ ref('stg_shop__customer') }}
 ),
 
 unknown_customer as (
@@ -139,7 +139,7 @@ unknown_customer as (
         'Unknown' as customer_name
 )
 
-select * from customers
+select * from customer
 union all
 select * from unknown_customer
 ```
@@ -558,8 +558,8 @@ select
     l.product_key,          -- line-level FK
     l.quantity,
     l.net_amt
-from {{ ref('stg_shop__order_headers') }} o
-join {{ ref('stg_shop__order_lines') }} l on o.order_no = l.order_no
+from {{ ref('stg_shop__order_header') }} o
+join {{ ref('stg_shop__order_line') }} l on o.order_no = l.order_no
 ```
 
 
@@ -591,7 +591,7 @@ select
     quantity,
     unit_price,
     quantity * unit_price as gross_amt   -- derived additive fact, stored
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ```sql
@@ -604,7 +604,7 @@ select
     unit_price
     -- every report/BI tool must remember to multiply quantity * unit_price,
     -- and risks getting it wrong (e.g. forgetting a discount factor)
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ### 2.3 Null Measures
@@ -630,7 +630,7 @@ select
     order_no,
     line_no,
     shipping_cost_amt   -- null: not yet shipped, not zero cost
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ```sql
@@ -639,7 +639,7 @@ select
     order_id as order_no,
     line_number as line_no,
     coalesce(shipping_cost_amt, 0)   -- treats "not yet shipped" as "shipped for free"
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ### 2.4 Null Foreign Keys in Fact Tables
@@ -665,7 +665,7 @@ select
     order_no,
     line_no,
     coalesce(salesperson_key, {{ dbt_utils.generate_surrogate_key(["'UNKNOWN'"]) }}) as salesperson_key
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ```sql
@@ -674,7 +674,7 @@ select
     order_no,
     line_no,
     salesperson_key   -- null when unassigned: no dimension row resolves
-from {{ ref('stg_shop__order_lines') }}
+from {{ ref('stg_shop__order_line') }}
 ```
 
 ### 2.5 Conformed Facts
