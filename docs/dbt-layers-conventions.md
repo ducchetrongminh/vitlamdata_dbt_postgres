@@ -171,7 +171,7 @@ See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-struc
 ### 3.2 Typical intermediate transformations
 Use the intermediate layer for joins, re-graining, and business-rule transformations that would clutter a mart model.
 
-- **Insert unknown/default dimension rows** — `int_<entity>_inserted_unknown` — union the "UNKNOWN" row per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys).
+- **Insert unknown/default dimension rows** — `int_<entity>_inserted_unknown` — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys).
 
 ```sql
 -- Yes: inserted_unknown
@@ -182,7 +182,7 @@ product as (
 
 unknown_product as (
     select
-        'UNKNOWN' as product_id,
+        -1 as product_id,
         'Unknown' as product_name
 ),
 

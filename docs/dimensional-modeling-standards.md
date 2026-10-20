@@ -118,7 +118,7 @@ Dimension tables must include a default row — representing "no dimension attac
 - Every dimension needs an extra unioned row, kept in sync with the real-row key generation strategy
 
 #### Decision
-Every dimension must ship a default row for the "no dimension attached" case. Generate its key with `dbt_utils.generate_surrogate_key` over `'UNKNOWN'`, consistent with the hash-based key generation used for real rows. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
+Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Source ids are auto-increment from 1, so `-1` never collides with a real row. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
 
 ```sql
 -- Yes:
@@ -126,7 +126,6 @@ with
 
 customer as (
     select
-        {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
         customer_id,
         customer_name
     from {{ ref('stg_shop__customer') }}
@@ -134,14 +133,21 @@ customer as (
 
 unknown_customer as (
     select
-        {{ dbt_utils.generate_surrogate_key(["'UNKNOWN'"]) }} as customer_key,
-        'UNKNOWN' as customer_id,
+        -1 as customer_id,
         'Unknown' as customer_name
+),
+
+customer_with_unknown as (
+    select * from customer
+    union all
+    select * from unknown_customer
 )
 
-select * from customer
-union all
-select * from unknown_customer
+select
+    {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,   -- one formula for every row, unknown included
+    customer_id,
+    customer_name
+from customer_with_unknown
 ```
 
 ### 1.3 Denormalized Flattened Dimensions
@@ -664,7 +670,7 @@ Never leave a fact table foreign key null. Resolve it to the referenced dimensio
 select
     order_no,
     line_no,
-    coalesce(salesperson_key, {{ dbt_utils.generate_surrogate_key(["'UNKNOWN'"]) }}) as salesperson_key
+    coalesce(salesperson_key, {{ dbt_utils.generate_surrogate_key(['-1']) }}) as salesperson_key   -- same hash as dim_salesperson's -1 row
 from {{ ref('stg_shop__order_line') }}
 ```
 
