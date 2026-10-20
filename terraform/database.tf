@@ -2,7 +2,7 @@
 # CI (ci_pr_<n>_*) schemas are created by dbt, not here.
 locals {
   # Each raw schema gets a *_staging twin for dlt's merge loads (§3).
-  raw_schemas = ["raw_wordpress_vitlamdata", "raw_metabase", "raw_sheets"]
+  raw_schemas = ["raw_wordpress", "raw_metabase", "raw_sheets"]
 
   # schema => owner. Add mart_<domain> schemas (owner transformer) as marts arrive.
   schemas = merge(
@@ -45,17 +45,4 @@ resource "postgresql_schema" "this" {
   lifecycle {
     prevent_destroy = true
   }
-}
-
-# raw_wordpress was renamed for the source name wordpress_vitlamdata (#5). The
-# provider renames a schema in place (ALTER SCHEMA ... RENAME), so contents and
-# ACLs stay. Its grants are replaced: revoked before the rename, granted after.
-moved {
-  from = postgresql_schema.this["raw_wordpress"]
-  to   = postgresql_schema.this["raw_wordpress_vitlamdata"]
-}
-
-moved {
-  from = postgresql_schema.this["raw_wordpress_staging"]
-  to   = postgresql_schema.this["raw_wordpress_vitlamdata_staging"]
 }

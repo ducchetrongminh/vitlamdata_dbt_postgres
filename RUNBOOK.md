@@ -60,7 +60,7 @@ as `loader`. Each source is a folder, `ingestion/<source>/`: `pipeline.py` runs 
 `.dlt/config.toml` holds its tables, write dispositions and cursors.
 Credentials for all sources are in `ingestion/credentials.toml` as `${VAR}`
 references to env vars, like `env_var()` in `profiles.yml`; `ingestion/setup.py`
-fills them in. Sources: `wordpress_vitlamdata`.
+fills them in. Sources: `wordpress`.
 
 Its dependencies are the `ingestion` group in `pyproject.toml`, in the same `.venv`.
 
@@ -80,13 +80,13 @@ reuses your `PG*` values. Then, from the repo root:
 ```bash
 source .venv/bin/activate
 set -a; . ./.env; set +a
-WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python -m ingestion.wordpress_vitlamdata.pipeline
+WORDPRESS__DATASET_NAME=dbt_duc_raw_wordpress python -m ingestion.wordpress.pipeline
 ```
 
 dlt creates that schema and its `_staging` twin. To reload every table and
 reset the cursors (what nightly `full_refresh` does), add `REFRESH=drop_data`.
 When done, drop both schemas and the local pipeline state,
-`~/.dlt/pipelines/wordpress_vitlamdata`; otherwise its saved cursor makes the
+`~/.dlt/pipelines/wordpress`; otherwise its saved cursor makes the
 next load into a fresh schema skip rows.
 
 ### Nightly and manual loads
@@ -104,8 +104,8 @@ dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
 
 ### Add a table
 
-1. Add it to `table_names` under `[sources.wordpress_vitlamdata]` in
-   `ingestion/wordpress_vitlamdata/.dlt/config.toml`. It gets the default, `replace`.
+1. Add it to `table_names` under `[sources.wordpress]` in
+   `ingestion/wordpress/.dlt/config.toml`. It gets the default, `replace`.
 2. If it holds credentials (password hashes, tokens, keys), keep them out:
    columns with `excluded_columns` in the table's own section, like `wp_users`;
    rows with a query filter in `pipeline.py`, like `wp_usermeta`.
@@ -116,10 +116,10 @@ dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
 Only when the table has a cursor column that changes on every update
 (architecture §3), and a primary key in the source (dlt reads it from there).
 
-1. Give the table its own section in `ingestion/wordpress_vitlamdata/.dlt/config.toml`, like `wp_posts`:
+1. Give the table its own section in `ingestion/wordpress/.dlt/config.toml`, like `wp_posts`:
 
    ```toml
-   [sources.wordpress_vitlamdata.wp_posts]
+   [sources.wordpress.wp_posts]
    write_disposition = { disposition = "merge" }
    incremental = { cursor_path = "post_modified_gmt" }
    ```
@@ -127,7 +127,7 @@ Only when the table has a cursor column that changes on every update
 2. Run a local load twice, then check that the primary key has no duplicates:
 
    ```sql
-   select count(*), count(distinct id) from dbt_duc_raw_wordpress_vitlamdata.wp_posts;
+   select count(*), count(distinct id) from dbt_duc_raw_wordpress.wp_posts;
    ```
 
 Merge does not see hard deletes. Nightly with `full_refresh` truncates every

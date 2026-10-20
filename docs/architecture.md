@@ -73,7 +73,7 @@ in the project's one `.venv`.
 
 | Source | Where | Reached through | Login | Lands in |
 |---|---|---|---|---|
-| WordPress + Tutor LMS (sales, enrollments, users) | MariaDB `wordpress` DB | tunnel `localhost:3306` | `dlt_reader` (read-only) | `raw_wordpress_vitlamdata` |
+| WordPress + Tutor LMS (sales, enrollments, users) | MariaDB `wordpress` DB | tunnel `localhost:3306` | `dlt_reader` (read-only) | `raw_wordpress` |
 | Metabase app DB (questions, dashboards, usage) | app Postgres `metabase_db` | tunnel `localhost:5432` | `dlt_reader` (read-only) | `raw_metabase` |
 | Google Sheets | Google Sheets API | HTTPS | the service-account key in the secret `vitlamdata-gsheets-key`; each sheet is shared with that account's email | `raw_sheets` |
 
@@ -100,7 +100,7 @@ and CI side by side.
 
 | Schema | Owner | Contents |
 |---|---|---|
-| `raw_wordpress_vitlamdata`, `raw_metabase`, `raw_sheets` (+ `*_staging`) | `loader` | dlt output, 1:1 with the source |
+| `raw_wordpress`, `raw_metabase`, `raw_sheets` (+ `*_staging`) | `loader` | dlt output, 1:1 with the source |
 | `staging` | `transformer` | dbt views: rename, cast, hash PII |
 | `intermediate` | `transformer` | only intermediate models overridden to view/table |
 | `mart_<domain>` (e.g. `mart_sales`, `mart_metabase`) | `transformer` | `fact_*` / `dim_*` tables |

@@ -1,9 +1,9 @@
-# dlt config for wordpress_vitlamdata: WordPress + Tutor LMS (MariaDB),
+# dlt config for wordpress: WordPress + Tutor LMS (MariaDB),
 # architecture §3. pipeline.py points dlt at this folder. Credentials
 # are in ingestion/credentials.toml, never here: dlt refuses them in config.toml.
 #
 # Any key can be overridden with an env var: sections joined by __, upper case.
-# WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata
+# WORDPRESS__DATASET_NAME=dbt_duc_raw_wordpress
 
 [runtime]
 log_level = "WARNING"
@@ -11,12 +11,12 @@ log_level = "WARNING"
 # The pipeline, named after the source. REFRESH=drop_data (nightly full_refresh)
 # truncates every table and resets the cursors, so the next load is complete and
 # catches hard deletes.
-[wordpress_vitlamdata]
-dataset_name = "raw_wordpress_vitlamdata"
+[wordpress]
+dataset_name = "raw_wordpress"
 
 # Courses, enrollments, sales, users. Add more as models need them. Never
 # wp_options: it can hold API keys and SMTP passwords.
-[sources.wordpress_vitlamdata]
+[sources.wordpress]
 table_names = [
     "wp_posts",               # courses, topics, lessons, bundles, enrollments (tutor_enrolled), leads (vld_lead)
     "wp_postmeta",
@@ -39,14 +39,14 @@ table_names = [
 # vitlamdata_infras#156.
 write_disposition = { disposition = "replace" }
 
-[sources.wordpress_vitlamdata.wp_posts]
+[sources.wordpress.wp_posts]
 write_disposition = { disposition = "merge" }
 incremental = { cursor_path = "post_modified_gmt" }
 
-[sources.wordpress_vitlamdata.wp_tutor_ordermeta]
+[sources.wordpress.wp_tutor_ordermeta]
 write_disposition = { disposition = "merge" }
 incremental = { cursor_path = "updated_at_gmt" }
 
 # Password hashes and reset keys stay in WordPress.
-[sources.wordpress_vitlamdata.wp_users]
+[sources.wordpress.wp_users]
 excluded_columns = ["user_pass", "user_activation_key"]
