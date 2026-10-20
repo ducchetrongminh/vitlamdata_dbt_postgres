@@ -2028,7 +2028,7 @@ wheels = [
 name = "vitlamdata-dbt-postgres"
 version = "0.1.0"
 source = { virtual = "." }
-default-groups = ["dev", "el"]
+default-groups = ["dev", "ingestion"]
 dependencies = [
     { name = "dbt-core" },
     { name = "dbt-postgres" },
@@ -2038,7 +2038,7 @@ dependencies = [
 dev = [
     { name = "sqlfluff" },
 ]
-el = [
+ingestion = [
     { name = "dlt", extra = ["postgres", "sql-database"] },
     { name = "pymysql" },
 ]
@@ -2051,7 +2051,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [{ name = "sqlfluff", specifier = ">=4.4.0" }]
-el = [
+ingestion = [
     { name = "dlt", extras = ["postgres", "sql-database"], specifier = ">=1.31.0" },
     { name = "pymysql", specifier = ">=1.2.3" },
 ]

@@ -53,16 +53,16 @@ A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
 
 Hash PII in staging with `{{ hash_pii('column') }}`.
 
-## Extract-load (`el/`)
+## Ingestion (`ingestion/`)
 
 dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
-as `loader`. Each source is a folder, `el/<source>/`: `pipeline.py` runs it, and
+as `loader`. Each source is a folder, `ingestion/<source>/`: `pipeline.py` runs it, and
 `.dlt/config.toml` holds its tables, write dispositions and cursors.
-Credentials for all sources are in `el/credentials.toml` as `${VAR}`
-references to env vars, like `env_var()` in `profiles.yml`; `el/setup.py`
+Credentials for all sources are in `ingestion/credentials.toml` as `${VAR}`
+references to env vars, like `env_var()` in `profiles.yml`; `ingestion/setup.py`
 fills them in. Sources: `wordpress_vitlamdata`.
 
-Its dependencies are the `el` group in `pyproject.toml`, in the same `.venv`.
+Its dependencies are the `ingestion` group in `pyproject.toml`, in the same `.venv`.
 
 ### Run one source load locally
 
@@ -80,7 +80,7 @@ reuses your `PG*` values. Then, from the repo root:
 ```bash
 source .venv/bin/activate
 set -a; . ./.env; set +a
-WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python -m el.wordpress_vitlamdata.pipeline
+WORDPRESS_VITLAMDATA__DATASET_NAME=dbt_duc_raw_wordpress_vitlamdata python -m ingestion.wordpress_vitlamdata.pipeline
 ```
 
 dlt creates that schema and its `_staging` twin. To reload every table and
@@ -89,10 +89,23 @@ When done, drop both schemas and the local pipeline state,
 `~/.dlt/pipelines/wordpress_vitlamdata`; otherwise its saved cursor makes the
 next load into a fresh schema skip rows.
 
+### Nightly and manual loads
+
+`nightly.yml` runs at 02:00 ICT: `ingest.yml` loads every source, then (#9)
+dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
+
+- **Load now, without dbt:** Actions → ingest → Run workflow.
+- **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
+  to repeat: merge tables update in place, replace tables are reloaded.
+- **full_refresh:** tick it after rows were hard-deleted in a source, or after
+  a model logic change. It reloads every table from scratch and (#9) rebuilds
+  every model with `--full-refresh`. Use it on nightly, not on ingest alone:
+  reloading raw without the dbt rebuild leaves incremental marts stale.
+
 ### Add a table
 
 1. Add it to `table_names` under `[sources.wordpress_vitlamdata]` in
-   `el/wordpress_vitlamdata/.dlt/config.toml`. It gets the default, `replace`.
+   `ingestion/wordpress_vitlamdata/.dlt/config.toml`. It gets the default, `replace`.
 2. If it holds credentials (password hashes, tokens, keys), keep them out:
    columns with `excluded_columns` in the table's own section, like `wp_users`;
    rows with a query filter in `pipeline.py`, like `wp_usermeta`.
@@ -103,7 +116,7 @@ next load into a fresh schema skip rows.
 Only when the table has a cursor column that changes on every update
 (architecture §3), and a primary key in the source (dlt reads it from there).
 
-1. Give the table its own section in `el/wordpress_vitlamdata/.dlt/config.toml`, like `wp_posts`:
+1. Give the table its own section in `ingestion/wordpress_vitlamdata/.dlt/config.toml`, like `wp_posts`:
 
    ```toml
    [sources.wordpress_vitlamdata.wp_posts]

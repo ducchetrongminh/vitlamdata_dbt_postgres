@@ -1,0 +1,24 @@
+name: nightly
+
+# Nightly prod run (docs/architecture.md §8): ingest every source, then (#9) dbt.
+# Run workflow with full_refresh after a hard delete in a source or a model logic
+# change: it reloads raw from scratch and (#9) rebuilds dbt with --full-refresh.
+on:
+  schedule:
+    - cron: "0 19 * * *" # 02:00 ICT
+  workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: Reload every source and rebuild every model from scratch
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # WIF, in the called workflows
+
+jobs:
+  ingest:
+    uses: ./.github/workflows/ingest.yml
+    with:
+      full_refresh: ${{ inputs.full_refresh || false }}

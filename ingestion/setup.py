@@ -1,4 +1,4 @@
-"""Shared setup for el/<source>/pipeline.py. Call setup(__file__) first."""
+"""Shared setup for ingestion/<source>/pipeline.py. Call setup(__file__) first."""
 
 import os
 import tomllib

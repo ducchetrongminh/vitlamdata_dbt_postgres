@@ -1,15 +1,15 @@
 """WordPress + Tutor LMS (MariaDB) -> raw_wordpress_vitlamdata.
 
 Tables, write dispositions and cursors: .dlt/config.toml next to this file.
-Credentials: el/credentials.toml. From the repo root:
+Credentials: ingestion/credentials.toml. From the repo root:
 
-    python -m el.wordpress_vitlamdata.pipeline
+    python -m ingestion.wordpress_vitlamdata.pipeline
 """
 
 import dlt
 from dlt.sources.sql_database import sql_database
 
-from el.setup import setup
+from ingestion.setup import setup
 
 
 def skip_login_sessions(query, table):
