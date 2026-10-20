@@ -118,6 +118,7 @@ and CI side by side.
 ```
 ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/credentials.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
+models/01_staging/<source>/base/ base_<source>__<entity>.sql (only when one table holds several entities)
 models/02_intermediate/<domain>/ int_<entity>_<verb_phrase>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
 snapshots/<source>/              snap_<source>__<table>.yml

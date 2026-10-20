@@ -26,13 +26,14 @@ Every model belongs to exactly one layer. Data moves in one direction — source
 ## 2. Staging Layer Rules (01_staging)
 
 ### 2.1 Staging structural constraints
-Build exactly one view per source table, and never join nor aggregate.
+Read each source table in exactly one model, and never join nor aggregate.
 
-- **One model per source table** — every source table gets exactly one staging model, using `source()`, or `ref()` to the table's snapshot when it has one ([6](#6-snapshots)). See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
+- **One model per source table** — every source table is read by exactly one model, using `source()`, or `ref()` to the table's snapshot when it has one ([6](#6-snapshots)). Normally that model is the table's staging model. See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
+- **Base model when a table holds several entities** — when one source table stores several business entities (WordPress `wp_posts` holds courses, lessons and enrollments, told apart by `post_type`), the model that reads it is a base model, `base_<source>__<entity>` in `01_staging/<source>/base/`. The base model does the compulsory cleanup of [2.2](#22-compulsory-cleanup-transformations) once for every entity. Each entity then gets its own staging model, which reads the base model, keeps only its entity's rows, and renames columns to that entity.
 - **View materialization** — always a view. Switch a model to table only when the view is measurably too slow downstream, and say why in a comment next to its `config()`.
 - **No joins** — staging models must not join other models.
 - **No aggregations** — grain must stay identical to the source table; aggregating changes grain and belongs downstream.
-- **Tests** — `unique` + `not_null` on the primary key of every staging model ([Architecture §10](architecture.md#10-data-quality-and-docs)).
+- **Tests** — `unique` + `not_null` on the primary key of every staging and base model ([Architecture §10](architecture.md#10-data-quality-and-docs)).
 
 See [dbt Labs: How we structure - Staging](https://docs.getdbt.com/best-practices/how-we-structure/2-staging?version=2.0) for full rationale.
 
@@ -55,7 +56,7 @@ Staging-only transformations that turn a raw source table into a clean, business
 Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. Do not carry dlt's metadata columns (`_dlt_load_id`, `_dlt_id`) past staging: list only business columns in `renamed`.
 
 ```sql
--- Yes:
+-- Yes: base_wordpress__post.sql — cleanup once, for every post type
 with
 
 source as (
@@ -64,27 +65,54 @@ source as (
 
 filtered as (
     select * from source
-    where post_type = 'courses'
-      and post_status <> 'trash'
+    where post_status <> 'trash'
 ),
 
 renamed as (
     select
-        id as course_id,
-        post_title as course_title,
-        post_date_gmt as published_at
+        id as post_id,
+        post_type,
+        post_title,
+        post_excerpt,
+        post_date_gmt as posted_at
     from filtered
 ),
 
 casted as (
     select
-        cast(course_id as bigint) as course_id,
-        course_title,
-        cast(published_at as timestamp) as published_at
+        cast(post_id as bigint) as post_id,
+        post_type,
+        post_title,
+        post_excerpt,
+        cast(posted_at as timestamp) as posted_at
     from renamed
 )
 
 select * from casted
+```
+
+```sql
+-- Yes: stg_wordpress__course.sql — one entity from the base model
+with
+
+base as (
+    select * from {{ ref('base_wordpress__post') }}
+),
+
+filtered as (
+    select * from base
+    where post_type = 'courses'
+),
+
+renamed as (
+    select
+        post_id as course_id,
+        post_title as course_title,
+        posted_at as published_at
+    from filtered
+)
+
+select * from renamed
 ```
 
 ```sql
@@ -339,6 +367,7 @@ from {{ ref('dim_date') }}
 ### 5.1 One-directional layering
 Data flows `01_staging` → `02_intermediate` → `03_mart`, never backward. A snapshot, when one exists, sits between the raw source and its staging model.
 
+- **Base models** — a staging model may `ref()` a base model of its own source, and nothing else in `01_staging`.
 - **No backward refs** — a staging model must never `ref()` an intermediate or mart model. An intermediate model must never `ref()` a mart model.
 - **Snapshots** — a snapshot reads one raw source table; only that table's staging model may `ref()` the snapshot (see [6](#6-snapshots)).
 - **Same-layer refs** — intermediate models may `ref()` other intermediate models (see [3.1](#31-intermediate-structural-constraints)); mart models may `ref()` other mart models (dim/fact cross-refs, role-playing views).

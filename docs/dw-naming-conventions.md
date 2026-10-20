@@ -123,10 +123,10 @@ Rename every source column to its business meaning at the staging layer. Retain 
 ```sql
 -- Yes: stg_wordpress__course.sql renames WordPress's generic post columns to their business meaning
 select
-    id as course_id,
+    post_id as course_id,
     post_title as course_title,
     post_excerpt as course_summary
-from {{ source('wordpress', 'wp_posts') }}
+from {{ ref('base_wordpress__post') }}
 where post_type = 'courses'
 ```
 
@@ -174,6 +174,7 @@ None yet.
 
 | Prefix | Meaning |
 |---|---|
+| `base_` | base (staging, when one source table holds several entities) |
 | `stg_` | staging |
 | `int_` | intermediate |
 | `dim_` | dimension |
@@ -202,7 +203,7 @@ Never use these in models or columns; spell the full word instead.
 ## 3. Model File Naming
 
 ### 3.1 Layer prefix required
-Prefix every model file with its layer: `stg_`, `int_`, `dim_`, or `fact_`. Snapshots use `snap_<source>__<table>`, named after the raw table they copy, in `snapshots/<source>/`.
+Prefix every model file with its layer: `base_`, `stg_`, `int_`, `dim_`, or `fact_`. Snapshots use `snap_<source>__<table>`, named after the raw table they copy, in `snapshots/<source>/`.
 
 #### Definition
 The layer prefix identifies which stage of the dbt DAG a model belongs to.
@@ -213,6 +214,7 @@ The layer prefix identifies which stage of the dbt DAG a model belongs to.
 
 #### Decision
 Every model file must start with its layer prefix, matching the folder it lives in: 
+- `base_` in `01_staging/<source>/base/`
 - `stg_` in `01_staging`
 - `int_` in `02_intermediate`
 - `dim_`/`fact_` in `03_mart`
@@ -281,12 +283,14 @@ The double underscore (`__`) separates the source system name from the entity na
 - Source system name changes (e.g., a system migration) require renaming every staging model and downstream `ref()`
 
 #### Decision
-Name every staging model `stg_<source>__<entity>`, using the singular entity noun from [3.2](#32-singular-nouns-for-entity-names). The entity portion must be clear and business-friendly, not the raw source table name — apply [1.1](#11-descriptive-over-short) and [1.4](#14-business-language-not-source-jargon) at the model name itself, not just its columns. Build exactly one staging model per source table. Group staging models into subfolders by source system, e.g. `01_staging/wordpress/`, `01_staging/metabase/` — never by loader (dlt) or by business function (sales, marketing). Each folder holds `_<source>__sources.yml` and `_<source>__models.yml`.
+Name every staging model `stg_<source>__<entity>`, using the singular entity noun from [3.2](#32-singular-nouns-for-entity-names). The entity portion must be clear and business-friendly, not the raw source table name — apply [1.1](#11-descriptive-over-short) and [1.4](#14-business-language-not-source-jargon) at the model name itself, not just its columns. Build exactly one staging model per source table — or, when one table holds several entities, one base model `base_<source>__<entity>` in a `base/` subfolder and one staging model per entity on top of it (see [dbt Layers Conventions, Staging structural constraints](dbt-layers-conventions.md#21-staging-structural-constraints)). Group staging models into subfolders by source system, e.g. `01_staging/wordpress/`, `01_staging/metabase/` — never by loader (dlt) or by business function (sales, marketing). Each folder holds `_<source>__sources.yml` and `_<source>__models.yml`.
 
 ```
 -- Yes:
 models/01_staging/wordpress/stg_wordpress__order_item.sql
 models/01_staging/metabase/stg_metabase__dashboard.sql
+models/01_staging/wordpress/base/base_wordpress__post.sql   -- wp_posts, every post type
+models/01_staging/wordpress/stg_wordpress__course.sql       -- reads base_wordpress__post
 ```
 
 ```
