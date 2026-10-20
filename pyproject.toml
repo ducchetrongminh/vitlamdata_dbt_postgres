@@ -12,3 +12,12 @@ dependencies = [
 dev = [
     "sqlfluff>=4.4.0",
 ]
+# ingestion/: dlt loads into raw_*. CI can install only these: uv sync --only-group ingestion
+ingestion = [
+    "dlt[postgres,sql-database]>=1.31.0",
+    "pymysql>=1.2.3",
+]
+
+[tool.uv]
+default-groups = ["dev", "ingestion"]
+

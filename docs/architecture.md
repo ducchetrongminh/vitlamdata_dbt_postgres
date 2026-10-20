@@ -65,8 +65,11 @@ flowchart LR
 
 ## 3. Sources and extract-load (dlt)
 
-One Python script, `el/load.py`, run with uv. It holds one dlt pipeline per source and takes
-a CLI flag to pick a source.
+Each source is a folder `ingestion/<source>/`: `pipeline.py` runs one dlt pipeline, and its own
+`.dlt/config.toml` holds tables, write dispositions and cursors. Credentials for all sources are
+`${VAR}` references in `ingestion/credentials.toml`, filled from env vars (`.env` locally, secrets in
+CI) by `ingestion/setup.py`. Its dependencies are the `ingestion` group in `pyproject.toml`,
+in the project's one `.venv`.
 
 | Source | Where | Reached through | Login | Lands in |
 |---|---|---|---|---|
@@ -110,7 +113,7 @@ and CI side by side.
 ### Layout
 
 ```
-el/load.py
+ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/credentials.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
 models/02_intermediate/<domain>/ int_<domain>__<verb>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
@@ -248,13 +251,15 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | tunnel → `el/load.py` → `dbt source freshness` → `dbt build --target prod` → upload `manifest.json` → `dbt docs generate` → publish to GitHub Pages → Lark (success and failure) |
+| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | job `ingest` (calls `ingest.yml`) → job `build` (calls `dbt-build.yml`, `needs: ingest`). `full_refresh` goes to both |
+| `ingest.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | tunnel → `python -m ingestion.<source>.pipeline` for each source as `loader` (`REFRESH=drop_data` on `full_refresh`) |
+| `dbt-build.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | `dbt source freshness` → `dbt build --target prod` (`--full-refresh` on `full_refresh`) → upload `manifest.json` → `dbt docs generate` → publish to GitHub Pages → Lark (success and failure) |
 | `deploy.yml` | push to `main` touching dbt paths | download manifest → `dbt build -s state:modified+ --state prod-state --target prod` → upload manifest |
 | `ci.yml` | `pull_request` | `lint`: `sqlfluff lint`, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
 | `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>_*` |
 | `terraform.yml` | PR touching `terraform/` → plan + PR comment; push to `main` → apply | env `admin`; after apply, write `private.pii_key` |
 
-- `nightly` and `deploy` share `concurrency: prod`, so they never overlap.
+- The jobs that write prod (`ingest`, `build`, `deploy`) share `concurrency: prod`, so they never overlap.
 - Every DB job carries `if: github.event.pull_request.head.repo.full_name == github.repository`
   where it runs on PRs.
 - The prod manifest lives at `gs://vitlamdata_dbt_postgres/dbt-state/`.
@@ -350,8 +355,8 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | Item | Decide when |
 |---|---|
 | Which marts `reporter_public` can read | when the first marts exist |
-| WordPress/Tutor table list and write disposition per table | implementing `el/load.py` |
-| Google Sheets list | implementing `el/load.py` |
+| WordPress/Tutor table list and write disposition per table | implementing its `ingestion/` pipeline |
+| Google Sheets list | implementing its `ingestion/` pipeline |
 | Delete check for hard deletes | only if source row counts drift |
 | Lark group and bot | before nightly goes live |
 | Porting the old `vitlamdata` models | separate spec |

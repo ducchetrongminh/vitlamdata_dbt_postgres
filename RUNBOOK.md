@@ -53,6 +53,86 @@ A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
 
 Hash PII in staging with `{{ hash_pii('column') }}`.
 
+## Ingestion (`ingestion/`)
+
+dlt copies each source into `raw_<source>` (architecture §3). Nightly runs it
+as `loader`. Each source is a folder, `ingestion/<source>/`: `pipeline.py` runs it, and
+`.dlt/config.toml` holds its tables, write dispositions and cursors.
+Credentials for all sources are in `ingestion/credentials.toml` as `${VAR}`
+references to env vars, like `env_var()` in `profiles.yml`; `ingestion/setup.py`
+fills them in. Sources: `wordpress`.
+
+Its dependencies are the `ingestion` group in `pyproject.toml`, in the same `.venv`.
+
+### Run one source load locally
+
+Your login cannot write `raw_*`, so load into a schema of your own. It needs
+the tunnel to forward 3306 too:
+
+```bash
+gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -N \
+  -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
+```
+
+In `.env`, set the `MARIADB_*` vars (`.env.example`). The warehouse login
+reuses your `PG*` values. Then, from the repo root:
+
+```bash
+source .venv/bin/activate
+set -a; . ./.env; set +a
+WORDPRESS__DATASET_NAME=dbt_duc_raw_wordpress python -m ingestion.wordpress.pipeline
+```
+
+dlt creates that schema and its `_staging` twin. To reload every table and
+reset the cursors (what nightly `full_refresh` does), add `REFRESH=drop_data`.
+When done, drop both schemas and the local pipeline state,
+`~/.dlt/pipelines/wordpress`; otherwise its saved cursor makes the
+next load into a fresh schema skip rows.
+
+### Nightly and manual loads
+
+`nightly.yml` runs at 02:00 ICT: `ingest.yml` loads every source, then (#9)
+dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
+
+- **Load now, without dbt:** Actions → ingest → Run workflow.
+- **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
+  to repeat: merge tables update in place, replace tables are reloaded.
+- **full_refresh:** tick it after rows were hard-deleted in a source, or after
+  a model logic change. It reloads every table from scratch and (#9) rebuilds
+  every model with `--full-refresh`. Use it on nightly, not on ingest alone:
+  reloading raw without the dbt rebuild leaves incremental marts stale.
+
+### Add a table
+
+1. Add it to `table_names` under `[sources.wordpress]` in
+   `ingestion/wordpress/.dlt/config.toml`. It gets the default, `replace`.
+2. If it holds credentials (password hashes, tokens, keys), keep them out:
+   columns with `excluded_columns` in the table's own section, like `wp_users`;
+   rows with a query filter in `pipeline.py`, like `wp_usermeta`.
+3. Run a local load and check the table.
+
+### Switch a table from replace to merge
+
+Only when the table has a cursor column that changes on every update
+(architecture §3), and a primary key in the source (dlt reads it from there).
+
+1. Give the table its own section in `ingestion/wordpress/.dlt/config.toml`, like `wp_posts`:
+
+   ```toml
+   [sources.wordpress.wp_posts]
+   write_disposition = { disposition = "merge" }
+   incremental = { cursor_path = "post_modified_gmt" }
+   ```
+
+2. Run a local load twice, then check that the primary key has no duplicates:
+
+   ```sql
+   select count(*), count(distinct id) from dbt_duc_raw_wordpress.wp_posts;
+   ```
+
+Merge does not see hard deletes. Nightly with `full_refresh` truncates every
+table and reloads it, which catches them.
+
 ## Claude Code Remote Control
 
 Recommended. `.devcontainer/postCreate.sh` turns it on for all your sessions in

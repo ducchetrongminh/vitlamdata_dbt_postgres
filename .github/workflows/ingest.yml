@@ -1,0 +1,87 @@
+name: ingest
+
+# Load every source in ingestion/ into raw_<source> with dlt, as `loader`
+# (docs/architecture.md §3). nightly.yml calls it before dbt; Run workflow
+# (workflow_dispatch) loads on its own, without a dbt build.
+#
+# full_refresh: REFRESH=drop_data truncates every table and resets the cursors,
+# so the load is complete and catches hard deletes. Alone it leaves incremental
+# marts stale: for a full refresh of everything, run nightly with full_refresh.
+on:
+  workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: Reload every table from scratch
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      full_refresh:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # WIF
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    # Environment prod: the only OIDC subject (with ci) dbt-runner accepts.
+    environment: prod
+    # Shared with every job that writes prod, so they never overlap.
+    concurrency: prod
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: "5433"
+      PGDATABASE: vitlamdata_dw
+      PGUSER: loader
+      MARIADB_HOST: 127.0.0.1
+      MARIADB_PORT: "3306"
+      MARIADB_DATABASE: wordpress
+      MARIADB_USER: dlt_reader
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/541617847124/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: dbt-runner@vit-lam-data.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Same flags as terraform.yml: keys expire so they do not pile up in the
+      # OS Login profile; host-key checking stays on (architecture §8).
+      - name: Open SSH tunnel to MariaDB and postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes \
+            -L 3306:127.0.0.1:3306 -L 5433:127.0.0.1:5433
+
+      - name: Passwords from Secret Manager
+        run: |
+          for pair in PGPASSWORD=dw-loader MARIADB_PASSWORD=dlt-reader-mariadb; do
+            var="${pair%%=*}"; secret="${pair#*=}"
+            pw="$(gcloud secrets versions access latest --secret="$secret")"
+            [ -n "$pw" ] || { echo "$secret is empty"; exit 1; }
+            echo "::add-mask::$pw"
+            echo "$var=$pw" >> "$GITHUB_ENV"
+          done
+
+      - uses: astral-sh/setup-uv@v6
+
+      - run: uv sync --frozen --only-group ingestion
+
+      # Every ingestion/<source>/pipeline.py, so a new source needs no change here.
+      # dlt restores each pipeline's cursors from the warehouse.
+      - name: Load sources
+        run: |
+          source .venv/bin/activate
+          if [ "${{ inputs.full_refresh }}" = true ]; then export REFRESH=drop_data; fi
+          for p in ingestion/*/pipeline.py; do
+            module="$(dirname "$p" | tr / .).pipeline"
+            echo "::group::$module"
+            python -m "$module"
+            echo "::endgroup::"
+          done
