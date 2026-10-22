@@ -19,7 +19,9 @@ Metabase can read; the whole warehouse can be rebuilt from code and sources alon
 - **Code public, data private.** The repo is public. Data, credentials and the VM stay private.
 - **Daily batch, small data.** Freshness of one day is enough. Tables are up to a few million rows.
 - **The warehouse is not backed up** (infras ADR 0008). Everything in it must be rebuildable
-  from sources. Nothing may land in it that has no other copy.
+  from sources. Nothing may land in it that has no other copy. The one exception is the
+  `snapshots` schema: dbt snapshots hold history that no source keeps, so infras backs up
+  that schema nightly (vitlamdata_infras#157).
 - **One maintainer.**
 
 ### Out of scope
@@ -104,6 +106,7 @@ and CI side by side.
 | `staging` | `transformer` | dbt views: rename, cast, hash PII |
 | `intermediate` | `transformer` | only intermediate models overridden to view/table |
 | `mart_<domain>` (e.g. `mart_sales`, `mart_metabase`) | `transformer` | `fact_*` / `dim_*` tables |
+| `snapshots` | `transformer` | dbt snapshots of raw tables, 1:1 like `raw_*` (PII unhashed); the only backed-up schema |
 | `private` | superuser | `pii_key` table (one row), readable by `transformer` and `developer` |
 | `dbt_<user>_*` | that developer | dev builds |
 | `ci_pr_<n>_*` | `ci` | PR builds, kept until the PR closes |
@@ -115,8 +118,10 @@ and CI side by side.
 ```
 ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/credentials.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
-models/02_intermediate/<domain>/ int_<domain>__<verb>.sql
+models/01_staging/<source>/base/ base_<source>__<entity>.sql (only when one table holds several entities)
+models/02_intermediate/<domain>/ int_<entity>_<verb_phrase>.sql
 models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
+snapshots/<source>/              snap_<source>__<table>.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql
 tests/assert_no_pii_in_marts.sql
@@ -124,7 +129,9 @@ terraform/
 profiles.yml
 ```
 
-Naming follows the dbt Labs style guide, except marts use `fact_` (not `fct_`).
+Naming follows the dbt Labs style guide, except marts use `fact_` (not `fct_`). The full rules are in
+[DW Naming Conventions](dw-naming-conventions.md), [dbt Layers Conventions](dbt-layers-conventions.md)
+and [Dimensional Modeling Standards](dimensional-modeling-standards.md).
 
 ### Materializations
 
@@ -192,8 +199,8 @@ revoked on the database and on the `public` schema.
 | Role | Login | Privileges |
 |---|---|---|
 | `loader` | yes | owns `raw_*` and `raw_*_staging` |
-| `transformer` | yes | owns `staging`, `intermediate`, `mart_*`; `SELECT` on `raw_*` and `private.pii_key` |
-| `developer` | no (group) | `CREATE` on the database; `SELECT` on `raw_*`, `staging`, `intermediate`, `mart_*` and `private.pii_key`; no write on prod schemas |
+| `transformer` | yes | owns `staging`, `intermediate`, `mart_*`, `snapshots`; `SELECT` on `raw_*` and `private.pii_key` |
+| `developer` | no (group) | `CREATE` on the database; `SELECT` on `raw_*`, `staging`, `intermediate`, `mart_*`, `snapshots` and `private.pii_key`; no write on prod schemas |
 | `ci` | yes | member of `developer` |
 | personal dev logins | yes | members of `developer` |
 | `reporter_public` | yes | `CONNECT`; `USAGE` + `SELECT` on the public marts only. **The list of marts will be decided later.** Metabase connects as this role |
@@ -329,9 +336,10 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
    - the bucket `vitlamdata_dbt_postgres`, read and write for both service accounts
    - the VM publishing its SSH host keys as guest attributes, and a project role for
      both service accounts to read them and the project (`gcloud compute ssh` needs both)
-4. **Metabase:** add a database connection to `vitlamdata_dw` as `reporter_public`. This is a
+4. **Backup:** dump the `snapshots` schema nightly, amending ADR 0008 (vitlamdata_infras#157).
+5. **Metabase:** add a database connection to `vitlamdata_dw` as `reporter_public`. This is a
    manual step in the Metabase admin UI.
-5. **After cutover:** retire `duck_data`, `sales` and `sales_normalized` from infras
+6. **After cutover:** retire `duck_data`, `sales` and `sales_normalized` from infras
    `postgres/`.
 
 ## 12. Security notes
@@ -380,3 +388,4 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | Deploy | on merge | prod reflects `main` within minutes |
 | Terraform apply | automatic on merge, `prevent_destroy` guard | maintainer's choice; plan is visible in the PR |
 | Contracts | marts only | protects the public Metabase interface |
+| Snapshot history | raw tables, only for dims that need history; own `snapshots` schema, dumped nightly by infras | the only data with no other copy; dlt history in raw would be wiped by `full_refresh` |
