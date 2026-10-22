@@ -109,8 +109,8 @@ Rename every column to lower_snake_case at the staging layer, regardless of sour
 ```sql
 -- Yes: stg_crm__customer.sql renames source camelCase to snake_case
 select
-    customerId as customer_id,
-    customerLifetimeValue as customer_lifetime_value
+    "customerId" as customer_id,                          -- quoted: Postgres folds unquoted names to lowercase
+    "customerLifetimeValue" as customer_lifetime_value
 from {{ source('crm', 'customer') }}
 ```
 
@@ -118,7 +118,7 @@ from {{ source('crm', 'customer') }}
 
 Source systems often expose columns named after internal implementation details — a table code, a legacy field name, a system-specific abbreviation — that mean nothing to a business user reading a report.
 
-Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in source-freshness documentation, never as the column name past `01_staging`.
+Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
 
 ```sql
 -- Yes: stg_wordpress__course.sql renames WordPress's generic post columns to their business meaning
@@ -223,10 +223,10 @@ Marts use `fact_`, not dbt Labs' `fct_`.
 
 ```
 -- Yes:
-models/01_staging/wordpress/stg_wordpress__order_item.sql
-models/02_intermediate/sales/int_order_item_joined_to_header.sql
+models/01_staging/wordpress/stg_wordpress__order_line.sql
+models/02_intermediate/sales/int_order_line_joined_to_header.sql
 models/03_mart/sales/dim_course.sql
-models/03_mart/sales/fact_order_item.sql
+models/03_mart/sales/fact_order_line.sql
 ```
 
 ```
@@ -248,7 +248,7 @@ An entity name is the noun portion of a model name after its layer prefix — `c
 
 #### Cons
 - Departs from the [dbt best practices guide](https://docs.getdbt.com/best-practices/how-we-structure/2-staging) and most dbt community examples, which use plural
-- Some intermediate names read less naturally (`int_payment_pivoted_to_order` vs. `int_payment_pivoted_to_order`)
+- Some intermediate names read less naturally (`int_payment_pivoted_to_order` vs. plural `int_payments_pivoted_to_orders`)
 
 #### Decision
 Use the singular noun for the entity portion of a model name in every layer: `stg_`, `int_`, `dim_`, and `fact_`. Raw source table names keep their own spelling in `_<source>__sources.yml` and `source()`, since they must match the database — staging renames them.
@@ -287,7 +287,7 @@ Name every staging model `stg_<source>__<entity>`, using the singular entity nou
 
 ```
 -- Yes:
-models/01_staging/wordpress/stg_wordpress__order_item.sql
+models/01_staging/wordpress/stg_wordpress__order_line.sql
 models/01_staging/metabase/stg_metabase__dashboard.sql
 models/01_staging/wordpress/base/base_wordpress__post.sql   -- wp_posts, every post type
 models/01_staging/wordpress/stg_wordpress__course.sql       -- reads base_wordpress__post
@@ -352,7 +352,7 @@ Exception: the date dimension is keyed by the date value itself, not suffixed `_
 -- Yes: surrogate key and natural keys suffixed by origin
 select
     customer_key,     -- DW-generated surrogate key
-    customer_id,      -- natural key from CRM source
+    customer_id,      -- natural key from the source
     coupon_code       -- natural key, alphanumeric code from source
 from {{ ref('dim_customer') }}
 ```
@@ -380,6 +380,8 @@ See [Dimensional Modeling Standards, Role playing dimension](dimensional-modelin
 
 #### Decision
 When a fact table references the same dimension in more than one role, name each foreign key `<passive_verb>_by_<entity>_key`. Never point two foreign keys at the same conformed dimension without a role prefix.
+
+Exception: a date role is named `<role>_date` (`order_date`, `ship_date`), since the date dimension is keyed by the date itself — see [4.1](#41-key-column-suffixes).
 
 ```sql
 -- Yes: each foreign key to dim_employee names its role
@@ -495,18 +497,22 @@ Suffix a date-only column with `_date`, a time-only column with `_time`, and a f
 #### Decision
 Suffix every date-only column with `_date`, every time-only column with `_time`, and every combined date-plus-time column with `_at`. Never use `_date` for a column that also carries a time component.
 
+A date or time column with no timezone suffix is in Vietnam time (`Asia/Ho_Chi_Minh`): `_at`, `_date`, and `_time`. A value in another timezone adds the timezone as a suffix — `_at_<timezone>`, `_date_<timezone>`, `_time_<timezone>` — in practice only `_utc`. Store `_at` as `timestamp` (without time zone), so the suffix states what the wall-clock value means. Convert in staging, e.g. `created_at_utc at time zone 'UTC' at time zone 'Asia/Ho_Chi_Minh' as created_at`.
+
 ```sql
 -- Yes: suffix matches what each column actually stores
 select
     order_id,
-    order_date,         -- date only
-    order_time,         -- time only
-    order_at            -- date and time together
+    order_date,         -- date only, Vietnam time
+    order_time,         -- time only, Vietnam time
+    order_at,           -- date and time together, Vietnam time
+    order_at_utc,       -- same moment in UTC
+    order_date_utc      -- date of order_at_utc
 from {{ ref('stg_shop__order') }}
 ```
 
 ### 4.7 Standard fact prefixes and suffixes
-Name a fact measure with a standard prefix for what kind of value it is and a standard suffix for its unit.
+Suffix a fact measure with a standard term for its unit; prefix it with a standard term when it is a variant of a value.
 
 #### Definition
 A fact measure's prefix states which variant of a value it is (actual, planned, allocated); its suffix states the unit the value is expressed in (quantity, amount, percent).
@@ -520,7 +526,7 @@ A fact measure's prefix states which variant of a value it is (actual, planned, 
 - A measure that isn't a clean fit for any standard prefix or suffix still needs one assigned, forcing a judgment call
 
 #### Decision
-Prefix a fact measure with the standard term for what kind of value it holds, and suffix it with the standard term for its unit. Only add a new prefix or suffix to these tables in a PR that updates this doc.
+Suffix every fact measure with the standard term for its unit. When a measure is a variant (budget, actual, allocated, gross, net…), prefix it with the standard term for that variant. Only add a new prefix or suffix to these tables in a PR that updates this doc.
 
 **Prefixes**
 
@@ -545,7 +551,7 @@ Prefix a fact measure with the standard term for what kind of value it holds, an
 | `_rate` | a ratio expressed per unit of another measure |
 | `_count` | a count of discrete items |
 
-**Currency suffixes** — apply to any amount measure that isn't already in the accounting currency
+**Currency suffixes** — which currency an amount is in
 
 | Suffix | Meaning |
 |---|---|

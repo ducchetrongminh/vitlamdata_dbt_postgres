@@ -269,11 +269,11 @@ joined_to_header as (
         h.order_no,
         h.order_date,
         h.customer_id,
-        h.order_discount,
+        h.order_discount_amt,
         l.line_no,
         l.product_id,
-        l.line_amount,
-        sum(l.line_amount) over (partition by h.order_no) as order_line_amount_total
+        l.line_amt,
+        sum(l.line_amt) over (partition by h.order_no) as order_line_amt_total
     from {{ ref('stg_shop__order_header') }} h
     join {{ ref('stg_shop__order_line') }} l on h.order_no = l.order_no
 ),
@@ -285,8 +285,8 @@ allocated as (
         customer_id,
         line_no,
         product_id,
-        line_amount,
-        order_discount * (line_amount / order_line_amount_total) as allocated_discount   -- avoids double-counting
+        line_amt,
+        order_discount_amt * line_amt / nullif(order_line_amt_total, 0) as allocated_discount_amt   -- avoids double-counting
     from joined_to_header
 )
 
@@ -322,9 +322,9 @@ Materialize as table or incremental, grouped into subfolders by business domain,
 - **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `delete+insert` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
 
 ```sql
--- Yes: fact_order_item.sql
+-- Yes: fact_order_line.sql
 select ...
-from {{ ref('int_order_item_joined_to_header') }}
+from {{ ref('int_order_line_joined_to_header') }}
 {% if is_incremental() %}
 where updated_at >= (select max(updated_at) from {{ this }})
 {% endif %}
@@ -410,17 +410,17 @@ from {{ ref('stg_metabase__query_execution') }}
 ```
 
 ```sql
--- No: fact_order_item.sql — joining two staging models directly in a mart
+-- No: fact_order_line.sql — joining two staging models directly in a mart
 select
-    i.order_item_id,
+    l.order_line_id,
     o.order_date,
     o.customer_id,
-    i.course_id,
-    i.sale_amt
-from {{ ref('stg_wordpress__order_item') }} i
-join {{ ref('stg_wordpress__order') }} o on i.order_id = o.order_id
--- should be: int_order_item_joined_to_header.sql in 02_intermediate,
--- with fact_order_item.sql in 03_mart referencing that instead
+    l.course_id,
+    l.sale_amt
+from {{ ref('stg_wordpress__order_line') }} l
+join {{ ref('stg_wordpress__order') }} o on l.order_id = o.order_id
+-- should be: int_order_line_joined_to_header.sql in 02_intermediate,
+-- with fact_order_line.sql in 03_mart referencing that instead
 ```
 
 ## 6. Snapshots
