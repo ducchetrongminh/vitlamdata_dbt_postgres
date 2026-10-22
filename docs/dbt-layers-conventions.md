@@ -333,6 +333,7 @@ where updated_at >= (select max(updated_at) from {{ this }})
 - **Folder grouping** — subfolders by business domain (e.g. `03_mart/sales`, `03_mart/metabase`). Each domain builds into its own prod schema `mart_<domain>`, so grants to the public Metabase can be set per domain.
 - **Contracts** — `contract: {enforced: true}` on every mart model, with every column and type declared ([Architecture §10](architecture.md#10-data-quality-and-docs)).
 - **Entity grain** — one model per dimension or fact table; a model must not mix grains.
+- **Fact foreign keys** — a fact computes each foreign key from the natural key with the dimension's formula, `generate_surrogate_key` over the same columns. It never joins or `ref()`s a dimension to look a key up, so facts and dimensions build in parallel. Exception: a fact referencing a [Type 6 dimension](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd) joins it on the natural key and the fact date within `row_effective_date`/`row_expiration_date`, since the key also depends on the effective date.
 - **No PII** — mart columns never hold raw PII; `assert_no_pii_in_marts` fails the build otherwise ([Architecture §6](architecture.md#6-pii)).
 
 ### 4.2 Apply dimensional modeling standards
@@ -366,7 +367,7 @@ select
 from {{ ref('dim_date') }}
 ```
 
-- **Slowly Changing Dimensions (SCD)** — a mart dimension tracks attribute history as Type 6 (Type 2 row + Type 3 column maintained via Type 1 overwrite), per [Slowly Changing Dimensions (SCD)](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd). The history comes from a snapshot, see [6](#6-snapshots).
+- **Slowly Changing Dimensions (SCD)** — a mart dimension is Type 1 by default; only a dimension whose reports need history is Type 6 (Type 2 row + Type 3 column maintained via Type 1 overwrite), per [Slowly Changing Dimensions (SCD)](dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd). The history comes from a snapshot, see [6](#6-snapshots).
 
 
 ## 5. Dependency Direction (ref() rules)
@@ -377,7 +378,7 @@ Data flows `01_staging` → `02_intermediate` → `03_mart`, never backward. A s
 - **Base models** — a staging model may `ref()` a base model of its own source, and nothing else in `01_staging`.
 - **No backward refs** — a staging model must never `ref()` an intermediate or mart model. An intermediate model must never `ref()` a mart model.
 - **Snapshots** — a snapshot reads one raw source table; only that table's staging model may `ref()` the snapshot (see [6](#6-snapshots)).
-- **Same-layer refs** — intermediate models may `ref()` other intermediate models (see [3.1](#31-intermediate-structural-constraints)); mart models may `ref()` other mart models (dim/fact cross-refs, role-playing views).
+- **Same-layer refs** — intermediate models may `ref()` other intermediate models (see [3.1](#31-intermediate-structural-constraints)); mart models may `ref()` other mart models (role-playing views over a dimension, a fact rolled up from another fact, a fact joining a Type 6 dimension). A fact does not `ref()` a Type 1 dimension for its keys (see [4.1](#41-mart-structural-constraints)).
 
 See [dbt Labs: How we structure](https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview?version=2.0) for the overall DAG shape ("narrow the DAG, widen the tables").
 

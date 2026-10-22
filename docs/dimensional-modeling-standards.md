@@ -565,8 +565,8 @@ select
     o.order_no,             -- PK, degenerate dimension, header-level
     l.line_no,              -- PK, degenerate dimension, line-level
     o.order_date,           -- header-level FK
-    o.customer_key,         -- header-level FK
-    l.product_key,          -- line-level FK
+    {{ dbt_utils.generate_surrogate_key(['o.customer_id']) }} as customer_key,   -- header-level FK
+    {{ dbt_utils.generate_surrogate_key(['l.product_id']) }} as product_key,     -- line-level FK
     l.quantity,
     l.net_amt
 from {{ ref('stg_shop__order_header') }} o
@@ -598,7 +598,6 @@ Store every derived additive fact as a physical column in the fact table, comput
 select
     order_no,
     line_no,
-    product_key,
     quantity,
     unit_price,
     quantity * unit_price as gross_amt   -- derived additive fact, stored
@@ -610,7 +609,6 @@ from {{ ref('stg_shop__order_line') }}
 select
     order_no,
     line_no,
-    product_key,
     quantity,
     unit_price
     -- every report/BI tool must remember to multiply quantity * unit_price,
