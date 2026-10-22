@@ -444,14 +444,14 @@ from {{ ref('dim_date') }}
 ```sql
 -- No: base dimension joined 3x with unprefixed columns — attribute names collide
 select
-    o.order_id,
-    d1.calendar_year as order_calendar_year,
-    d2.calendar_year,   -- ambiguous: also "calendar_year", caller must alias every column
-    d3.calendar_year
-from {{ ref('fact_order') }} o
-left join {{ ref('dim_date') }} d1 on o.order_date = d1.date
-left join {{ ref('dim_date') }} d2 on o.ship_date = d2.date
-left join {{ ref('dim_date') }} d3 on o.delivery_date = d3.date
+    fact_order.order_id,
+    dim_order_date.calendar_year as order_calendar_year,
+    dim_ship_date.calendar_year,   -- ambiguous: also "calendar_year", caller must alias every column
+    dim_delivery_date.calendar_year
+from {{ ref('fact_order') }} as fact_order
+left join {{ ref('dim_date') }} as dim_order_date on fact_order.order_date = dim_order_date.date
+left join {{ ref('dim_date') }} as dim_ship_date on fact_order.ship_date = dim_ship_date.date
+left join {{ ref('dim_date') }} as dim_delivery_date on fact_order.delivery_date = dim_delivery_date.date
 ```
 
 ### 1.8 Conformed Dimensions
@@ -478,13 +478,13 @@ Conform every dimension to one governed standard: identical surrogate keys where
 ```sql
 -- Yes: fact_sales and fact_inventory both group by calendar_month, both return 'July'
 select calendar_month, sum(sales_amt) as sales_amt
-from {{ ref('fact_sales') }} s
-join {{ ref('dim_date') }} d on s.order_date = d.date
+from {{ ref('fact_sales') }} as fact_sales
+join {{ ref('dim_date') }} as dim_date on fact_sales.order_date = dim_date.date
 group by calendar_month
 
 select calendar_month, sum(inventory_qty) as inventory_qty
-from {{ ref('fact_inventory') }} i
-join {{ ref('dim_date') }} d on i.transaction_date = d.date
+from {{ ref('fact_inventory') }} as fact_inventory
+join {{ ref('dim_date') }} as dim_date on fact_inventory.transaction_date = dim_date.date
 group by calendar_month
 -- results from both queries align in a drill-across report on calendar_month
 ```
@@ -574,15 +574,15 @@ erDiagram
 ```sql
 -- Yes: fact_order_line.sql — header-level keys rolled down onto the line grain
 select
-    o.order_no,             -- PK, degenerate dimension, header-level
-    l.line_no,              -- PK, degenerate dimension, line-level
-    o.order_date,           -- header-level FK
-    {{ dbt_utils.generate_surrogate_key(['o.customer_id']) }} as customer_key,   -- header-level FK
-    {{ dbt_utils.generate_surrogate_key(['l.product_id']) }} as product_key,     -- line-level FK
-    l.quantity,
-    l.net_amt
-from {{ ref('stg_shop__order_header') }} o
-join {{ ref('stg_shop__order_line') }} l on o.order_no = l.order_no
+    header.order_no,             -- PK, degenerate dimension, header-level
+    line.line_no,                -- PK, degenerate dimension, line-level
+    header.order_date,           -- header-level FK
+    {{ dbt_utils.generate_surrogate_key(['header.customer_id']) }} as customer_key,   -- header-level FK
+    {{ dbt_utils.generate_surrogate_key(['line.product_id']) }} as product_key,       -- line-level FK
+    line.quantity,
+    line.net_amt
+from {{ ref('stg_shop__order_header') }} as header
+join {{ ref('stg_shop__order_line') }} as line on header.order_no = line.order_no
 ```
 
 

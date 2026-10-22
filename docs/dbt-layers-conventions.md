@@ -248,13 +248,13 @@ flowchart LR
 -- int_brand_denormalized.sql
 denormalized as (
     select
-        b.brand_id,
-        b.brand_name,
-        coalesce(sc.subcategory_name, 'Unknown') as subcategory_name,   -- subcategory_id = -1 finds no row
-        coalesce(c.category_name, 'Unknown') as category_name
-    from {{ ref('stg_shop__brand') }} b
-    left join {{ ref('stg_shop__subcategory') }} sc on b.subcategory_id = sc.subcategory_id
-    left join {{ ref('stg_shop__category') }} c on sc.category_id = c.category_id
+        brand.brand_id,
+        brand.brand_name,
+        coalesce(subcategory.subcategory_name, 'Unknown') as subcategory_name,   -- subcategory_id = -1 finds no row
+        coalesce(category.category_name, 'Unknown') as category_name
+    from {{ ref('stg_shop__brand') }} as brand
+    left join {{ ref('stg_shop__subcategory') }} as subcategory on brand.subcategory_id = subcategory.subcategory_id
+    left join {{ ref('stg_shop__category') }} as category on subcategory.category_id = category.category_id
 )
 -- later we will denormalize this into dim_product, see 4.2 for example
 ```
@@ -266,16 +266,16 @@ denormalized as (
 -- int_order_line_joined_to_header.sql
 joined_to_header as (
     select
-        h.order_no,
-        h.order_date,
-        h.customer_id,
-        h.order_discount_amt,
-        l.line_no,
-        l.product_id,
-        l.line_amt,
-        sum(l.line_amt) over (partition by h.order_no) as order_line_amt_total
-    from {{ ref('stg_shop__order_header') }} h
-    join {{ ref('stg_shop__order_line') }} l on h.order_no = l.order_no
+        header.order_no,
+        header.order_date,
+        header.customer_id,
+        header.order_discount_amt,
+        line.line_no,
+        line.product_id,
+        line.line_amt,
+        sum(line.line_amt) over (partition by header.order_no) as order_line_amt_total
+    from {{ ref('stg_shop__order_header') }} as header
+    join {{ ref('stg_shop__order_line') }} as line on header.order_no = line.order_no
 ),
 
 allocated as (
@@ -346,16 +346,16 @@ Most directly relevant to mart construction:
 ```sql
 -- Yes: dim_product.sql — joins each flattened hierarchy onto the product grain
 select
-    {{ dbt_utils.generate_surrogate_key(['p.product_id']) }} as product_key,
-    p.product_id,
-    p.product_name,
+    {{ dbt_utils.generate_surrogate_key(['product.product_id']) }} as product_key,
+    product.product_id,
+    product.product_name,
     brand.brand_name,
     brand.category_name,
     vendor.vendor_name,
     vendor.region_name
-from {{ ref('int_product_inserted_unknown') }} p
-left join {{ ref('int_brand_denormalized') }} brand on p.brand_id = brand.brand_id
-left join {{ ref('int_vendor_denormalized') }} vendor on p.vendor_id = vendor.vendor_id
+from {{ ref('int_product_inserted_unknown') }} as product
+left join {{ ref('int_brand_denormalized') }} as brand on product.brand_id = brand.brand_id
+left join {{ ref('int_vendor_denormalized') }} as vendor on product.vendor_id = vendor.vendor_id
 ```
 
 - **Role playing dimensions** — a mart may expose the same base dimension multiple times under different roles (e.g. `dim_order_date`, `dim_ship_date` from one date dimension), per [Role playing dimension](dimensional-modeling-standards.md#17-role-playing-dimension).
@@ -412,13 +412,13 @@ from {{ ref('stg_metabase__query_execution') }}
 ```sql
 -- No: fact_order_line.sql — joining two staging models directly in a mart
 select
-    l.order_line_id,
-    o.order_date,
-    o.customer_id,
-    l.course_id,
-    l.sale_amt
-from {{ ref('stg_wordpress__order_line') }} l
-join {{ ref('stg_wordpress__order') }} o on l.order_id = o.order_id
+    line.order_line_id,
+    order_header.order_date,
+    order_header.customer_id,
+    line.course_id,
+    line.sale_amt
+from {{ ref('stg_wordpress__order_line') }} as line
+join {{ ref('stg_wordpress__order') }} as order_header on line.order_id = order_header.order_id
 -- should be: int_order_line_joined_to_header.sql in 02_intermediate,
 -- with fact_order_line.sql in 03_mart referencing that instead
 ```

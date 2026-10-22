@@ -32,7 +32,7 @@ Naming rules for models, columns, folders, and schemas in this dbt project. Read
 ## 1. General Naming Principles
 
 ### 1.1 Descriptive over short
-Use a long, self-explanatory name over a short, fuzzy one.
+Use a long, self-explanatory name over a short, fuzzy one — for models, columns, CTEs, and aliases.
 
 #### Definition
 A descriptive name spells out what an entity or column represents in full words. A fuzzy name shortens or truncates it, trading clarity for keystrokes.
@@ -71,6 +71,28 @@ select
     monetary,
     rfm_segment
 from {{ ref('int_customer_scored_rfm') }}
+```
+
+Same for table aliases: use the shortest name that still says what the table is.
+
+```sql
+-- Yes: each alias reads as the entity it holds
+select
+    header.order_no,
+    line.line_no,
+    line.product_id
+from {{ ref('stg_shop__order_header') }} as header
+join {{ ref('stg_shop__order_line') }} as line on header.order_no = line.order_no
+```
+
+```sql
+-- No: single-letter aliases — reader must scroll to the from clause to decode every column
+select
+    o.order_no,
+    l.line_no,
+    l.product_id
+from {{ ref('stg_shop__order_header') }} o
+join {{ ref('stg_shop__order_line') }} l on o.order_no = l.order_no
 ```
 
 ### 1.2 Abbreviations avoided
