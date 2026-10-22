@@ -51,7 +51,7 @@ Exception: the date dimension is a special case — key it by the date value its
 **Operational**
 ```mermaid
 erDiagram
-    CUSTOMER {
+    customer {
         int customer_id PK
         string name
     }
@@ -65,7 +65,7 @@ erDiagram
 **Dimensional**
 ```mermaid
 erDiagram
-    DIM_CUSTOMER {
+    dim_customer {
         string customer_key PK "surrogate key"
         int customer_id "natural key retained"
         string customer_name
@@ -182,25 +182,25 @@ Flatten known, fixed-depth hierarchies into attributes on the dimension row inst
 **Operational**
 ```mermaid
 erDiagram
-    PRODUCT }o--|| SUBCATEGORY : belongs_to
-    SUBCATEGORY }o--|| CATEGORY : belongs_to
-    CATEGORY }o--|| DEPARTMENT : belongs_to
-    PRODUCT {
+    product }o--|| subcategory : belongs_to
+    subcategory }o--|| category : belongs_to
+    category }o--|| department : belongs_to
+    product {
         int product_id PK
         string product_name
         int subcategory_id FK
     }
-    SUBCATEGORY {
+    subcategory {
         int subcategory_id PK
         string subcategory_name
         int category_id FK
     }
-    CATEGORY {
+    category {
         int category_id PK
         string category_name
         int department_id FK
     }
-    DEPARTMENT {
+    department {
         int department_id PK
         string department_name
     }
@@ -209,7 +209,7 @@ erDiagram
 **Dimensional**
 ```mermaid
 erDiagram
-    DIM_PRODUCT {
+    dim_product {
         string product_key PK "surrogate key"
         int product_id "natural key retained"
         string product_name
@@ -400,29 +400,29 @@ Build one physical dimension. For each role a fact table needs, create a dedicat
 **Dimensional**
 ```mermaid
 erDiagram
-    FACT_ORDER {
+    fact_order {
         string order_date FK
         string ship_date FK
         string delivery_date FK
     }
-    DIM_ORDER_DATE {
+    dim_order_date {
         date order_date PK
         string order_calendar_month
         string order_calendar_year
     }
-    DIM_SHIP_DATE {
+    dim_ship_date {
         date ship_date PK
         string ship_calendar_month
         string ship_calendar_year
     }
-    DIM_DELIVERY_DATE {
+    dim_delivery_date {
         date delivery_date PK
         string delivery_calendar_month
         string delivery_calendar_year
     }
-    FACT_ORDER }o--|| DIM_ORDER_DATE : order_date
-    FACT_ORDER }o--|| DIM_SHIP_DATE : ship_date
-    FACT_ORDER }o--|| DIM_DELIVERY_DATE : delivery_date
+    fact_order }o--|| dim_order_date : order_date
+    fact_order }o--|| dim_ship_date : ship_date
+    fact_order }o--|| dim_delivery_date : delivery_date
 ```
 
 ```sql
@@ -516,13 +516,13 @@ Never build a separate header-grain fact table for a header/line source. Include
 **Operational**
 ```mermaid
 erDiagram
-    ORDER_HEADER ||--|{ ORDER_LINE : contains
-    ORDER_HEADER {
+    order_header ||--|{ order_line : contains
+    order_header {
         string order_id PK
         date order_date
         int customer_id FK
     }
-    ORDER_LINE {
+    order_line {
         string order_id PK
         int line_number PK
         int product_id FK
@@ -531,14 +531,14 @@ erDiagram
     }
 ```
 
-ORDER_HEADER
+order_header
 
 | order_id | order_date | customer_id |
 |---|---|---|
 | ORD-1001 | 2026-06-01 | 101 |
 | ORD-1002 | 2026-06-03 | 102 |
 
-ORDER_LINE
+order_line
 
 | order_id | line_number | product_id | quantity | net_amount |
 |---|---|---|---|---|
@@ -551,7 +551,7 @@ ORDER_LINE
 **Dimensional**
 ```mermaid
 erDiagram
-    FACT_ORDER_LINE {
+    fact_order_line {
         string order_line_key PK "surrogate key over order_no, line_no"
         string order_no "degenerate dimension, header-level"
         int line_no "degenerate dimension, line-level"
