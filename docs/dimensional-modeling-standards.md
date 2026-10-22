@@ -1,6 +1,6 @@
 # Dimensional Modeling Standards
 
-Dimensional Modelling is the ultimate data modelling architecture for data warehouses. These standards govern the `03_mart` layer — see [dbt Layers Conventions](dbt-layers-conventions.md) for where each transformation runs, and [DW Naming Conventions](dw-naming-conventions.md) for column names. Examples use a hypothetical `shop` source.
+Dimensional modeling (Kimball) is the modeling approach for this warehouse. These standards govern the `03_mart` layer — see [dbt Layers Conventions](dbt-layers-conventions.md) for where each transformation runs, and [DW Naming Conventions](dw-naming-conventions.md) for column names. Examples use a hypothetical `shop` source.
 
 ## Table of Contents
 
@@ -44,9 +44,9 @@ A surrogate key is a warehouse-managed primary key assigned to every dimension r
 - Requires a consistent generation strategy across all models
 
 #### Decision
-Create a surrogate key on every dimension and fact table. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns.
+Create a surrogate key on every dimension and fact table. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns. On a fact, those are the columns of its grain (e.g. `order_no`, `line_no` on `fact_order_line`).
 
-Exception: the date dimension is a special case — key it by the date value itself, not a generated hash, since a date is already unique, stable, and meaningful without hashing.
+Exception: the date dimension is a special case — key it by the date value itself, not a generated hash, since a date is already unique, stable, and meaningful without hashing. Its unknown row is the date `'1900-01-01'`, with `'Unknown'` in every text attribute; a fact fills a null date foreign key with `'1900-01-01'` in staging.
 
 **Operational**
 ```mermaid
@@ -67,7 +67,7 @@ erDiagram
 erDiagram
     DIM_CUSTOMER {
         string customer_key PK "surrogate key"
-        int customer_id FK "natural key retained"
+        int customer_id "natural key retained"
         string customer_name
     }
 ```
@@ -95,10 +95,16 @@ select
 ```
 
 ```sql
--- No:
+-- No: natural key used as the primary key
 select
-    customer_id as customer_key,                              -- natural key used as PK
-    row_number() over (order by customer_id) as customer_key  -- sequence: not idempotent
+    customer_id as customer_key,
+    ...
+```
+
+```sql
+-- No: sequence as the key — not idempotent, a row's key changes when rows are added
+select
+    row_number() over (order by customer_id) as customer_key,
     ...
 ```
 
@@ -118,7 +124,7 @@ Dimension tables must include a default row — representing "no dimension attac
 - Every dimension needs an extra unioned row, kept in sync with the real-row key generation strategy
 
 #### Decision
-Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Source ids are auto-increment from 1, so `-1` never collides with a real row. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
+Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
 
 ```sql
 -- Yes: int_customer_inserted_unknown.sql
@@ -269,6 +275,7 @@ Report grouped on textual indicator (self-describing) — `group by holiday_indi
         when 'D' then 'Delivered'
         when 'C' then 'Cancelled'
         when 'R' then 'Returned'
+        else 'Unknown'
     end as order_status
 ```
 
@@ -305,6 +312,7 @@ For example, a VIN's first three characters (the WMI) identify the manufacturer,
         when '1HG' then 'Honda'
         when '5YJ' then 'Tesla'
         when '1FT' then 'Ford'
+        else 'Unknown'
     end as manufacturer_name,           -- WMI decoded against the WMI registry
 ```
 
@@ -339,11 +347,14 @@ Null-valued dimension attributes occur when a dimension row hasn't been fully po
 Replace null, empty string `''` or equivalent empty-value `NA` `N/A` with `'Unknown'` at transform time using `coalesce`.
 
 ```sql
--- Yes:
+-- Yes: stg_shop__customer.sql — null handling runs in staging
 select
     customer_id,
     coalesce(customer_segment, 'Unknown') as customer_segment,
-    coalesce(nullif(trim(customer_region), ''), nullif(customer_region, 'NA'), 'Unknown') as customer_region
+    coalesce(
+        case when trim(customer_region) in ('', 'NA') then null else customer_region end,
+        'Unknown'
+    ) as customer_region
 from {{ source('shop', 'customers') }}
 ```
 
@@ -541,8 +552,9 @@ ORDER_LINE
 ```mermaid
 erDiagram
     FACT_ORDER_LINE {
-        string order_no PK "degenerate dimension, header-level"
-        int line_no PK "degenerate dimension, line-level"
+        string order_line_key PK "surrogate key over order_no, line_no"
+        string order_no "degenerate dimension, header-level"
+        int line_no "degenerate dimension, line-level"
         string order_date FK "header-level"
         string customer_key FK "header-level"
         string product_key FK "line-level"
@@ -645,9 +657,9 @@ from {{ ref('stg_shop__order_line') }}
 ```sql
 -- No: shipping_cost_amt coalesced to 0 — corrupts avg(shipping_cost_amt) across shipped and unshipped lines
 select
-    order_id as order_no,
-    line_number as line_no,
-    coalesce(shipping_cost_amt, 0)   -- treats "not yet shipped" as "shipped for free"
+    order_no,
+    line_no,
+    coalesce(shipping_cost_amt, 0) as shipping_cost_amt   -- treats "not yet shipped" as "shipped for free"
 from {{ ref('stg_shop__order_line') }}
 ```
 
@@ -666,7 +678,7 @@ A null foreign key is a fact table dimension reference with no value. Unlike a n
 - Requires the referenced dimension to ship a default row (see [Null foreign keys](#12-null-foreign-keys)) for every not-applicable case
 
 #### Decision
-Never leave a fact table foreign key null. Resolve it to the referenced dimension's default row instead — see [Null foreign keys](#12-null-foreign-keys) for how that default row is built. Do it at the natural key, in staging: fill a null natural foreign key with `-1` (`'UNKNOWN'` for text keys) — see [dbt Layers Conventions, Value-level transformations](dbt-layers-conventions.md#23-value-level-transformations). The fact then builds its foreign key from the natural key with the same formula as the dimension, and the `-1` hashes to the default row's key.
+Never leave a fact table foreign key null. Resolve it to the referenced dimension's default row instead — see [Null foreign keys](#12-null-foreign-keys) for how that default row is built. Do it at the natural key, in staging: fill a null natural foreign key with `-1` (`'UNKNOWN'` for text keys, `'1900-01-01'` for dates) — see [dbt Layers Conventions, Value-level transformations](dbt-layers-conventions.md#23-value-level-transformations). The fact then builds its foreign key from the natural key with the same formula as the dimension, and the `-1` hashes to the default row's key.
 
 ```sql
 -- Yes: order placed with no salesperson assigned — staging fills -1, the fact's key resolves to dim_salesperson's default row
@@ -716,7 +728,7 @@ If the same measurement appears in more than one fact table, verify the technica
 select
     ...
     quantity * unit_price as revenue_amt,                        -- full price, all channels
-    revenue_amt - discount_amt as marketing_revenue_amt    -- excl. promotion-funded discount
+    quantity * unit_price - discount_amt as marketing_revenue_amt    -- excl. promotion-funded discount
 ```
 
 ```sql
@@ -728,9 +740,12 @@ select
     ...
     quantity * unit_price as revenue_amt
 
--- fact_budget.sql
+-- fact_budget.sql — actual revenue, part of the budget model's query
+...
 select product_key, period_key, sum(revenue_amt) as revenue_amt
 from {{ ref('fact_sales_line') }}
+group by product_key, period_key
+...
 ```
 
 ```sql
@@ -741,9 +756,12 @@ select
     ...
     quantity * unit_price as revenue_amt
 
--- fact_budget.sql
+-- fact_budget.sql — actual revenue, part of the budget model's query
+...
 select product_key, period_key, sum(revenue_amt - tax_amt) as revenue_amt   -- excl. tax
 from {{ ref('fact_sales_line') }}
+group by product_key, period_key
+...
 -- summed sales_line revenue (incl. tax) is compared against budget revenue (excl. tax) — variance is bogus
 ```
 
@@ -751,7 +769,7 @@ from {{ ref('fact_sales_line') }}
 
 ### 3.1 Slowly Changing Dimensions (SCD)
 
-Overwrite dimension attributes in place (Type 1) by default. Only when a dimension needs its history, track changes as Type 6: a new row per change (Type 2), plus a current-value column overwritten across every row for that member (Type 1), plus a previous-value column where analysts need the prior value without joining history rows (Type 3).
+Overwrite dimension attributes in place (Type 1) by default. Only when a dimension needs its history, track changes as Type 6: a new row per change (Type 2), plus a `current_<attribute>` column (Type 3) overwritten across every row for that member on each change (Type 1).
 
 #### Definition
 
@@ -769,23 +787,23 @@ Only when a report must show the value that was true when a fact happened, track
 
 **Original row in `dim_product`:**
 
-| product_key | sku | product_description | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
+| product_key | product_code | product_name | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
 |---|---|---|---|---|---|---|---|
-| 12345 | QZ-8810-M | Nova Blender 3000 | Home Appliances | Home Appliances | 2012-01-01 | 9999-12-31 | Current |
+| 3f9c21ab | QZ-8810-M | Nova Blender 3000 | Home Appliances | Home Appliances | 2012-01-01 | 9999-12-31 | Current |
 
 **Rows in `dim_product` following the first department reassignment (Home Appliances → Kitchen Appliances):**
 
-| product_key | sku | product_description | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
+| product_key | product_code | product_name | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
 |---|---|---|---|---|---|---|---|
-| 12345 | QZ-8810-M | Nova Blender 3000 | Home Appliances | Kitchen Appliances | 2012-01-01 | 2013-01-31 | Expired |
-| 25984 | QZ-8810-M | Nova Blender 3000 | Kitchen Appliances | Kitchen Appliances | 2013-02-01 | 9999-12-31 | Current |
+| 3f9c21ab | QZ-8810-M | Nova Blender 3000 | Home Appliances | Kitchen Appliances | 2012-01-01 | 2013-01-31 | Expired |
+| b7e40d12 | QZ-8810-M | Nova Blender 3000 | Kitchen Appliances | Kitchen Appliances | 2013-02-01 | 9999-12-31 | Current |
 
 **Rows in `dim_product` following the second department reassignment (Kitchen Appliances → Small Appliances):**
 
-| product_key | sku | product_description | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
+| product_key | product_code | product_name | historic_department_name | current_department_name | row_effective_date | row_expiration_date | current_row_indicator |
 |---|---|---|---|---|---|---|---|
-| 12345 | QZ-8810-M | Nova Blender 3000 | Home Appliances | Small Appliances | 2012-01-01 | 2013-01-31 | Expired |
-| 25984 | QZ-8810-M | Nova Blender 3000 | Kitchen Appliances | Small Appliances | 2013-02-01 | 2013-06-30 | Expired |
-| 31726 | QZ-8810-M | Nova Blender 3000 | Small Appliances | Small Appliances | 2013-07-01 | 9999-12-31 | Current |
+| 3f9c21ab | QZ-8810-M | Nova Blender 3000 | Home Appliances | Small Appliances | 2012-01-01 | 2013-01-31 | Expired |
+| b7e40d12 | QZ-8810-M | Nova Blender 3000 | Kitchen Appliances | Small Appliances | 2013-02-01 | 2013-06-30 | Expired |
+| d1a8f6c3 | QZ-8810-M | Nova Blender 3000 | Small Appliances | Small Appliances | 2013-07-01 | 9999-12-31 | Current |
 
-`historic_department_name` holds the value valid for that row's own period and never changes after the row is inserted (Type 2). `current_department_name` is overwritten in place across every row for the member on each new change, so all three rows always show today's value (Type 3 column, maintained via Type 1 response) — this is why row `12345`'s `current_department_name` reads "Small Appliances" even though that row's own period predates "Kitchen Appliances" entirely.
+`historic_department_name` holds the value valid for that row's own period and never changes after the row is inserted (Type 2). `current_department_name` is overwritten in place across every row for the member on each new change, so all three rows always show today's value (Type 3 column, maintained via Type 1 response) — this is why row `3f9c21ab`'s `current_department_name` reads "Small Appliances" even though that row's own period predates "Kitchen Appliances" entirely.

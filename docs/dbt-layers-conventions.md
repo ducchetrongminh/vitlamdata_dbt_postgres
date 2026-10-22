@@ -138,7 +138,7 @@ Continue the CTE chain from the last CTE of 2.2, one CTE per transformation type
   - Simple `case when` categorization.
 - **Null handling** — CTE `null_handled`:
   - Text attributes: null or empty → `'Unknown'`, per [Null Attributes in Dimensions](dimensional-modeling-standards.md#16-null-attributes-in-dimensions).
-  - Natural foreign keys: null → `-1` (`'UNKNOWN'` for text keys), the natural key of the dimension's unknown row, per [Null Foreign Keys in Fact Tables](dimensional-modeling-standards.md#24-null-foreign-keys-in-fact-tables). Every join and key hash downstream then lands on the unknown row, with no null left to special-case.
+  - Natural foreign keys: null → `-1` (`'UNKNOWN'` for text keys, `'1900-01-01'` for dates), the natural key of the dimension's unknown row, per [Null Foreign Keys in Fact Tables](dimensional-modeling-standards.md#24-null-foreign-keys-in-fact-tables). Every join and key hash downstream then lands on the unknown row, with no null left to special-case.
   - Measures stay null, per [Null Measures](dimensional-modeling-standards.md#23-null-measures).
 - **Derived facts** — CTE `derived` — calculate derived additive facts per [Derived additive facts](dimensional-modeling-standards.md#22-derived-additive-facts).
 
