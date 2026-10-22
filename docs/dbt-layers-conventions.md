@@ -204,7 +204,7 @@ See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-struc
 ### 3.2 Typical intermediate transformations
 Use the intermediate layer for joins, re-graining, and business-rule transformations that would clutter a mart model.
 
-- **Insert unknown/default dimension rows** — `int_<entity>_inserted_unknown` — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys).
+- **Insert unknown/default dimension rows** — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys), in the intermediate model at the dimension's grain. When the dimension already has an intermediate model at its grain, the union is that model's last CTE; otherwise add `int_<entity>_inserted_unknown`. The mart dimension then generates the surrogate key over every row, unknown included. So every dimension reads an intermediate model, never staging directly.
 
 ```sql
 -- Yes: inserted_unknown
@@ -237,7 +237,8 @@ flowchart LR
     stg_category["stg_shop__category"] --> int_brand
     stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor_denormalized"]
     stg_region["stg_shop__region"] --> int_vendor
-    stg_product["stg_shop__product"] --> dim["dim_product.sql (03_mart)"]
+    stg_product["stg_shop__product"] --> int_product["int_product_inserted_unknown"]
+    int_product --> dim["dim_product.sql (03_mart)"]
     int_brand --> dim
     int_vendor --> dim
 ```
@@ -344,13 +345,14 @@ Most directly relevant to mart construction:
 ```sql
 -- Yes: dim_product.sql — joins each flattened hierarchy onto the product grain
 select
+    {{ dbt_utils.generate_surrogate_key(['p.product_id']) }} as product_key,
     p.product_id,
     p.product_name,
     brand.brand_name,
     brand.category_name,
     vendor.vendor_name,
     vendor.region_name
-from {{ ref('stg_shop__product') }} p
+from {{ ref('int_product_inserted_unknown') }} p
 left join {{ ref('int_brand_denormalized') }} brand on p.brand_id = brand.brand_id
 left join {{ ref('int_vendor_denormalized') }} vendor on p.vendor_id = vendor.vendor_id
 ```
@@ -394,11 +396,16 @@ Whether a mart model may reference a staging model directly, bypassing `02_inter
 - Once a mart model mixes staging refs and business logic, refactoring it into an intermediate model later touches every downstream consumer
 
 #### Decision
-A mart model may `ref()` a staging model directly only when none of [3.1](#31-intermediate-structural-constraints)'s or [3.2](#32-typical-intermediate-transformations)'s triggers apply — no join, no re-grain, no complex logic to isolate. The moment a mart model needs to join two or more staging models, or apply non-trivial business logic, that logic belongs in an intermediate model first.
+A mart model may `ref()` a staging model directly only when none of [3.1](#31-intermediate-structural-constraints)'s or [3.2](#32-typical-intermediate-transformations)'s triggers apply — no join, no re-grain, no complex logic to isolate. In practice this is a fact: a dimension always needs its unknown row, which is added in intermediate. The moment a mart model needs to join two or more staging models, or apply non-trivial business logic, that logic belongs in an intermediate model first.
 
 ```sql
--- Yes: dim_coupon.sql — one staging table, no joins, no re-grain
-select * from {{ ref('stg_wordpress__coupon') }}
+-- Yes: fact_query_execution.sql — one staging table, no joins, no re-grain
+select
+    query_execution_id,
+    {{ dbt_utils.generate_surrogate_key(['card_id']) }} as card_key,
+    executed_at,
+    result_row_count
+from {{ ref('stg_metabase__query_execution') }}
 ```
 
 ```sql

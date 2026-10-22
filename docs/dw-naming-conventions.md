@@ -299,10 +299,10 @@ models/01_staging/wordpress/stg_wordpress__wp_tutor_order_items.sql
 ```
 
 ### 3.4 Intermediate naming
-Name intermediate models after the transformation they perform: `int_<entity>_<verb_phrase>`.
+Name intermediate models after the main transformation they perform: `int_<entity>_<verb_phrase>`.
 
 #### Definition
-An intermediate model exists to perform one transformation step — a pivot, a join, a fan-out, an aggregation — on its way from staging to a mart. The verb phrase names that transformation, not just the entity being transformed.
+An intermediate model has one purpose — a pivot, a join, a fan-out, an aggregation — on its way from staging to a mart. It may take several CTE steps to get there (`int_order_line_joined_to_header` joins, then allocates the header discount). The verb phrase names the main transformation, not just the entity being transformed.
 
 #### Pros
 - A reader understands what the model does from its name alone, without opening the SQL
@@ -312,7 +312,7 @@ An intermediate model exists to perform one transformation step — a pivot, a j
 - Verb-phrase names run longer than a bare entity name
 
 #### Decision
-Name every intermediate model `int_<entity>_<verb_phrase>`, where the verb phrase states the transformation in plain English (`pivoted`, `joined`, `aggregated_to_<grain>`). Drop the source-system double underscore at this layer — intermediate models are business-conformed, not source-specific. Group them into subfolders by business domain (`02_intermediate/sales/`), not into the file name.
+Name every intermediate model `int_<entity>_<verb_phrase>`, where the verb phrase states its main transformation in plain English (`pivoted`, `joined`, `aggregated_to_<grain>`). Supporting steps don't need their own model or a place in the name. Split a model only when its steps serve different purposes, or another model needs one step on its own. Drop the source-system double underscore at this layer — intermediate models are business-conformed, not source-specific. Group them into subfolders by business domain (`02_intermediate/sales/`), not into the file name.
 
 ```
 -- Yes:
