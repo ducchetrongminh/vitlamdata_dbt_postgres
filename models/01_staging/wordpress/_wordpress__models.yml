@@ -1,0 +1,31 @@
+models:
+  - name: base_wordpress__post
+    description: >
+      wp_posts without trashed and auto-draft posts, cleaned once for every post type.
+      Read by one staging model per post type. Times are Vietnam time.
+    columns:
+      - name: post_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_wordpress__course
+    description: Tutor LMS courses (post_type courses), one row per course.
+    columns:
+      - name: course_id
+        data_tests:
+          - unique
+          - not_null
+      - name: instructor_user_id
+        description: wp_users.ID of the course author. -1 when none.
+      - name: course_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Published', 'Draft', 'Pending Review', 'Private', 'Scheduled']
+      - name: course_summary
+        description: The course excerpt (wp_posts.post_excerpt).
+      - name: published_at
+        description: wp_posts.post_date_gmt in Vietnam time.
+      - name: updated_at
+        description: wp_posts.post_modified_gmt in Vietnam time.
