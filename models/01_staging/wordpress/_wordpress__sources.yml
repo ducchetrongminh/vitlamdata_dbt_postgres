@@ -17,7 +17,7 @@ sources:
         description: >
           Every WordPress post, told apart by post_type: courses, topics, lesson,
           course-bundle, tutor_enrolled (enrollment), vld_lead (lead), pages, revisions.
-          Read only by base_wordpress__post.
+          Read only by base_wordpress__wp_post.
       - name: wp_postmeta
         description: Key-value attributes of wp_posts, e.g. Tutor course settings.
       - name: wp_users
