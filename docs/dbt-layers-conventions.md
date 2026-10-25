@@ -56,7 +56,7 @@ Staging-only transformations that turn a raw source table into a clean, business
 Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. Do not carry dlt's metadata columns (`_dlt_load_id`, `_dlt_id`) past staging: list only business columns in `renamed`.
 
 ```sql
--- Yes: base_wordpress__post.sql — cleanup once, for every post type
+-- Yes: base_wordpress__wp_post.sql — cleanup once, for every post type
 with
 
 source as (
@@ -70,20 +70,20 @@ filtered as (
 
 renamed as (
     select
-        id as post_id,
-        post_type,
-        post_title,
-        post_excerpt,
+        id as wp_post_id,
+        post_type as wp_post_type,
+        post_title as wp_post_title,
+        post_excerpt as wp_post_excerpt,
         post_date_gmt as posted_at
     from filtered
 ),
 
 casted as (
     select
-        cast(post_id as bigint) as post_id,
-        post_type,
-        post_title,
-        post_excerpt,
+        cast(wp_post_id as bigint) as wp_post_id,
+        wp_post_type,
+        wp_post_title,
+        wp_post_excerpt,
         cast(posted_at as timestamp) as posted_at
     from renamed
 )
@@ -92,22 +92,22 @@ select * from casted
 ```
 
 ```sql
--- Yes: stg_wordpress__course.sql — one entity from the base model
+-- Yes: stg_wordpress__wp_course.sql — one entity from the base model
 with
 
 base as (
-    select * from {{ ref('base_wordpress__post') }}
+    select * from {{ ref('base_wordpress__wp_post') }}
 ),
 
 filtered as (
     select * from base
-    where post_type = 'courses'
+    where wp_post_type = 'courses'
 ),
 
 renamed as (
     select
-        post_id as course_id,
-        post_title as course_title,
+        wp_post_id as wp_course_id,
+        wp_post_title as wp_course_title,
         posted_at as published_at
     from filtered
 )
@@ -293,18 +293,18 @@ allocated as (
 select * from allocated
 ```
 
-- **Pivot key-value (meta) tables** — `int_<entity>_meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
+- **Pivot key-value (meta) tables** — `int_<entity>_meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`wp_post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
 
 ```sql
 -- Yes: meta_pivoted
--- int_course_meta_pivoted.sql — one row per course, one column per meta key
+-- int_wp_course_meta_pivoted.sql — one row per course, one column per meta key
 pivoted as (
     select
-        post_id as course_id,
-        max(meta_value) filter (where meta_key = '_tutor_course_level') as course_level,
-        max(meta_value) filter (where meta_key = '_tutor_course_price_type') as course_price_type
-    from {{ ref('stg_wordpress__post_meta') }}
-    group by post_id
+        wp_post_id as wp_course_id,
+        max(meta_value) filter (where meta_key = '_tutor_course_level') as wp_course_level,
+        max(meta_value) filter (where meta_key = '_tutor_course_price_type') as wp_course_price_type
+    from {{ ref('stg_wordpress__wp_post_meta') }}
+    group by wp_post_id
 )
 
 select * from pivoted
@@ -415,7 +415,7 @@ select
     line.order_line_id,
     order_header.order_date,
     order_header.customer_id,
-    line.course_id,
+    line.wp_course_id,
     line.sale_amt
 from {{ ref('stg_wordpress__order_line') }} as line
 join {{ ref('stg_wordpress__order') }} as order_header on line.order_id = order_header.order_id

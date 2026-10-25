@@ -143,13 +143,13 @@ Source systems often expose columns named after internal implementation details 
 Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
 
 ```sql
--- Yes: stg_wordpress__course.sql renames WordPress's generic post columns to their business meaning
+-- Yes: stg_wordpress__wp_course.sql renames WordPress's generic post columns to their business meaning
 select
-    post_id as course_id,
-    post_title as course_title,
-    post_excerpt as course_summary
-from {{ ref('base_wordpress__post') }}
-where post_type = 'courses'
+    wp_post_id as wp_course_id,
+    wp_post_title as wp_course_title,
+    wp_post_excerpt as wp_course_summary
+from {{ ref('base_wordpress__wp_post') }}
+where wp_post_type = 'courses'
 ```
 
 
@@ -190,7 +190,9 @@ Use only the abbreviations below. To add a new one, propose it in a PR that upda
 
 **Domain/system-specific** — full form is itself jargon or a proper system name
 
-None yet.
+| Abbreviation | Meaning |
+|---|---|
+| `wp` | WordPress — system qualifier on WordPress entities (`wp_post`, `wp_course`, `wp_user`), see [3.2](#32-singular-nouns-for-entity-names) |
 
 **Model layer prefixes** — see [Model File Naming](#3-model-file-naming) for full rules on where each applies
 
@@ -275,11 +277,15 @@ An entity name is the noun portion of a model name after its layer prefix — `c
 #### Decision
 Use the singular noun for the entity portion of a model name in every layer: `stg_`, `int_`, `dim_`, and `fact_`. Raw source table names keep their own spelling in `_<source>__sources.yml` and `source()`, since they must match the database — staging renames them.
 
+Qualify the entity with its source system when the entity is that system's own object, not a conformed business entity: `wp_post`, `wp_course`, `wp_user`, `facebook_post`. Several systems can each have posts or users, with different meanings and separate ID spaces; the qualifier keeps them apart once they are joined or unioned. Use the approved abbreviation from [2.1](#21-approved-abbreviations) when one exists (`wp`), otherwise the full system name (`facebook`, `discord`). The qualified entity is used everywhere: in the model name (`stg_wordpress__wp_course`) and as the column prefix from [4.4](#44-entity-prefix-on-common-column-names) (`wp_course_id`, `author_wp_user_id`). A conformed entity that integrates several systems drops the qualifier (`dim_user`), while the natural key it keeps from each system stays qualified (`wp_user_id`, `discord_user_id`).
+
 ```
 -- Yes:
 stg_crm__customer.sql
 dim_customer.sql
 fact_order.sql
+stg_wordpress__wp_post.sql      -- WordPress post, apart from a future facebook_post
+dim_user.sql                    -- conformed across WordPress, Metabase, Discord: no qualifier
 ```
 
 ```
@@ -311,12 +317,13 @@ Name every staging model `stg_<source>__<entity>`, using the singular entity nou
 -- Yes:
 models/01_staging/wordpress/stg_wordpress__order_line.sql
 models/01_staging/metabase/stg_metabase__dashboard.sql
-models/01_staging/wordpress/base/base_wordpress__post.sql   -- wp_posts, every post type
-models/01_staging/wordpress/stg_wordpress__course.sql       -- reads base_wordpress__post
+models/01_staging/wordpress/base/base_wordpress__wp_post.sql   -- wp_posts, every post type
+models/01_staging/wordpress/stg_wordpress__wp_course.sql       -- reads base_wordpress__wp_post
 ```
 
 ```
 -- No: raw source table name (wp_tutor_order_items) carried straight into the model name
+-- (plural, Tutor LMS jargon); the wp_ system qualifier alone is allowed: stg_wordpress__wp_order_line
 models/01_staging/wordpress/stg_wordpress__wp_tutor_order_items.sql
 ```
 
@@ -467,7 +474,7 @@ A common column name (`key`, `id`, `code`, `name`, `status`) is a generic attrib
 - Feels redundant in a model scoped to a single entity, where ambiguity can't yet occur
 
 #### Decision
-Never name a column `key`, `id`, `code`, `name`, or `status` on its own. Always prefix it with the entity it belongs to: `customer_id`, `customer_name`, `customer_status`, `customer_key`, `coupon_code`. Apply this even in single-entity staging models — intermediate and mart models join multiple entities together and inherit the column name via `ref()`.
+Never name a column `key`, `id`, `code`, `name`, or `status` on its own. Always prefix it with the entity it belongs to: `customer_id`, `customer_name`, `customer_status`, `customer_key`, `coupon_code`. When the entity is system-qualified ([3.2](#32-singular-nouns-for-entity-names)), the prefix includes the qualifier: `wp_post_id`, `wp_course_title`. Apply this even in single-entity staging models — intermediate and mart models join multiple entities together and inherit the column name via `ref()`.
 
 ```sql
 -- Yes: every common column is prefixed with its entity

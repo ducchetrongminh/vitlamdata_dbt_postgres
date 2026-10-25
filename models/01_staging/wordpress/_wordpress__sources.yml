@@ -1,0 +1,48 @@
+sources:
+  - name: wordpress
+    description: >
+      WordPress + Tutor LMS (MariaDB), loaded by ingestion/wordpress/pipeline.py.
+      Tables and write dispositions: ingestion/wordpress/.dlt/config.toml.
+    schema: raw_wordpress
+    tables:
+      - name: _dlt_loads
+        description: dlt load log, one row per load. Used only for freshness.
+        config:
+          loaded_at_field: inserted_at
+          freshness:
+            warn_after: {count: 26, period: hour}
+            error_after: {count: 50, period: hour}
+
+      - name: wp_posts
+        description: >
+          Every WordPress post, told apart by post_type: courses, topics, lesson,
+          course-bundle, tutor_enrolled (enrollment), vld_lead (lead), pages, revisions.
+          Read only by base_wordpress__wp_post.
+      - name: wp_postmeta
+        description: Key-value attributes of wp_posts, e.g. Tutor course settings.
+      - name: wp_users
+        description: WordPress accounts. user_pass and user_activation_key are not loaded.
+      - name: wp_usermeta
+        description: >
+          Key-value attributes of wp_users. Login sessions and app passwords are not
+          loaded (pipeline.py skip_login_sessions).
+      - name: wp_terms
+        description: Terms (names and slugs) of every taxonomy, e.g. course categories and tags.
+      - name: wp_term_taxonomy
+        description: Which taxonomy each term belongs to.
+      - name: wp_term_relationships
+        description: Which terms each post has.
+      - name: wp_tutor_orders
+        description: Tutor LMS orders, one row per order.
+      - name: wp_tutor_order_items
+        description: Tutor LMS order lines, one row per course or bundle bought in an order.
+      - name: wp_tutor_ordermeta
+        description: Key-value attributes of wp_tutor_orders.
+      - name: wp_tutor_coupons
+        description: Tutor LMS coupons.
+      - name: wp_tutor_coupon_usages
+        description: One row each time a user redeems a coupon.
+      - name: wp_tutor_customers
+        description: Billing details of each Tutor LMS customer (a wp_users account that checked out).
+      - name: wp_tutor_earnings
+        description: Instructor and admin share of each course sold.
