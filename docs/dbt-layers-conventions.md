@@ -415,7 +415,7 @@ select
     line.order_line_id,
     order_header.order_date,
     order_header.customer_id,
-    line.course_id,
+    line.wp_course_id,
     line.sale_amt
 from {{ ref('stg_wordpress__order_line') }} as line
 join {{ ref('stg_wordpress__order') }} as order_header on line.order_id = order_header.order_id
