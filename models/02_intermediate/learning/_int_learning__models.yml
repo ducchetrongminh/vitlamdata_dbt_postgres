@@ -38,8 +38,7 @@ models:
 
   - name: int_wp_instructor__inserted_unknown
     description: >
-      Instructors: wp_users in the seed wp_instructor_allowlist, with their public name,
-      plus the unknown instructor (-1). One row per instructor. Read by dim_wp_instructor.
+      stg_wordpress__wp_instructor plus the unknown instructor (-1). One row per instructor. Read by dim_wp_instructor.
     columns:
       - name: wp_instructor_id
         description: wp_users.ID of the instructor.

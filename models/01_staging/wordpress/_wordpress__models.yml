@@ -37,6 +37,16 @@ models:
       - name: instructor_wp_user_id
         description: wp_users.ID of the course author. -1 when none.
 
+  - name: base_wordpress__wp_user
+    description: >
+      wp_users renamed and cast, names and emails still raw. Ephemeral, so never
+      stored. Read by stg_wordpress__wp_user (hashed) and stg_wordpress__wp_instructor.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null
+
   - name: stg_wordpress__wp_user
     description: >
       WordPress accounts, one row per wp_users row. Every name, login and email is
@@ -46,10 +56,6 @@ models:
         data_tests:
           - unique
           - not_null
-      - name: wp_user_public_name
-        description: >
-          display_name unhashed, only for users in the seed wp_instructor_allowlist,
-          whose names are public on the course pages. Null for everyone else.
       - name: wp_user_login_hash
         description: Hash of user_login. Most logins are email addresses.
       - name: wp_user_email_hash
@@ -192,3 +198,17 @@ models:
         description: >
           The post this attribute belongs to. Includes meta of posts that the base model
           filters out (trash, auto-draft); the pivot drops them by joining to the entity.
+
+  - name: stg_wordpress__wp_instructor
+    description: >
+      Instructors whose names are public on the course pages, listed by id in the
+      model (public_instructor_ids). One row per instructor. The only wp_users whose
+      display name leaves staging unhashed.
+    columns:
+      - name: wp_instructor_id
+        description: wp_users.ID of the instructor.
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_instructor_name
+        description: display_name, unhashed; public on the course pages.

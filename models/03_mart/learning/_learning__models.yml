@@ -49,8 +49,8 @@ models:
 
   - name: dim_wp_instructor
     description: >
-      Course authors whose names are public on the course pages (seed
-      wp_instructor_allowlist), one row per instructor, plus the unknown instructor (-1).
+      Course authors whose names are public on the course pages
+      (stg_wordpress__wp_instructor), one row per instructor, plus the unknown instructor (-1).
       Type 1.
     columns:
       - name: wp_instructor_key
