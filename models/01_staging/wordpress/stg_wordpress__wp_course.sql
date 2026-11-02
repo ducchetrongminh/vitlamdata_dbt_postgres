@@ -28,12 +28,7 @@ renamed as (
 
 decoded as (
     select
-        -- Keys
-        wp_course_id,
-        -- Name, desc
-        wp_course_title,
-        wp_course_summary,
-        -- Attributes
+        *,
         case wp_course_status_code
             when 'publish' then 'Published'
             when 'draft' then 'Draft'
@@ -41,12 +36,7 @@ decoded as (
             when 'private' then 'Private'
             when 'future' then 'Scheduled'
             else 'Unknown'
-        end as wp_course_status,
-        wp_course_slug,
-        published_at,
-        updated_at,
-        -- Instructor
-        instructor_wp_user_id
+        end as wp_course_status
     from renamed
 ),
 
