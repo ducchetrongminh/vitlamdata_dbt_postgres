@@ -129,7 +129,7 @@ Dimension tables must include a default row — representing "no dimension attac
 Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
 
 ```sql
--- Yes: int_customer_inserted_unknown.sql
+-- Yes: int_customer__inserted_unknown.sql
 with
 
 customer as (
@@ -160,7 +160,7 @@ select
     {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
     customer_id,
     customer_name
-from {{ ref('int_customer_inserted_unknown') }}
+from {{ ref('int_customer__inserted_unknown') }}
 ```
 
 ### 1.3 Denormalized Flattened Dimensions

@@ -1,5 +1,5 @@
 models:
-  - name: int_wp_course_meta_pivoted
+  - name: int_wp_course__meta_pivoted
     description: >
       Tutor LMS course and bundle settings from wp_postmeta, one row per wp_course,
       one column per meta key a mart needs. Prices are VND.

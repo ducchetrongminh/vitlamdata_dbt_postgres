@@ -172,7 +172,7 @@ models:
   - name: stg_wordpress__wp_post_meta
     description: >
       Key-value attributes of wp_posts (wp_postmeta), one row per post per meta key.
-      Kept in key-value shape; pivoted per entity in intermediate (int_<entity>_meta_pivoted).
+      Kept in key-value shape; pivoted per entity in intermediate (int_<entity>__meta_pivoted).
       Only keys reviewed in the seed wp_post_meta_key_allowlist pass; meta_value is
       hashed for keys marked 'PII' there.
     data_tests:

@@ -204,11 +204,11 @@ See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-struc
 ### 3.2 Typical intermediate transformations
 Use the intermediate layer for joins, re-graining, and business-rule transformations that would clutter a mart model.
 
-- **Insert unknown/default dimension rows** — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys), in the intermediate model at the dimension's grain. When the dimension already has an intermediate model at its grain, the union is that model's last CTE; otherwise add `int_<entity>_inserted_unknown`. The mart dimension then generates the surrogate key over every row, unknown included. So every dimension reads an intermediate model, never staging directly.
+- **Insert unknown/default dimension rows** — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys), in the intermediate model at the dimension's grain. When the dimension already has an intermediate model at its grain, the union is that model's last CTE; otherwise add `int_<entity>__inserted_unknown`. The mart dimension then generates the surrogate key over every row, unknown included. So every dimension reads an intermediate model, never staging directly.
 
 ```sql
 -- Yes: inserted_unknown
--- int_product_inserted_unknown.sql
+-- int_product__inserted_unknown.sql
 product as (
     select * from {{ ref('stg_shop__product') }}
 ),
@@ -228,16 +228,16 @@ inserted_unknown as (
 select * from inserted_unknown
 ```
 
-- **Denormalize dimensions closer to mart shape** — `int_<entity>_denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
+- **Denormalize dimensions closer to mart shape** — `int_<entity>__denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
 
 ```mermaid
 flowchart LR
-    stg_brand["stg_shop__brand"] --> int_brand["int_brand_denormalized"]
+    stg_brand["stg_shop__brand"] --> int_brand["int_brand__denormalized"]
     stg_subcategory["stg_shop__subcategory"] --> int_brand
     stg_category["stg_shop__category"] --> int_brand
-    stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor_denormalized"]
+    stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor__denormalized"]
     stg_region["stg_shop__region"] --> int_vendor
-    stg_product["stg_shop__product"] --> int_product["int_product_inserted_unknown"]
+    stg_product["stg_shop__product"] --> int_product["int_product__inserted_unknown"]
     int_product --> dim["dim_product.sql (03_mart)"]
     int_brand --> dim
     int_vendor --> dim
@@ -245,7 +245,7 @@ flowchart LR
 
 ```sql
 -- Yes: denormalized
--- int_brand_denormalized.sql
+-- int_brand__denormalized.sql
 denormalized as (
     select
         brand.brand_id,
@@ -259,11 +259,11 @@ denormalized as (
 -- later we will denormalize this into dim_product, see 4.2 for example
 ```
 
-- **Header/line join and allocation** — `int_<entity>_joined_to_header` — bring header-level foreign keys and degenerate dimensions down onto the line grain, and allocate header-level measures (e.g. an order-level discount) across lines to avoid double-counting, per [Header/Line Fact Tables](dimensional-modeling-standards.md#21-headerline-fact-tables).
+- **Header/line join and allocation** — `int_<entity>__joined_to_header` — bring header-level foreign keys and degenerate dimensions down onto the line grain, and allocate header-level measures (e.g. an order-level discount) across lines to avoid double-counting, per [Header/Line Fact Tables](dimensional-modeling-standards.md#21-headerline-fact-tables).
 
 ```sql
 -- Yes: joined_to_header, allocated
--- int_order_line_joined_to_header.sql
+-- int_order_line__joined_to_header.sql
 joined_to_header as (
     select
         header.order_no,
@@ -293,11 +293,11 @@ allocated as (
 select * from allocated
 ```
 
-- **Pivot key-value (meta) tables** — `int_<entity>_meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`wp_post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
+- **Pivot key-value (meta) tables** — `int_<entity>__meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`wp_post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
 
 ```sql
 -- Yes: meta_pivoted
--- int_wp_course_meta_pivoted.sql — one row per course, one column per meta key
+-- int_wp_course__meta_pivoted.sql — one row per course, one column per meta key
 pivoted as (
     select
         wp_post_id as wp_course_id,
@@ -324,7 +324,7 @@ Materialize as table or incremental, grouped into subfolders by business domain,
 ```sql
 -- Yes: fact_order_line.sql
 select ...
-from {{ ref('int_order_line_joined_to_header') }}
+from {{ ref('int_order_line__joined_to_header') }}
 {% if is_incremental() %}
 where updated_at >= (select max(updated_at) from {{ this }})
 {% endif %}
@@ -353,9 +353,9 @@ select
     brand.category_name,
     vendor.vendor_name,
     vendor.region_name
-from {{ ref('int_product_inserted_unknown') }} as product
-left join {{ ref('int_brand_denormalized') }} as brand on product.brand_id = brand.brand_id
-left join {{ ref('int_vendor_denormalized') }} as vendor on product.vendor_id = vendor.vendor_id
+from {{ ref('int_product__inserted_unknown') }} as product
+left join {{ ref('int_brand__denormalized') }} as brand on product.brand_id = brand.brand_id
+left join {{ ref('int_vendor__denormalized') }} as vendor on product.vendor_id = vendor.vendor_id
 ```
 
 - **Role playing dimensions** — a mart may expose the same base dimension multiple times under different roles (e.g. `dim_order_date`, `dim_ship_date` from one date dimension), per [Role playing dimension](dimensional-modeling-standards.md#17-role-playing-dimension).
@@ -419,7 +419,7 @@ select
     line.sale_amt
 from {{ ref('stg_wordpress__order_line') }} as line
 join {{ ref('stg_wordpress__order') }} as order_header on line.order_id = order_header.order_id
--- should be: int_order_line_joined_to_header.sql in 02_intermediate,
+-- should be: int_order_line__joined_to_header.sql in 02_intermediate,
 -- with fact_order_line.sql in 03_mart referencing that instead
 ```
 
