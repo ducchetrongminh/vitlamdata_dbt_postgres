@@ -24,8 +24,8 @@ final as (
         published_at,
         updated_at,
         -- Instructor
-        {{ dbt_utils.generate_surrogate_key(['instructor_wp_user_id']) }} as instructor_wp_user_key,
-        instructor_wp_user_id
+        {{ dbt_utils.generate_surrogate_key(['instructor_wp_user_id']) }} as wp_instructor_key,
+        instructor_wp_user_id as wp_instructor_id
     from course
 )
 

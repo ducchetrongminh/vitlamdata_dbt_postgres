@@ -21,3 +21,20 @@ seeds:
           - accepted_values:
               arguments:
                 values: ['PII', 'Not PII']
+
+  - name: wp_instructor_allowlist
+    description: >
+      wp_users whose display name is public, because it is shown on the course pages.
+      stg_wordpress__wp_user passes display_name unhashed as wp_user_public_name only for
+      these users; every other name stays hashed. Add a user here only after confirming
+      their name is published on the site. assert_wp_course_instructors_allowlisted lists
+      course authors still missing.
+    config:
+      column_types:
+        wp_user_id: bigint
+        description: text
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null

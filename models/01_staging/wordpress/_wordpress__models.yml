@@ -46,6 +46,10 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: wp_user_public_name
+        description: >
+          display_name unhashed, only for users in the seed wp_instructor_allowlist,
+          whose names are public on the course pages. Null for everyone else.
       - name: wp_user_login_hash
         description: Hash of user_login. Most logins are email addresses.
       - name: wp_user_email_hash
