@@ -126,3 +126,26 @@ models:
         description: The item's sale price at checkout. Null when the item was not on sale.
       - name: discounted_unit_price
         description: The price after the coupon (discount_price). Null when no coupon applied.
+
+  - name: stg_wordpress__wp_course_bundle
+    description: >
+      Tutor LMS course bundles (post_type course-bundle), one row per bundle.
+      Unioned with stg_wordpress__wp_course into one wp_course entity in intermediate.
+    columns:
+      - name: wp_course_bundle_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_course_bundle_summary
+        description: The bundle excerpt (wp_posts.post_excerpt).
+      - name: wp_course_bundle_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Published', 'Draft', 'Pending Review', 'Private', 'Scheduled']
+      - name: published_at
+        description: wp_posts.post_date_gmt in Vietnam time.
+      - name: updated_at
+        description: wp_posts.post_modified_gmt in Vietnam time.
+      - name: instructor_wp_user_id
+        description: wp_users.ID of the bundle author. -1 when none.
