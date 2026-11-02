@@ -1,0 +1,27 @@
+models:
+  - name: int_wp_course_meta_pivoted
+    description: >
+      Tutor LMS course and bundle settings from wp_postmeta, one row per wp_course,
+      one column per meta key a mart needs. Prices are VND.
+    columns:
+      - name: wp_course_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_course_price_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Paid', 'Free']
+      - name: wp_course_level
+        description: "'Unknown' for bundles, which have no level."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['All Levels', 'Beginner', 'Intermediate', 'Expert', 'Unknown']
+      - name: wp_course_public_indicator
+        description: Whether guests can view the course without enrolling (_tutor_is_public_course).
+      - name: regular_unit_price
+        description: The regular price (tutor_course_price).
+      - name: sale_unit_price
+        description: The sale price (tutor_course_sale_price). Null when not on sale.
