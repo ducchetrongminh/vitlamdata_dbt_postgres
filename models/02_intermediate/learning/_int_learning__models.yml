@@ -45,3 +45,13 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: int_wp_user__inserted_unknown
+    description: >
+      WordPress accounts plus the unknown user (-1), one row per wp_user. Hashes stay
+      out: they are join keys for intermediate only. Read by dim_wp_user.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null

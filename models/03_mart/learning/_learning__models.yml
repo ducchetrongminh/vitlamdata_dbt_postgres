@@ -74,3 +74,21 @@ models:
       - name: wp_instructor_name
         data_type: text
         description: The instructor's display name as published on the course pages.
+
+  - name: dim_wp_user
+    description: >
+      WordPress accounts (learners, instructors, admins), one row per wp_user, plus the
+      unknown user (-1). No names or emails, hashed or not. Type 1. Times are Vietnam time.
+    columns:
+      - name: wp_user_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: wp_user_id
+        data_type: bigint
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: registered_at
+        data_type: timestamp
+        description: When the account was created. Null for the unknown user.
