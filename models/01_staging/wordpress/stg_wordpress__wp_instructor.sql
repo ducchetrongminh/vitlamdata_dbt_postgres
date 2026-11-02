@@ -1,6 +1,6 @@
 -- Instructors whose display name is public on the course pages. Only these users
 -- leave staging with an unhashed name. Add a wp_users.ID here after confirming the
--- name is published; assert_wp_course_instructors_listed flags authors missing.
+-- name is published; a relationships test on dim_wp_course flags authors missing.
 -- 2: author of courses 20 and 126 and bundle 292
 {% set public_instructor_ids = [2] %}
 

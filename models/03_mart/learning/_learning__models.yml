@@ -43,6 +43,14 @@ models:
       - name: wp_instructor_key
         data_type: text
         description: Key of the course author in dim_wp_instructor.
+        data_tests:
+          - relationships:   # author missing from public_instructor_ids in stg_wordpress__wp_instructor
+              arguments:
+                to: ref('dim_wp_instructor')
+                field: wp_instructor_key
+              config:
+                severity: warn
+                where: "wp_course_status = 'Published'"
       - name: wp_instructor_id
         data_type: bigint
         description: wp_users.ID of the course author. -1 when none.
