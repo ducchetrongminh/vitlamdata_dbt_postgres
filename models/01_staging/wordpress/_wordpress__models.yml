@@ -173,7 +173,8 @@ models:
     description: >
       Key-value attributes of wp_posts (wp_postmeta), one row per post per meta key.
       Kept in key-value shape; pivoted per entity in intermediate (int_<entity>_meta_pivoted).
-      No key holds PII today; hash meta_value for any key that does.
+      Only keys reviewed in the seed wp_post_meta_key_allowlist pass; meta_value is
+      hashed for keys marked 'PII' there.
     data_tests:
       - dbt_utils.unique_combination_of_columns:
           arguments:
