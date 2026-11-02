@@ -139,9 +139,9 @@ models:
       Tutor LMS enrollments (post_type tutor_enrolled), one row per student per course
       or course bundle. Times are Vietnam time.
     data_tests:
-      - unique:   # one enrollment per student per course
+      - dbt_utils.unique_combination_of_columns:   # one enrollment per student per course
           arguments:
-            column_name: "student_wp_user_id || '-' || wp_course_id"
+            combination_of_columns: ['student_wp_user_id', 'wp_course_id']
     columns:
       - name: wp_enrollment_id
         data_tests:
