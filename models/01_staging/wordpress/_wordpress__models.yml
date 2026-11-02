@@ -114,8 +114,10 @@ models:
               arguments:
                 to: ref('stg_wordpress__wp_order')
                 field: wp_order_id
-      - name: item_wp_post_id
-        description: wp_posts.ID of the item bought, a course (post_type courses) or a course bundle (course-bundle). -1 when none.
+      - name: wp_course_id
+        description: >
+          wp_posts.ID of the item bought: a course (post_type courses) or a course bundle
+          (course-bundle). Courses and bundles are one entity, wp_course. -1 when none.
       - name: wp_coupon_code
         description: Coupon applied to this line. 'UNKNOWN' when none.
       - name: regular_unit_price

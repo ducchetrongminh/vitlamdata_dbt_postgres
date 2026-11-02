@@ -10,7 +10,7 @@ renamed as (
         id as wp_order_line_id,
         -- Foreign keys
         order_id as wp_order_id,
-        item_id as item_wp_post_id,
+        item_id as wp_course_id,
         coupon_code as wp_coupon_code,
         -- Measures
         regular_price as regular_unit_price,
@@ -25,7 +25,7 @@ casted as (
         cast(wp_order_line_id as bigint) as wp_order_line_id,
         -- Foreign keys
         cast(wp_order_id as bigint) as wp_order_id,
-        cast(item_wp_post_id as bigint) as item_wp_post_id,
+        cast(wp_course_id as bigint) as wp_course_id,
         cast(wp_coupon_code as text) as wp_coupon_code,
         -- Measures
         cast(regular_unit_price as numeric) as regular_unit_price,
@@ -40,7 +40,7 @@ null_handled as (
         wp_order_line_id,
         -- Foreign keys
         coalesce(nullif(wp_order_id, 0), -1) as wp_order_id,
-        coalesce(nullif(item_wp_post_id, 0), -1) as item_wp_post_id,
+        coalesce(nullif(wp_course_id, 0), -1) as wp_course_id,
         coalesce(nullif(trim(wp_coupon_code), ''), 'UNKNOWN') as wp_coupon_code,
         -- Measures
         regular_unit_price,
