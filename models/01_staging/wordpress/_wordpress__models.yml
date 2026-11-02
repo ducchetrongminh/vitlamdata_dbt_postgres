@@ -133,3 +133,38 @@ models:
         description: The item's sale price at checkout. Null when the item was not on sale.
       - name: discounted_unit_price
         description: The price after the coupon (discount_price). Null when no coupon applied.
+
+  - name: stg_wordpress__wp_enrollment
+    description: >
+      Tutor LMS enrollments (post_type tutor_enrolled), one row per student per course
+      or course bundle. Times are Vietnam time.
+    data_tests:
+      - unique:   # one enrollment per student per course
+          arguments:
+            column_name: "student_wp_user_id || '-' || wp_course_id"
+    columns:
+      - name: wp_enrollment_id
+        data_tests:
+          - unique
+          - not_null
+      - name: student_wp_user_id
+        description: wp_users.ID of the enrolled student (post_author). -1 when none.
+      - name: wp_course_id
+        description: The course or course bundle enrolled in (post_parent). -1 when none.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_wordpress__wp_course')
+                field: wp_course_id
+      - name: wp_enrollment_status
+        description: >
+          'Enrolled' for Tutor's 'completed', meaning the enrollment went through,
+          not that the student finished the course.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Enrolled', 'Pending', 'Cancelled']
+      - name: enrolled_at
+        description: wp_posts.post_date_gmt in Vietnam time.
+      - name: updated_at
+        description: wp_posts.post_modified_gmt in Vietnam time.
