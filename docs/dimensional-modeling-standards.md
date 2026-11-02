@@ -13,12 +13,14 @@ Dimensional modeling (Kimball) is the modeling approach for this warehouse. Thes
    6. [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)
    7. [Role playing dimension](#17-role-playing-dimension)
    8. [Conformed Dimensions](#18-conformed-dimensions)
+   9. [Dimension Column Order](#19-dimension-column-order)
 2. [Fact table standards](#2-fact-table-standards)
    1. [Header/Line Fact Tables](#21-headerline-fact-tables)
    2. [Derived additive facts](#22-derived-additive-facts)
    3. [Null Measures](#23-null-measures)
    4. [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables)
    5. [Conformed Facts](#25-conformed-facts)
+   6. [Fact Column Order](#26-fact-column-order)
 3. [Dimension Advanced Standards](#3-dimension-advanced-standards)
    1. [Slowly Changing Dimensions (SCD)](#31-slowly-changing-dimensions-scd)
 
@@ -489,6 +491,61 @@ group by calendar_month
 -- results from both queries align in a drill-across report on calendar_month
 ```
 
+### 1.9 Dimension Column Order
+
+List a dimension's columns in a fixed order: its own keys, its name, its own attributes, then the columns flattened in from other dimensions.
+
+#### Definition
+Column order is the order of columns in a dimension model's final `select`, which is the order users see in Metabase and in the published docs.
+
+#### Pros
+- Every dimension reads the same way — key, natural key and name are always the first three columns
+- Columns flattened from another dimension (see [Denormalized Flattened Dimensions](#13-denormalized-flattened-dimensions)) stay grouped, so it is clear which entity each one describes
+- Reviewers spot a missing key or name at a glance
+
+#### Cons
+- Adding a column means placing it in its group, not appending it at the end
+
+#### Decision
+Order the columns of every `dim_*` model in these groups:
+
+1. Primary key — the surrogate key `<entity>_key`
+2. Natural key — `<entity>_id` or `<entity>_code`
+3. Name and description — `<entity>_name`, `<entity>_description`
+4. The dimension's own attributes — e.g. `product_status`, `product_group`
+5. Columns from other dimensions, one block per dimension, each block in key, natural key, name order — e.g. `brand_key`, `brand_id`, `brand_name`
+
+```sql
+-- Yes: dim_product.sql
+select
+    -- Keys
+    product_key,
+    product_id,
+    -- Name, desc
+    product_name,
+    product_description,
+    -- Attributes
+    product_status,
+    product_group,
+    -- Brand
+    brand_key,
+    brand_id,
+    brand_name
+```
+
+```sql
+-- No: key buried mid-table, brand columns split up, own attributes after another dimension's columns
+select
+    product_name,
+    brand_name,
+    product_key,
+    product_status,
+    brand_id,
+    product_id,
+    product_group
+```
+
+
 
 
 
@@ -763,6 +820,76 @@ from {{ ref('fact_sales_line') }}
 group by product_key, period_key
 ...
 -- summed sales_line revenue (incl. tax) is compared against budget revenue (excl. tax) — variance is bogus
+```
+
+### 2.6 Fact Column Order
+
+List a fact's columns in a fixed order: keys first, then dates, then measures from quantity to amount.
+
+#### Definition
+Column order is the order of columns in a fact model's final `select`, which is the order users see in Metabase and in the published docs.
+
+#### Pros
+- Every fact reads the same way — grain first, then what the row joins to, then when, then how much
+- Measures sit together at the end, in the same order on every fact, so related measures (`net_sales_qty`, `unit_price`, `net_amt`) scan side by side
+- Reviewers can check the grain and the foreign keys from the first columns alone
+
+#### Cons
+- Adding a column means placing it in its group, not appending it at the end
+
+#### Decision
+Order the columns of every `fact_*` model in these groups:
+
+1. Primary key — the surrogate key `<entity>_key`
+2. Grain columns the primary key is generated from — e.g. `order_no`, `line_no`
+3. Name and description, when the fact has one — e.g. `order_description`
+4. Natural keys `_id` / `_code` — the fact's own first, then the dimensions' (e.g. `inventory_transaction_id`, then `product_id`)
+5. Degenerate textual attributes — decoded statuses and types, e.g. `order_status`
+6. Dimension surrogate keys `_key` — in the same order as their natural keys in group 4
+7. Dates and datetimes — `_date`, `_at` (see [Data Warehouse Naming Conventions, Date and time suffixes](dw-naming-conventions.md#46-date-and-time-suffixes))
+8. Quantities — `_qty`, `_count`
+9. Prices — `_unit_price`
+10. Amounts — `_amt`, `_amt_in_<currency>`, `_amt_in_currency`
+11. Other measures — e.g. `_pct`, `_rate`
+
+Inside each group, put header-level columns before line-level columns (see [Header/Line Fact Tables](#21-headerline-fact-tables)). Measure suffixes follow [Data Warehouse Naming Conventions, Standard fact prefixes and suffixes](dw-naming-conventions.md#47-standard-fact-prefixes-and-suffixes).
+
+```sql
+-- Yes: fact_order_line.sql
+select
+    -- Keys
+    order_line_key,     -- 1. primary key
+    order_no,           -- 2. grain, header-level
+    line_no,            -- 2. grain, line-level
+    -- Foreign keys
+    customer_id,        -- 4. natural keys, header-level
+    product_id,         -- 4. natural keys, line-level
+    -- Attributes
+    order_status,       -- 5. degenerate textual attribute
+    -- Foreign keys
+    customer_key,       -- 6. dimension keys, header-level
+    product_key,        -- 6. dimension keys, line-level
+    -- Dates
+    order_date,         -- 7. dates
+    -- Measures
+    sales_qty,          -- 8. quantities
+    unit_price,         -- 9. prices
+    discount_amt,       -- 10. amounts
+    net_amt,            -- 10. amounts
+    discount_pct        -- 11. other measures
+```
+
+```sql
+-- No: measures before keys, grain columns split up, line-level key before header-level key
+select
+    net_amt,
+    order_line_key,
+    product_key,
+    order_date,
+    customer_key,
+    line_no,
+    sales_qty,
+    order_no
 ```
 
 ## 3. Dimension Advanced Standards
