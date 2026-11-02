@@ -6,7 +6,7 @@ base as (
 
 filtered as (
     select * from base
-    where wp_post_type = 'courses'
+    where wp_post_type in ('courses', 'course-bundle')
 ),
 
 renamed as (
@@ -17,6 +17,7 @@ renamed as (
         wp_post_title as wp_course_title,
         wp_post_excerpt as wp_course_summary,
         -- Attributes
+        wp_post_type as wp_course_type_code,
         wp_post_status as wp_course_status_code,
         wp_post_slug as wp_course_slug,
         posted_at as published_at,
@@ -29,6 +30,11 @@ renamed as (
 decoded as (
     select
         *,
+        case wp_course_type_code
+            when 'courses' then 'Course'
+            when 'course-bundle' then 'Course Bundle'
+            else 'Unknown'
+        end as wp_course_type,
         case wp_course_status_code
             when 'publish' then 'Published'
             when 'draft' then 'Draft'
@@ -48,6 +54,7 @@ null_handled as (
         coalesce(nullif(trim(wp_course_title), ''), 'Unknown') as wp_course_title,
         coalesce(nullif(trim(wp_course_summary), ''), 'Unknown') as wp_course_summary,
         -- Attributes
+        wp_course_type,
         wp_course_status,
         coalesce(nullif(trim(wp_course_slug), ''), 'Unknown') as wp_course_slug,
         published_at,
