@@ -13,6 +13,7 @@ renamed as (
     select
         -- Keys
         id as wp_order_id,
+        -- Foreign keys
         parent_id as parent_wp_order_id,
         user_id as ordered_by_wp_user_id,
         created_by as created_by_wp_user_id,
@@ -50,6 +51,7 @@ casted as (
     select
         -- Keys
         cast(wp_order_id as bigint) as wp_order_id,
+        -- Foreign keys
         cast(parent_wp_order_id as bigint) as parent_wp_order_id,
         cast(ordered_by_wp_user_id as bigint) as ordered_by_wp_user_id,
         cast(created_by_wp_user_id as bigint) as created_by_wp_user_id,
@@ -133,6 +135,7 @@ null_handled as (
     select
         -- Keys
         wp_order_id,
+        -- Foreign keys
         coalesce(nullif(parent_wp_order_id, 0), -1) as parent_wp_order_id,          -- Tutor writes 0 for no parent
         coalesce(nullif(ordered_by_wp_user_id, 0), -1) as ordered_by_wp_user_id,
         coalesce(nullif(created_by_wp_user_id, 0), -1) as created_by_wp_user_id,
