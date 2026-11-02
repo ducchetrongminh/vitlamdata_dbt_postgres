@@ -29,3 +29,24 @@ models:
         description: wp_posts.post_modified_gmt in Vietnam time.
       - name: instructor_wp_user_id
         description: wp_users.ID of the course author. -1 when none.
+
+  - name: stg_wordpress__wp_user
+    description: >
+      WordPress accounts, one row per wp_users row. Every name, login and email is
+      hashed with hash_pii. Times are Vietnam time.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_user_login_hash
+        description: Hash of user_login. Most logins are email addresses.
+      - name: wp_user_email_hash
+        description: Hash of user_email. Joins to other systems' email hashes.
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_user_slug_hash
+        description: Hash of user_nicename, the URL slug WordPress derives from the login.
+      - name: registered_at
+        description: wp_users.user_registered (UTC) in Vietnam time.
