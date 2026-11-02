@@ -16,16 +16,16 @@ models:
         data_tests:
           - unique
           - not_null
-      - name: instructor_wp_user_id
-        description: wp_users.ID of the course author. -1 when none.
+      - name: wp_course_summary
+        description: The course excerpt (wp_posts.post_excerpt).
       - name: wp_course_status
         data_tests:
           - accepted_values:
               arguments:
                 values: ['Published', 'Draft', 'Pending Review', 'Private', 'Scheduled']
-      - name: wp_course_summary
-        description: The course excerpt (wp_posts.post_excerpt).
       - name: published_at
         description: wp_posts.post_date_gmt in Vietnam time.
       - name: updated_at
         description: wp_posts.post_modified_gmt in Vietnam time.
+      - name: instructor_wp_user_id
+        description: wp_users.ID of the course author. -1 when none.
