@@ -25,3 +25,13 @@ models:
         description: The regular price (tutor_course_price).
       - name: sale_unit_price
         description: The sale price (tutor_course_sale_price). Null when not on sale.
+
+  - name: int_wp_course__joined_to_meta
+    description: >
+      Courses and bundles with their pivoted meta, plus the unknown course
+      (wp_course_id -1). One row per wp_course. Read by dim_wp_course.
+    columns:
+      - name: wp_course_id
+        data_tests:
+          - unique
+          - not_null
