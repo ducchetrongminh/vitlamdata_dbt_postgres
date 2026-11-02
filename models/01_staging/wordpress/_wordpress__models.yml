@@ -168,3 +168,22 @@ models:
         description: wp_posts.post_date_gmt in Vietnam time.
       - name: updated_at
         description: wp_posts.post_modified_gmt in Vietnam time.
+
+  - name: stg_wordpress__wp_post_meta
+    description: >
+      Key-value attributes of wp_posts (wp_postmeta), one row per post per meta key.
+      Kept in key-value shape; pivoted per entity in intermediate (int_<entity>_meta_pivoted).
+      No key holds PII today; hash meta_value for any key that does.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['wp_post_id', 'meta_key']
+    columns:
+      - name: wp_post_meta_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_post_id
+        description: >
+          The post this attribute belongs to. Includes meta of posts that the base model
+          filters out (trash, auto-draft); the pivot drops them by joining to the entity.
