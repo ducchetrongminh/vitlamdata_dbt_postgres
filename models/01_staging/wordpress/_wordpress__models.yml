@@ -97,3 +97,30 @@ models:
         description: Amount the buyer paid (net_payment).
       - name: tax_pct
         description: Tax rate in percent (tax_rate).
+
+  - name: stg_wordpress__wp_order_line
+    description: >
+      Tutor LMS order lines (wp_tutor_order_items), one row per course or course bundle
+      bought in an order. Each line is one unit. Prices are VND.
+    columns:
+      - name: wp_order_line_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_order_id
+        description: The order header (stg_wordpress__wp_order). -1 when none.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_wordpress__wp_order')
+                field: wp_order_id
+      - name: item_wp_post_id
+        description: wp_posts.ID of the item bought, a course (post_type courses) or a course bundle (course-bundle). -1 when none.
+      - name: wp_coupon_code
+        description: Coupon applied to this line. 'UNKNOWN' when none.
+      - name: regular_unit_price
+        description: The item's regular price.
+      - name: sale_unit_price
+        description: The item's sale price at checkout. Null when the item was not on sale.
+      - name: discounted_unit_price
+        description: The price after the coupon (discount_price). Null when no coupon applied.
