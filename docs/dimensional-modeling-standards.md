@@ -507,7 +507,7 @@ Column order is the order of columns in a dimension model's final `select`, whic
 - Adding a column means placing it in its group, not appending it at the end
 
 #### Decision
-Order the columns of every `dim_*` model in these groups:
+Order the columns of every `dim_*` model in the groups below. Apply the same order to every dimension-like model in `01_staging` and `02_intermediate`, which have no surrogate key, so start at the natural key. Apply it in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
 
 1. Primary key — the surrogate key `<entity>_key`
 2. Natural key — `<entity>_id` or `<entity>_code`
@@ -838,7 +838,7 @@ Column order is the order of columns in a fact model's final `select`, which is 
 - Adding a column means placing it in its group, not appending it at the end
 
 #### Decision
-Order the columns of every `fact_*` model in these groups:
+Order the columns of every `fact_*` model in the groups below. Apply the same order to every fact-like model in `01_staging` and `02_intermediate`, which have no surrogate key, so start at the natural key. Apply it in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
 
 1. Primary key — the surrogate key `<entity>_key`
 2. Grain columns the primary key is generated from — e.g. `order_no`, `line_no`
