@@ -11,22 +11,29 @@ filtered as (
 
 renamed as (
     select
+        -- Keys
         wp_post_id as wp_course_id,
+        -- Name, desc
         wp_post_title as wp_course_title,
         wp_post_excerpt as wp_course_summary,
+        -- Attributes
         wp_post_status as wp_course_status_code,
         wp_post_slug as wp_course_slug,
         posted_at as published_at,
         modified_at as updated_at,
+        -- Instructor
         author_wp_user_id as instructor_wp_user_id
     from filtered
 ),
 
 decoded as (
     select
+        -- Keys
         wp_course_id,
+        -- Name, desc
         wp_course_title,
         wp_course_summary,
+        -- Attributes
         case wp_course_status_code
             when 'publish' then 'Published'
             when 'draft' then 'Draft'
@@ -38,6 +45,7 @@ decoded as (
         wp_course_slug,
         published_at,
         updated_at,
+        -- Instructor
         instructor_wp_user_id
     from renamed
 ),

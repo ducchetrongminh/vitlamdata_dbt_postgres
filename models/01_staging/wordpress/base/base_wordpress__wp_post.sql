@@ -11,16 +11,21 @@ filtered as (
 
 renamed as (
     select
+        -- Keys
         id as wp_post_id,
+        -- Name, desc
         post_title as wp_post_title,
         post_excerpt as wp_post_excerpt,
+        -- Attributes
         post_type as wp_post_type,
         post_status as wp_post_status,
         post_name as wp_post_slug,
         menu_order as wp_post_menu_order,
         post_date_gmt as posted_at_utc,
         post_modified_gmt as modified_at_utc,
+        -- Parent post
         post_parent as parent_wp_post_id,
+        -- Author
         post_author as author_wp_user_id
     from filtered
 ),
