@@ -1,3 +1,8 @@
+-- Ephemeral, not a view: post_title is raw PII for leads (vld_lead titles are the
+-- lead's email), so this model is never stored. Staging models on top of it pick
+-- their post type and hash what they need.
+{{ config(materialized='ephemeral') }}
+
 with
 
 source as (

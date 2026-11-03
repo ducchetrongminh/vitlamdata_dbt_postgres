@@ -2,7 +2,8 @@ models:
   - name: base_wordpress__wp_post
     description: >
       wp_posts without trashed and auto-draft posts, cleaned once for every post type.
-      Read by one staging model per post type. Times are Vietnam time.
+      Read by one staging model per post type. Ephemeral: post_title holds raw emails
+      for leads. Times are Vietnam time.
     columns:
       - name: wp_post_id
         data_tests:
