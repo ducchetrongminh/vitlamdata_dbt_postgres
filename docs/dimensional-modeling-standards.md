@@ -508,7 +508,7 @@ Column order is the order of columns in a dimension model's final `select`, whic
 - Adding a column means placing it in its group, not appending it at the end
 
 #### Decision
-Order the columns of every `dim_*` model in the groups below. Apply the same order to every dimension-like model in `01_staging` and `02_intermediate`, which have no surrogate key, so start at the natural key. Apply it in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
+Order the columns of every dimension in the groups below.
 
 1. Primary key — the surrogate key `<entity>_key`
 2. Natural key — `<entity>_id` or `<entity>_code`
@@ -839,7 +839,7 @@ Column order is the order of columns in a fact model's final `select`, which is 
 - Adding a column means placing it in its group, not appending it at the end
 
 #### Decision
-Order the columns of every `fact_*` model in the groups below. Apply the same order to every fact-like model in `01_staging` and `02_intermediate`, which have no surrogate key, so start at the natural key. Apply it in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
+Order the columns of every fact table in the groups below.
 
 1. Primary key — the surrogate key `<entity>_key`
 2. Grain columns the primary key is generated from — e.g. `order_no`, `line_no`
@@ -954,11 +954,11 @@ An inferred member is a placeholder dimension row for such a key: real natural k
 - A status attribute separates "deleted" from "not loaded yet" from "no member at all" (`-1`)
 
 #### Cons
-- The dimension's intermediate model must read the fact's staging model to find referenced keys, and must be updated whenever a new fact references the dimension
+- Building the dimension requires reading the facts' source rows to find referenced keys, and that step must be extended whenever a new fact references the dimension
 - Telling deleted from late-arriving needs a signal from the source; without one, both look identical
 
 #### Decision
-In the dimension's intermediate model (`int_<entity>__inserted_inferred`), union three sets: the real members from staging, an inferred row for each natural key that a fact's staging model references but the dimension's staging model lacks, and the unknown row from [Null foreign keys](#12-null-foreign-keys). Give inferred rows `'Unknown'` text attributes, null dates, and a status attribute (`<entity>_status`):
+Build every dimension from three sets of rows: the real members from its source, an inferred row for each natural key that a fact references but the dimension's source lacks, and the unknown row from [Null foreign keys](#12-null-foreign-keys). Add the inferred rows before the surrogate key is generated, so they get keys from the same formula as every other row. Give inferred rows `'Unknown'` text attributes, null dates, and a status attribute:
 
 | Status | Meaning |
 |---|---|
@@ -967,12 +967,12 @@ In the dimension's intermediate model (`int_<entity>__inserted_inferred`), union
 | `Not Loaded Yet` | the member was created after the last load; the next load replaces the row |
 | `Unknown` | the unknown row, `-1` |
 
-Decide `Deleted` vs `Not Loaded Yet` from the best signal the source offers, and state the signal in a `shortcut:` comment when it is a heuristic:
+Decide `Deleted` vs `Not Loaded Yet` from the best signal the source offers. When the signal is a heuristic, write down where it breaks next to the logic:
 
 - **Auto-increment ids (default)** — an id below the highest id in the source existed, since a later id was handed out after it: `Deleted`. An id above it was created after the load: `Not Loaded Yet`. Breaks if ids are reused or imported out of order.
-- **Snapshot history** — an id present in an earlier snapshot ([Slowly Changing Dimensions](#31-slowly-changing-dimensions-scd), [dbt Layers Conventions, Snapshots](dbt-layers-conventions.md#6-snapshots)) and absent now: `Deleted`; never seen: `Not Loaded Yet`. Use it once the dimension's source has a snapshot.
+- **History** — an id present in an earlier copy of the source (see [Slowly Changing Dimensions](#31-slowly-changing-dimensions-scd)) and absent now: `Deleted`; never seen: `Not Loaded Yet`. Use it once the source's history is kept.
 
-The fact itself never changes: it builds its key from the natural key with the dimension's formula, as for every row ([dbt Layers Conventions, Mart structural constraints](dbt-layers-conventions.md#41-mart-structural-constraints)). The dimension is rebuilt each run, so a late-arriving member's inferred row is replaced by the real one at the next load.
+The fact itself never changes: it builds its key from the natural key with the dimension's formula, as for every row. The dimension is rebuilt each load, so a late-arriving member's inferred row is replaced by the real one at the next load.
 
 ```sql
 -- Yes: int_wp_user__inserted_inferred.sql

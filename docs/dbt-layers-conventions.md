@@ -23,6 +23,8 @@ Every model belongs to exactly one layer. Data moves in one direction — source
 | Intermediate | `02_intermediate` | Joins, re-graining, and complex logic between staging and marts | Ephemeral | `intermediate` (only models overridden to view/table) |
 | Mart | `03_mart` | Wide, business-defined entities (facts/dimensions) for consumption | Table | `mart_<domain>` |
 
+**Column order** — every layer orders columns per [Dimensional Modeling Standards, Dimension Column Order](dimensional-modeling-standards.md#19-dimension-column-order) for dimension-like models and [Fact Column Order](dimensional-modeling-standards.md#26-fact-column-order) for fact-like models. Staging and intermediate models have no surrogate key, so they start at the natural key. Apply the order in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
+
 ## 2. Staging Layer Rules (01_staging)
 
 ### 2.1 Staging structural constraints
@@ -227,6 +229,8 @@ inserted_unknown as (
 
 select * from inserted_unknown
 ```
+
+- **Insert inferred dimension members** — `int_<entity>__inserted_inferred` — per [Late-Arriving and Deleted Dimension Members](dimensional-modeling-standards.md#32-late-arriving-and-deleted-dimension-members). Union the real members from staging, an inferred row for each natural key that a fact's staging model references but the dimension's staging model lacks, and the unknown row. Read the referenced keys from the facts' staging models, not from the facts, so facts and dimensions still build in parallel. Add a fact's key column to the model when a new fact references the dimension. Mark the deleted/not-loaded-yet signal with a `shortcut:` comment when it is a heuristic. This model replaces `int_<entity>__inserted_unknown` for that dimension. Example: `int_wp_user__inserted_inferred.sql`.
 
 - **Denormalize dimensions closer to mart shape** — `int_<entity>__denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
 
