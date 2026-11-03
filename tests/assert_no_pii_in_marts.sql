@@ -1,4 +1,4 @@
--- Fails for any mart column whose name looks like PII and is not a hash
+-- Fails for any mart column whose name looks like PII, or is a hash
 -- (docs/architecture.md §6). Checks the mart schemas of the current target:
 -- mart_* on prod, dbt_<user>_mart_* on dev, ci_pr_<n>_mart_* on CI.
 -- It has no parents, so dbt build may run it before the marts: the post-hook
