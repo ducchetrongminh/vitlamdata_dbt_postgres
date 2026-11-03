@@ -50,26 +50,34 @@ def iowa_liquor(products_dataset=dlt.config.value, sales_datasets=dlt.config.val
     def products():
         yield from read_csv_zip(products_dataset)
 
-    # One dataset per year. Past years are final, so each loads once; the latest year
-    # reloads every run. No column set is unique per line, so there is no primary key:
-    # merge_key deletes the rows of every ordered_on in the load, then inserts, which
-    # replaces the latest year whole. REFRESH=drop_data resets the state: all years reload.
-    @dlt.resource(write_disposition={"disposition": "merge", "strategy": "delete-insert"}, merge_key="ordered_on")
-    def sales():
-        loaded = dlt.current.resource_state().setdefault("loaded_years", [])
-        latest = max(sales_datasets)
-        for year, dataset_id in sorted(sales_datasets.items()):
-            if year in loaded:
-                continue
+    # One table per yearly dataset, sales_<year>, each replaced whole when it loads.
+    # Past years are final: each loads once, then is left out of the run, so its table
+    # is never touched. The latest year reloads every run.
+    def sales_year(year, dataset_id, final):
+        def rows():
             yield from read_csv_zip(dataset_id)
-            if year != latest:
-                loaded.append(year)
+            if final:
+                dlt.current.resource_state()["loaded"] = True
 
-    return products, sales
+        return dlt.resource(rows, name=f"sales_{year}", write_disposition="replace")
+
+    pipeline = dlt.current.pipeline()
+    resources_state = dlt.current.source_state().get("resources", {})
+    latest = max(sales_datasets)
+    sales = [
+        sales_year(year, dataset_id, final=year != latest)
+        for year, dataset_id in sorted(sales_datasets.items())
+        # On refresh, include every year: dlt then wipes each one's state and reloads it.
+        if pipeline.refresh or not resources_state.get(f"sales_{year}", {}).get("loaded")
+    ]
+    return [products, *sales]
 
 
 if __name__ == "__main__":
     setup(__file__)
     pipeline = dlt.pipeline(pipeline_name="iowa_liquor", destination="postgres")
+    # The source picks which years to load from the state, so restore it from the
+    # warehouse first: a fresh CI runner has none, and run() restores it too late.
+    pipeline.sync_destination()
     # csv loads with COPY: much faster than INSERT for ~35M sales rows.
     report(pipeline, pipeline.run(iowa_liquor(), loader_file_format="csv"))
