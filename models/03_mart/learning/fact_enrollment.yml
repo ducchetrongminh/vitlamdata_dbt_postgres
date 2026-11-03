@@ -4,15 +4,10 @@ models:
       Tutor LMS enrollments, one row per student per course or course bundle. Factless:
       count rows to count enrollments. Incremental on updated_at. Times are Vietnam time.
     columns:
-      - name: wp_enrollment_key
-        data_type: text
-        constraints:
-          - type: primary_key
       - name: wp_enrollment_id
         data_type: bigint
         constraints:
-          - type: not_null
-          - type: unique
+          - type: primary_key
       - name: student_wp_user_id
         data_type: bigint
       - name: wp_course_id

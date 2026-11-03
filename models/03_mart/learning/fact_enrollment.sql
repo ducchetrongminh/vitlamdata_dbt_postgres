@@ -2,7 +2,7 @@
     config(
         materialized='incremental',
         incremental_strategy='delete+insert',
-        unique_key='wp_enrollment_key',
+        unique_key='wp_enrollment_id',
         on_schema_change='append_new_columns'
     )
 }}
@@ -19,7 +19,6 @@ enrollment as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['wp_enrollment_id']) }} as wp_enrollment_key,
         wp_enrollment_id,
         -- Foreign keys
         student_wp_user_id,
