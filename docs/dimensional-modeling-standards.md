@@ -31,7 +31,7 @@ Dimensional modeling (Kimball) is the modeling approach for this warehouse. Thes
 
 ### 1.1 Dimension Surrogate Keys
 
-Create a surrogate key on every dimension and fact table using `dbt_utils.generate_surrogate_key`.
+Create a surrogate key on every dimension, and on a fact table only when its grain spans several columns, using `dbt_utils.generate_surrogate_key`.
 
 #### Definition
 A surrogate key is a warehouse-managed primary key assigned to every dimension row, independent of the operational source system's natural key.
@@ -47,7 +47,7 @@ A surrogate key is a warehouse-managed primary key assigned to every dimension r
 - Requires a consistent generation strategy across all models
 
 #### Decision
-Create a surrogate key on every dimension and fact table. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns. On a fact, those are the columns of its grain (e.g. `order_no`, `line_no` on `fact_order_line`).
+Create a surrogate key on every dimension. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns. Give a fact table a surrogate key only when its grain spans several columns, generated over those columns (e.g. `order_no`, `line_no` on `fact_order_line`), so the fact has a one-column primary key. A fact whose grain is one column uses that column as its primary key: nothing joins to a fact's key, so a hash of one column adds nothing.
 
 Exception: the date dimension is a special case — key it by the date value itself, not a generated hash, since a date is already unique, stable, and meaningful without hashing. Its unknown row is the date `'1900-01-01'`, with `'Unknown'` in every text attribute; a fact fills a null date foreign key with `'1900-01-01'` in staging.
 
