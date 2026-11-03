@@ -20,7 +20,6 @@ renamed as (
         post_type as wp_post_type,
         post_status as wp_post_status,
         post_name as wp_post_slug,
-        menu_order as wp_post_menu_order,
         post_date_gmt as posted_at_utc,
         post_modified_gmt as modified_at_utc,
         -- Parent post
@@ -41,7 +40,6 @@ casted as (
         cast(wp_post_type as text) as wp_post_type,
         cast(wp_post_status as text) as wp_post_status,
         cast(wp_post_slug as text) as wp_post_slug,
-        cast(wp_post_menu_order as integer) as wp_post_menu_order,
         cast(posted_at_utc as timestamp) at time zone 'UTC' at time zone 'Asia/Ho_Chi_Minh' as posted_at,
         cast(modified_at_utc as timestamp) at time zone 'UTC' at time zone 'Asia/Ho_Chi_Minh' as modified_at,
         -- Parent post
