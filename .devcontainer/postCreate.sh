@@ -8,6 +8,10 @@ set -euo pipefail
 [ -O /home/vscode/.config/gcloud ] || sudo chown -R vscode:vscode /home/vscode/.config/gcloud
 [ -O /commandhistory ] || sudo chown -R vscode:vscode /commandhistory
 
+# The claude-code feature installs Claude Code as root at build time, so the
+# auto-updater (running as vscode) fails with "no write permission to npm prefix".
+sudo chown -R vscode:nvm "$(npm prefix -g)/lib/node_modules/@anthropic-ai" "$(npm prefix -g)/bin/claude"
+
 # Bash history: keep it on the shared bash-history volume so it survives rebuilds, and
 # write each command right away so a killed terminal doesn't lose it.
 grep -q commandhistory ~/.bashrc || cat >> ~/.bashrc <<'EOF'
