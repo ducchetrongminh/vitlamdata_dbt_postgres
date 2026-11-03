@@ -40,3 +40,5 @@ models:
       # One entry per domain folder, schema mart_<domain>:
       learning:
         +schema: mart_learning
+      marketing:
+        +schema: mart_marketing

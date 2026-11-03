@@ -238,3 +238,15 @@ models:
           - accepted_values:
               arguments:
                 values: ['All Courses and Bundles', 'All Courses', 'All Bundles', 'Specific Courses', 'Specific Bundles', 'Specific Category']
+
+  - name: stg_wordpress__wp_lead
+    description: >
+      Leads from the site's sign-up forms (post_type vld_lead), one row per lead. The
+      lead's email (post_title) is not selected. Times are Vietnam time.
+    columns:
+      - name: wp_lead_id
+        data_tests:
+          - unique
+          - not_null
+      - name: submitted_at
+        description: wp_posts.post_date_gmt in Vietnam time.

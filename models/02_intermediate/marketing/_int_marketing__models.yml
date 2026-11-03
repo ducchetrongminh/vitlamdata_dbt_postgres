@@ -1,0 +1,14 @@
+models:
+  - name: int_wp_lead__meta_pivoted
+    description: >
+      Leads with their form source and roadmap-email time from wp_postmeta, one row per
+      lead. Read by fact_lead.
+    columns:
+      - name: wp_lead_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_lead_source
+        description: "The sign-up form (meta source). 'Unknown' when the lead has none."
+      - name: roadmap_sent_at
+        description: When the roadmap email was sent (meta roadmap_sent_at, unix time), in Vietnam time. Null when not sent.
