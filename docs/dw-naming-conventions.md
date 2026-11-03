@@ -140,7 +140,7 @@ from {{ source('crm', 'customer') }}
 
 Source systems often expose columns named after internal implementation details — a table code, a legacy field name, a system-specific abbreviation — that mean nothing to a business user reading a report.
 
-Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
+Rename every source column that staging selects to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
 
 ```sql
 -- Yes: stg_wordpress__wp_course.sql renames WordPress's generic post columns to their business meaning

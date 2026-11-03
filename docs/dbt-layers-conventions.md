@@ -55,7 +55,7 @@ Staging-only transformations that turn a raw source table into a clean, business
 - Renaming decisions made this early are hard to walk back once dozens of downstream models `ref()` the new names
 
 #### Decision
-Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. Do not carry dlt's metadata columns (`_dlt_load_id`, `_dlt_id`) past staging: list only business columns in `renamed`.
+Every staging model must, at minimum: filter out invalid/deleted rows, select only the columns a downstream model uses, rename each one to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast each one to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. List only the used business columns in `renamed`: no unused source columns and no dlt metadata columns (`_dlt_load_id`, `_dlt_id`). Add a column to staging when a downstream model first needs it.
 
 ```sql
 -- Yes: base_wordpress__wp_post.sql — cleanup once, for every post type
