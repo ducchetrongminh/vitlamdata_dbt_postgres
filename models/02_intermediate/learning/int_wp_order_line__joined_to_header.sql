@@ -11,8 +11,8 @@ order_header as (
 joined_to_header as (
     select
         -- Keys
-        order_line.wp_order_id,
-        order_line.wp_order_line_id,
+        order_line.wp_order_no,
+        order_line.wp_order_line_no,
         -- Foreign keys
         order_header.ordered_by_wp_user_id,
         order_line.wp_course_id,
@@ -34,7 +34,7 @@ joined_to_header as (
         order_line.discount_amt,
         order_line.net_amt
     from order_line
-    inner join order_header on order_line.wp_order_id = order_header.wp_order_id
+    inner join order_header on order_line.wp_order_no = order_header.wp_order_no
 )
 
 select * from joined_to_header

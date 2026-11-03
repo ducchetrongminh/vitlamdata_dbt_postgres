@@ -10,9 +10,9 @@ order_line as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['wp_order_line_id']) }} as wp_order_line_key,
-        wp_order_id as wp_order_no,              -- degenerate dimension, header-level
-        wp_order_line_id as wp_order_line_no,    -- degenerate dimension, line-level
+        {{ dbt_utils.generate_surrogate_key(['wp_order_line_no']) }} as wp_order_line_key,
+        wp_order_no,         -- degenerate dimension, header-level
+        wp_order_line_no,    -- degenerate dimension, line-level
         -- Foreign keys
         ordered_by_wp_user_id,
         wp_course_id,

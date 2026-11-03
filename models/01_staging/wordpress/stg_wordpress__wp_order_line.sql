@@ -7,9 +7,9 @@ source as (
 renamed as (
     select
         -- Keys
-        id as wp_order_line_id,
+        id as wp_order_line_no,
         -- Foreign keys
-        order_id as wp_order_id,
+        order_id as wp_order_no,
         item_id as wp_course_id,
         coupon_code as wp_coupon_code,
         -- Measures
@@ -22,9 +22,9 @@ renamed as (
 casted as (
     select
         -- Keys
-        cast(wp_order_line_id as bigint) as wp_order_line_id,
+        cast(wp_order_line_no as bigint) as wp_order_line_no,
         -- Foreign keys
-        cast(wp_order_id as bigint) as wp_order_id,
+        cast(wp_order_no as bigint) as wp_order_no,
         cast(wp_course_id as bigint) as wp_course_id,
         cast(wp_coupon_code as text) as wp_coupon_code,
         -- Measures
@@ -37,9 +37,9 @@ casted as (
 null_handled as (
     select
         -- Keys
-        wp_order_line_id,
+        wp_order_line_no,
         -- Foreign keys
-        coalesce(nullif(wp_order_id, 0), -1) as wp_order_id,
+        coalesce(nullif(wp_order_no, 0), -1) as wp_order_no,
         coalesce(nullif(wp_course_id, 0), -1) as wp_course_id,
         coalesce(nullif(trim(wp_coupon_code), ''), 'UNKNOWN') as wp_coupon_code,
         -- Measures

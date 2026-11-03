@@ -63,7 +63,7 @@ models:
       down, one row per order line. Lines of trashed orders drop out with the inner join.
       Read by fact_order_line.
     columns:
-      - name: wp_order_line_id
+      - name: wp_order_line_no
         data_tests:
           - unique
           - not_null
