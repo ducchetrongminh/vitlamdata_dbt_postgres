@@ -17,7 +17,8 @@ Metabase can read; the whole warehouse can be rebuilt from code and sources alon
 ### Constraints
 
 - **Code public, data private.** The repo is public. Data, credentials and the VM stay private.
-- **Daily batch, small data.** Freshness of one day is enough. Tables are up to a few million rows.
+- **Daily batch, small data.** Freshness of one day is enough. Tables are up to a few million rows, except Iowa liquor sales
+  (~35M rows, a public practice dataset): past years load once, so a nightly run reloads only one year.
 - **The warehouse is not backed up** (infras ADR 0008). Everything in it must be rebuildable
   from sources. Nothing may land in it that has no other copy. The one exception is the
   `snapshots` schema: dbt snapshots hold history that no source keeps, so infras backs up
@@ -78,6 +79,7 @@ in the project's one `.venv`.
 | WordPress + Tutor LMS (sales, enrollments, users) | MariaDB `wordpress` DB | tunnel `localhost:3306` | `dlt_reader` (read-only) | `raw_wordpress` |
 | Metabase app DB (questions, dashboards, usage) | app Postgres `metabase_db` | tunnel `localhost:5432` | `dlt_reader` (read-only) | `raw_metabase` |
 | Google Sheets | Google Sheets API | HTTPS | the service-account key in the secret `vitlamdata-gsheets-key`; each sheet is shared with that account's email | `raw_sheets` |
+| Iowa liquor products and sales 2012– (public, CC BY 4.0) | Iowa Data Hub zip exports | HTTPS | none | `raw_iowa_liquor` |
 
 Write disposition is decided **per table**:
 
@@ -102,7 +104,7 @@ and CI side by side.
 
 | Schema | Owner | Contents |
 |---|---|---|
-| `raw_wordpress`, `raw_metabase`, `raw_sheets` (+ `*_staging`) | `loader` | dlt output, 1:1 with the source |
+| `raw_wordpress`, `raw_metabase`, `raw_sheets`, `raw_iowa_liquor` (+ `*_staging`) | `loader` | dlt output, 1:1 with the source |
 | `staging` | `transformer` | dbt views: rename, cast, hash PII |
 | `intermediate` | `transformer` | only intermediate models overridden to view/table |
 | `mart_<domain>` (e.g. `mart_sales`, `mart_metabase`) | `transformer` | `fact_*` / `dim_*` tables |
