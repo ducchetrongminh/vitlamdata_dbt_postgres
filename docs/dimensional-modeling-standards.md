@@ -944,7 +944,7 @@ Add an inferred dimension row for every natural key a fact references that the d
 A fact can reference a dimension member that isn't in the dimension's source:
 
 - **Late-arriving** — the member exists in the operational system but hasn't been loaded yet. It was created after its table was extracted, while the fact's table was extracted later in the same load. The next load brings it in.
-- **Deleted** — the member was deleted in the operational system, while the facts that reference it were kept (e.g. a WordPress account deleted after its Tutor enrollment).
+- **Deleted** — the member was deleted in the operational system, while the facts that reference it were kept (e.g. a customer account deleted after its orders).
 
 An inferred member is a placeholder dimension row for such a key: real natural key, `'Unknown'` attributes, and a status saying why it is a placeholder.
 
@@ -974,57 +974,62 @@ Decide `Deleted` vs `Not Loaded Yet` from the best signal the source offers. Whe
 
 The fact itself never changes: it builds its key from the natural key with the dimension's formula, as for every row. The dimension is rebuilt each load, so a late-arriving member's inferred row is replaced by the real one at the next load.
 
+Orders reference customers 105 and 120, which the customer source doesn't hold; its highest id is 110.
+
 ```sql
--- Yes: int_wp_user__inserted_inferred.sql
-wp_user as (
-    select wp_user_id, 'Active' as wp_user_status, registered_at
-    from {{ ref('stg_wordpress__wp_user') }}
+-- Yes: int_customer__inserted_inferred.sql
+customer as (
+    select customer_id, customer_name, 'Active' as customer_status
+    from {{ ref('stg_shop__customer') }}
 ),
 
-referenced_user as (
-    -- user ids that facts point to; add each new fact's user column here
-    select student_wp_user_id as wp_user_id from {{ ref('stg_wordpress__wp_enrollment') }}
+referenced_customer as (
+    select customer_id from {{ ref('stg_shop__order') }}
 ),
 
-inferred_user as (
-    -- shortcut: assumes ids are auto-increment and never reused; switch to a wp_users snapshot once one exists
+inferred_customer as (
     select distinct
-        referenced_user.wp_user_id,
+        referenced_customer.customer_id,
+        'Unknown' as customer_name,
         case
-            when referenced_user.wp_user_id < (select max(wp_user_id) from wp_user) then 'Deleted'
+            when referenced_customer.customer_id < (select max(customer_id) from customer) then 'Deleted'
             else 'Not Loaded Yet'
-        end as wp_user_status,
-        null::timestamp as registered_at
-    from referenced_user
+        end as customer_status
+    from referenced_customer
     where
-        referenced_user.wp_user_id <> -1
-        and not exists (select 1 from wp_user where wp_user.wp_user_id = referenced_user.wp_user_id)
+        referenced_customer.customer_id <> -1
+        and not exists (select 1 from customer where customer.customer_id = referenced_customer.customer_id)
 ),
 
-unknown_user as (
-    select -1 as wp_user_id, 'Unknown' as wp_user_status, null::timestamp as registered_at
+unknown_customer as (
+    select -1 as customer_id, 'Unknown' as customer_name, 'Unknown' as customer_status
 ),
 
 inserted_inferred as (
-    select * from wp_user
+    select * from customer
     union all
-    select * from inferred_user
+    select * from inferred_customer
     union all
-    select * from unknown_user
+    select * from unknown_customer
 )
 
 select * from inserted_inferred
 ```
 
+| customer_id | customer_name | customer_status |
+|---|---|---|
+| 101 | Acme Corp | Active |
+| 110 | Globex Inc | Active |
+| 105 | Unknown | Deleted |
+| 120 | Unknown | Not Loaded Yet |
+| -1 | Unknown | Unknown |
+
 ```sql
--- No: the fact re-points a missing member to the unknown row — it must join the dimension
--- to find out, and per-member counts and the self-healing of late members are lost
+-- No: the order's customer re-pointed to the unknown row — customer 105's orders now count
+-- as "no customer", and customer 120's orders stay there after customer 120 arrives
 select
-    case
-        when dim_wp_user.wp_user_key is null then {{ dbt_utils.generate_surrogate_key(['-1']) }}
-        else dim_wp_user.wp_user_key
-    end as student_wp_user_key
-from {{ ref('stg_wordpress__wp_enrollment') }} as enrollment
-left join {{ ref('dim_wp_user') }} as dim_wp_user
-    on {{ dbt_utils.generate_surrogate_key(['enrollment.student_wp_user_id']) }} = dim_wp_user.wp_user_key
+    order_no,
+    coalesce(customer.customer_id, -1) as customer_id
+from {{ ref('stg_shop__order') }} as shop_order
+left join {{ ref('stg_shop__customer') }} as customer on shop_order.customer_id = customer.customer_id
 ```
