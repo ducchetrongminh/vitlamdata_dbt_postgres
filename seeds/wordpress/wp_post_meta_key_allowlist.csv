@@ -1,0 +1,31 @@
+meta_key_pattern,pii_indicator,description
+^bundle-course-ids$,Not PII,Comma-separated course ids in a bundle
+^_course_duration$,Not PII,PHP-serialized course hours and minutes
+^_edit_lock$,Not PII,Edit lock: unix time and wp_users.ID of the editor
+^_is_tutor_order_for_course$,Not PII,Unix time; marks an order-for-course post
+^roadmap_sent_at$,Not PII,Lead: unix time the roadmap email was sent
+^source$,Not PII,Lead: signup form slug
+^_thumbnail_id$,Not PII,Attachment post id of the featured image
+^_tutor_bundle_id$,Not PII,Enrollment: course bundle id
+^tutor_bundle_ribbon_type$,Not PII,Bundle ribbon setting
+^_tutor_course_benefits$,Not PII,Course marketing text
+^_tutor_course_level$,Not PII,Course level code
+^_tutor_course_material_includes$,Not PII,Course marketing text
+^tutor_course_price$,Not PII,Course regular price
+^_tutor_course_price_type$,Not PII,paid or free
+^_tutor_course_requirements$,Not PII,Course marketing text
+^tutor_course_sale_price$,Not PII,Course sale price
+^_tutor_course_settings$,Not PII,PHP-serialized course settings
+^_tutor_course_started$,Not PII,Unix time the course started
+^_tutor_course_target_audience$,Not PII,Course marketing text
+^_tutor_enable_qa$,Not PII,yes or no
+^_tutor_enrolled_by_order_id$,Not PII,Enrollment: wp_tutor_orders.id
+^_tutor_enrolled_by_product_id$,Not PII,Enrollment: product id
+^_tutor_is_public_course$,Not PII,yes or no
+^_tutor_order_for_course_id_[0-9]+$,Not PII,One key per course id; order-for-course marker
+^_video$,Not PII,PHP-serialized video source settings
+^_wp_attached_file$,Not PII,Upload path of an attachment
+^_wp_attachment_image_alt$,Not PII,Image alt text
+^_wp_attachment_metadata$,Not PII,PHP-serialized image sizes and EXIF
+^_wp_old_slug$,Not PII,Previous post slug
+^_wp_page_template$,Not PII,Page template name

@@ -119,8 +119,8 @@ and CI side by side.
 ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/credentials.toml
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
 models/01_staging/<source>/base/ base_<source>__<entity>.sql (only when one table holds several entities)
-models/02_intermediate/<domain>/ int_<entity>_<verb_phrase>.sql
-models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
+models/02_intermediate/<domain>/ int_<entity>__<verb_phrase>.sql
+models/03_mart/<domain>/         fact_*.sql, dim_*.sql, one <model>.yml per model
 snapshots/<source>/              snap_<source>__<table>.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql
@@ -139,10 +139,12 @@ and [Dimensional Modeling Standards](dimensional-modeling-standards.md).
 |---|---|---|
 | `01_staging` | view | |
 | `02_intermediate` | ephemeral | a model may override to view/table; it then lands in `intermediate` |
-| `03_mart` | table | transaction facts are `incremental`, `incremental_strategy: delete+insert`, with a `unique_key` |
+| `03_mart` | table | transaction facts are `incremental`, `incremental_strategy: merge`, with a `unique_key` |
 
-Incremental marts with an enforced contract set `on_schema_change: append_new_columns`
-(or `fail`).
+Incremental marts with an enforced contract set `on_schema_change: fail`. A new column
+then stops the run, and a deliberate `--full-refresh` fills it on every row.
+`append_new_columns` would add it silently with null on every row outside the
+incremental window.
 
 ### Schema naming
 
@@ -189,7 +191,11 @@ encode(hmac(lower(trim({{ col }})), (select key from private.pii_key), 'sha256')
 - **Rotating the key changes every hash.** Rotation requires a full refresh of all
   incremental models.
 - The singular test `assert_no_pii_in_marts` fails if any column in a `mart_%` schema
-  matches `email|phone|name|address` without a `_hash` suffix.
+  matches `email|phone|name|address`, ends in `_hash`, or holds a coupon code (a usable
+  code is a working discount for anyone who reads it). Hashes are join keys for
+  staging and intermediate only (e.g. matching the same person across systems by email
+  hash); marts join on surrogate keys. A hash in a public mart would let anyone holding
+  the key, or a leaked copy of the data, link a person across every system.
 
 ## 7. Roles and privileges
 
@@ -382,7 +388,7 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | Database | new `vitlamdata_dw`, old ones retired later | clean cutover |
 | PII | HMAC with global key in `private.pii_key` | deterministic joins; key never in compiled SQL |
 | Prod schema naming | `staging`, `intermediate`, `mart_<domain>` | per-domain grants for public Metabase |
-| Facts | incremental `delete+insert` | works on every Postgres version |
+| Facts | incremental `merge` | updates matching rows in place; needs Postgres 15+ (the warehouse runs 16) |
 | Scheduled full refresh | none; manual `full_refresh` dispatch | dbt-only refresh cannot fix deletes that dlt merge never saw |
 | Slim CI | `state:modified+ --defer`, manifest in GCS | fast PR builds; schemas kept until PR closes |
 | Deploy | on merge | prod reflects `main` within minutes |

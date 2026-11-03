@@ -1,0 +1,22 @@
+models:
+  - name: fact_lead
+    description: >
+      Leads from the site's sign-up forms, one row per lead. Factless: count rows to
+      count leads. No email. Incremental with a 3-day lookback. Times are Vietnam time.
+    columns:
+      - name: wp_lead_id
+        data_type: bigint
+        constraints:
+          - type: primary_key
+      - name: wp_lead_source
+        data_type: text
+        description: "The sign-up form. 'Unknown' when the lead has none."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Home Lead Magnet', 'Unknown']
+      - name: submitted_at
+        data_type: timestamp
+      - name: roadmap_sent_at
+        data_type: timestamp
+        description: When the roadmap email was sent. Null when not sent.

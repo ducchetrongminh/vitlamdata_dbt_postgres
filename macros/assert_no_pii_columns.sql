@@ -1,11 +1,15 @@
 {#-
-    Column names that look like PII and are not hashes (docs/architecture.md §6).
-    `name` only in these forms, so course_name or dashboard_name pass.
+    Column names not allowed in a mart (docs/architecture.md §6): names that look
+    like PII, every _hash column, and coupon codes. Hashes are join keys for
+    staging and intermediate only; a mart joins on surrogate keys. A usable
+    coupon code is a working discount for anyone who reads it. `name` only in these forms,
+    so course_name or dashboard_name pass.
 -#}
 {% macro is_pii_column(col) -%}
     (
         {{ col }} ~* '(email|phone|address|first_name|last_name|full_name|user_name|display_name|learner_name)'
-        and {{ col }} !~* '_hash$'
+        or {{ col }} ~* '_hash$'
+        or {{ col }} ~* 'coupon_code'
     )
 {%- endmacro %}
 
@@ -45,7 +49,7 @@ begin
             {%- endif %}
         );
     if bad is not null then
-        raise exception 'PII column(s) in {{ this }}: %. Hash them in staging with hash_pii().', bad;
+        raise exception 'PII column(s) in {{ this }}: %. Hash them in staging with hash_pii() and keep the hashes out of the mart.', bad;
     end if;
 end $$
 {%- endmacro %}

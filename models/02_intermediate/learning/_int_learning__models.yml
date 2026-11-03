@@ -1,0 +1,79 @@
+models:
+  - name: int_wp_course__meta_pivoted
+    description: >
+      Tutor LMS course and bundle settings from wp_postmeta, one row per wp_course,
+      one column per meta key a mart needs. Prices are VND.
+    columns:
+      - name: wp_course_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_course_price_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Paid', 'Free']
+      - name: wp_course_level
+        description: "'Unknown' for bundles, which have no level."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['All Levels', 'Beginner', 'Intermediate', 'Expert', 'Unknown']
+      - name: wp_course_public_indicator
+        description: Whether guests can view the course without enrolling (_tutor_is_public_course).
+      - name: regular_unit_price
+        description: The regular price (tutor_course_price).
+      - name: sale_unit_price
+        description: The sale price (tutor_course_sale_price). Null when not on sale.
+
+  - name: int_wp_course__joined_to_meta
+    description: >
+      Courses and bundles with their pivoted meta, plus the unknown course
+      (wp_course_id -1). One row per wp_course. Read by dim_wp_course.
+    columns:
+      - name: wp_course_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_wp_instructor__inserted_unknown
+    description: >
+      stg_wordpress__wp_instructor plus the unknown instructor (-1). One row per instructor. Read by dim_wp_instructor.
+    columns:
+      - name: wp_instructor_id
+        description: wp_users.ID of the instructor.
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_wp_user__inserted_inferred
+    description: >
+      WordPress accounts, plus inferred users that a fact references but wp_users no
+      longer or not yet holds, plus the unknown user (-1). One row per wp_user. Hashes
+      stay out: they are join keys for intermediate only. Read by dim_wp_user.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_wp_order_line__joined_to_header
+    description: >
+      Tutor LMS order lines with their order's buyer, status, payment and dates rolled
+      down, one row per order line. Lines of trashed orders drop out with the inner join.
+      Read by fact_order_line.
+    columns:
+      - name: wp_order_line_no
+        data_tests:
+          - unique
+          - not_null
+
+  - name: int_wp_coupon__inserted_unknown
+    description: >
+      Coupons plus the unknown coupon (-1, for order lines without one). One row per
+      coupon. Leaves the coupon code out. Read by dim_wp_coupon.
+    columns:
+      - name: wp_coupon_id
+        data_tests:
+          - unique
+          - not_null

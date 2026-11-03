@@ -38,5 +38,7 @@ models:
         enforced: true
       +post-hook: "{{ assert_no_pii_columns() }}"
       # One entry per domain folder, schema mart_<domain>:
-      # sales:
-      #   +schema: mart_sales
+      learning:
+        +schema: mart_learning
+      marketing:
+        +schema: mart_marketing

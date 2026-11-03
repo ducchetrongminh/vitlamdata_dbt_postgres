@@ -23,6 +23,8 @@ Every model belongs to exactly one layer. Data moves in one direction — source
 | Intermediate | `02_intermediate` | Joins, re-graining, and complex logic between staging and marts | Ephemeral | `intermediate` (only models overridden to view/table) |
 | Mart | `03_mart` | Wide, business-defined entities (facts/dimensions) for consumption | Table | `mart_<domain>` |
 
+**Column order** — every layer orders columns per [Dimensional Modeling Standards, Dimension Column Order](dimensional-modeling-standards.md#19-dimension-column-order) for dimension-like models and [Fact Column Order](dimensional-modeling-standards.md#26-fact-column-order) for fact-like models. Staging and intermediate models have no surrogate key, so they start at the natural key. Apply the order in every CTE that lists all of the model's columns; a CTE that uses `select *` or picks only a few columns is exempt.
+
 ## 2. Staging Layer Rules (01_staging)
 
 ### 2.1 Staging structural constraints
@@ -30,7 +32,7 @@ Read each source table in exactly one model, and never join nor aggregate.
 
 - **One model per source table** — every source table is read by exactly one model, using `source()`, or `ref()` to the table's snapshot when it has one ([6](#6-snapshots)). Normally that model is the table's staging model. See [DW Naming Conventions, Staging naming](dw-naming-conventions.md#33-staging-naming) for folder-by-source and file naming.
 - **Base model when a table holds several entities** — when one source table stores several business entities (WordPress `wp_posts` holds courses, lessons and enrollments, told apart by `post_type`), the model that reads it is a base model, `base_<source>__<entity>` in `01_staging/<source>/base/`. The base model does the compulsory cleanup of [2.2](#22-compulsory-cleanup-transformations) once for every entity. Each entity then gets its own staging model, which reads the base model, keeps only its entity's rows, and renames columns to that entity.
-- **View materialization** — always a view. Switch a model to table only when the view is measurably too slow downstream, and say why in a comment next to its `config()`.
+- **View materialization** — always a view. Switch a model to table only when the view is measurably too slow downstream, and say why in a comment next to its `config()`. Exception: a base model that still holds raw PII, because the staging models on top of it hash it, is `ephemeral`, so raw PII is never stored in a view or table (e.g. `base_wordpress__wp_user`, read by the hashed `stg_wordpress__wp_user` and by `stg_wordpress__wp_instructor`, which keeps only the instructors' public names; `base_wordpress__wp_post`, whose `post_title` is the lead's email for leads).
 - **No joins** — staging models must not join other models.
 - **No aggregations** — grain must stay identical to the source table; aggregating changes grain and belongs downstream.
 - **Tests** — `unique` + `not_null` on the primary key of every staging and base model ([Architecture §10](architecture.md#10-data-quality-and-docs)).
@@ -53,10 +55,10 @@ Staging-only transformations that turn a raw source table into a clean, business
 - Renaming decisions made this early are hard to walk back once dozens of downstream models `ref()` the new names
 
 #### Decision
-Every staging model must, at minimum: filter out invalid/deleted rows, rename every column to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast every column to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. Do not carry dlt's metadata columns (`_dlt_load_id`, `_dlt_id`) past staging: list only business columns in `renamed`.
+Every staging model must, at minimum: filter out invalid/deleted rows, select only the columns a downstream model uses, rename each one to business language (see [DW Naming Conventions](dw-naming-conventions.md)), cast each one to its correct type, and replace every email, phone, name and address with `hash_pii` ([Architecture §6](architecture.md#6-pii)). Structure as sequential CTEs: `source` → `filtered` → `renamed` → `casted` → `hashed` (only when the table has PII), and end with `select * from <last_cte>`. List only the used business columns in `renamed`: no unused source columns and no dlt metadata columns (`_dlt_load_id`, `_dlt_id`). Add a column to staging when a downstream model first needs it.
 
 ```sql
--- Yes: base_wordpress__post.sql — cleanup once, for every post type
+-- Yes: base_wordpress__wp_post.sql — cleanup once, for every post type
 with
 
 source as (
@@ -70,20 +72,20 @@ filtered as (
 
 renamed as (
     select
-        id as post_id,
-        post_type,
-        post_title,
-        post_excerpt,
+        id as wp_post_id,
+        post_type as wp_post_type,
+        post_title as wp_post_title,
+        post_excerpt as wp_post_excerpt,
         post_date_gmt as posted_at
     from filtered
 ),
 
 casted as (
     select
-        cast(post_id as bigint) as post_id,
-        post_type,
-        post_title,
-        post_excerpt,
+        cast(wp_post_id as bigint) as wp_post_id,
+        wp_post_type,
+        wp_post_title,
+        wp_post_excerpt,
         cast(posted_at as timestamp) as posted_at
     from renamed
 )
@@ -92,22 +94,22 @@ select * from casted
 ```
 
 ```sql
--- Yes: stg_wordpress__course.sql — one entity from the base model
+-- Yes: stg_wordpress__wp_course.sql — one entity from the base model
 with
 
 base as (
-    select * from {{ ref('base_wordpress__post') }}
+    select * from {{ ref('base_wordpress__wp_post') }}
 ),
 
 filtered as (
     select * from base
-    where post_type = 'courses'
+    where wp_post_type = 'courses'
 ),
 
 renamed as (
     select
-        post_id as course_id,
-        post_title as course_title,
+        wp_post_id as wp_course_id,
+        wp_post_title as wp_course_title,
         posted_at as published_at
     from filtered
 )
@@ -204,11 +206,11 @@ See [dbt Labs: Intermediate](https://docs.getdbt.com/best-practices/how-we-struc
 ### 3.2 Typical intermediate transformations
 Use the intermediate layer for joins, re-graining, and business-rule transformations that would clutter a mart model.
 
-- **Insert unknown/default dimension rows** — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys), in the intermediate model at the dimension's grain. When the dimension already has an intermediate model at its grain, the union is that model's last CTE; otherwise add `int_<entity>_inserted_unknown`. The mart dimension then generates the surrogate key over every row, unknown included. So every dimension reads an intermediate model, never staging directly.
+- **Insert unknown/default dimension rows** — union the unknown row (natural key `-1`) per [Null foreign keys](dimensional-modeling-standards.md#12-null-foreign-keys), in the intermediate model at the dimension's grain. When the dimension already has an intermediate model at its grain, the union is that model's last CTE; otherwise add `int_<entity>__inserted_unknown`. The mart dimension then generates the surrogate key over every row, unknown included. So every dimension reads an intermediate model, never staging directly.
 
 ```sql
 -- Yes: inserted_unknown
--- int_product_inserted_unknown.sql
+-- int_product__inserted_unknown.sql
 product as (
     select * from {{ ref('stg_shop__product') }}
 ),
@@ -228,16 +230,18 @@ inserted_unknown as (
 select * from inserted_unknown
 ```
 
-- **Denormalize dimensions closer to mart shape** — `int_<entity>_denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
+- **Insert inferred dimension members** — `int_<entity>__inserted_inferred` — per [Late-Arriving and Deleted Dimension Members](dimensional-modeling-standards.md#32-late-arriving-and-deleted-dimension-members). Union the real members from staging, an inferred row for each natural key that a fact's staging model references but the dimension's staging model lacks, and the unknown row. Read the referenced keys from the facts' staging models, not from the facts, so facts and dimensions still build in parallel. Add a fact's key column to the model when a new fact references the dimension. Mark the deleted/not-loaded-yet signal with a `shortcut:` comment when it is a heuristic. This model replaces `int_<entity>__inserted_unknown` for that dimension. Example: `int_wp_user__inserted_inferred.sql`.
+
+- **Denormalize dimensions closer to mart shape** — `int_<entity>__denormalized`, one model per hierarchy — only when a mart dimension will consume the flattened hierarchy as columns. Don't pre-flatten a hierarchy that no mart dimension needs. A `-1` foreign key finds no row in a staging model, so coalesce each flattened attribute to `'Unknown'`. Per [Denormalized Flattened Dimensions](dimensional-modeling-standards.md#13-denormalized-flattened-dimensions).
 
 ```mermaid
 flowchart LR
-    stg_brand["stg_shop__brand"] --> int_brand["int_brand_denormalized"]
+    stg_brand["stg_shop__brand"] --> int_brand["int_brand__denormalized"]
     stg_subcategory["stg_shop__subcategory"] --> int_brand
     stg_category["stg_shop__category"] --> int_brand
-    stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor_denormalized"]
+    stg_vendor["stg_shop__vendor"] --> int_vendor["int_vendor__denormalized"]
     stg_region["stg_shop__region"] --> int_vendor
-    stg_product["stg_shop__product"] --> int_product["int_product_inserted_unknown"]
+    stg_product["stg_shop__product"] --> int_product["int_product__inserted_unknown"]
     int_product --> dim["dim_product.sql (03_mart)"]
     int_brand --> dim
     int_vendor --> dim
@@ -245,7 +249,7 @@ flowchart LR
 
 ```sql
 -- Yes: denormalized
--- int_brand_denormalized.sql
+-- int_brand__denormalized.sql
 denormalized as (
     select
         brand.brand_id,
@@ -259,11 +263,11 @@ denormalized as (
 -- later we will denormalize this into dim_product, see 4.2 for example
 ```
 
-- **Header/line join and allocation** — `int_<entity>_joined_to_header` — bring header-level foreign keys and degenerate dimensions down onto the line grain, and allocate header-level measures (e.g. an order-level discount) across lines to avoid double-counting, per [Header/Line Fact Tables](dimensional-modeling-standards.md#21-headerline-fact-tables).
+- **Header/line join and allocation** — `int_<entity>__joined_to_header` — bring header-level foreign keys and degenerate dimensions down onto the line grain, and allocate header-level measures (e.g. an order-level discount) across lines to avoid double-counting, per [Header/Line Fact Tables](dimensional-modeling-standards.md#21-headerline-fact-tables).
 
 ```sql
 -- Yes: joined_to_header, allocated
--- int_order_line_joined_to_header.sql
+-- int_order_line__joined_to_header.sql
 joined_to_header as (
     select
         header.order_no,
@@ -293,18 +297,18 @@ allocated as (
 select * from allocated
 ```
 
-- **Pivot key-value (meta) tables** — `int_<entity>_meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
+- **Pivot key-value (meta) tables** — `int_<entity>__meta_pivoted` — turn a key-value table (WordPress `wp_postmeta`, `wp_usermeta`, `wp_tutor_ordermeta`) into one row per entity and one column per key. Pivoting changes the grain, so it belongs here, not in staging: the staging model keeps the source's key-value shape (`wp_post_id`, `meta_key`, `meta_value`) and hashes `meta_value` for PII keys. Cast each pivoted column here, since `meta_value` is text. Pivot only the keys a mart needs.
 
 ```sql
 -- Yes: meta_pivoted
--- int_course_meta_pivoted.sql — one row per course, one column per meta key
+-- int_wp_course__meta_pivoted.sql — one row per course, one column per meta key
 pivoted as (
     select
-        post_id as course_id,
-        max(meta_value) filter (where meta_key = '_tutor_course_level') as course_level,
-        max(meta_value) filter (where meta_key = '_tutor_course_price_type') as course_price_type
-    from {{ ref('stg_wordpress__post_meta') }}
-    group by post_id
+        wp_post_id as wp_course_id,
+        max(meta_value) filter (where meta_key = '_tutor_course_level') as wp_course_level,
+        max(meta_value) filter (where meta_key = '_tutor_course_price_type') as wp_course_price_type
+    from {{ ref('stg_wordpress__wp_post_meta') }}
+    group by wp_post_id
 )
 
 select * from pivoted
@@ -318,13 +322,13 @@ select * from pivoted
 ### 4.1 Mart structural constraints
 Materialize as table or incremental, grouped into subfolders by business domain, one dim/fact per file at entity grain.
 
-- **Materialization** — table for dimensions; transaction facts are `incremental` with `incremental_strategy: delete+insert` and a `unique_key` ([Architecture §5](architecture.md#materializations)); view for [role playing dimensions](dimensional-modeling-standards.md#17-role-playing-dimension), since a role-playing dimension is a thin wrapper aliasing the base dimension, not a table of its own.
-- **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `delete+insert` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
+- **Materialization** — table for dimensions; transaction facts are `incremental` with `incremental_strategy: merge`, a `unique_key` and `on_schema_change: fail` ([Architecture §5](architecture.md#materializations)); view for [role playing dimensions](dimensional-modeling-standards.md#17-role-playing-dimension), since a role-playing dimension is a thin wrapper aliasing the base dimension, not a table of its own.
+- **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `merge` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
 
 ```sql
 -- Yes: fact_order_line.sql
 select ...
-from {{ ref('int_order_line_joined_to_header') }}
+from {{ ref('int_order_line__joined_to_header') }}
 {% if is_incremental() %}
 where updated_at >= (select max(updated_at) from {{ this }})
 {% endif %}
@@ -353,9 +357,9 @@ select
     brand.category_name,
     vendor.vendor_name,
     vendor.region_name
-from {{ ref('int_product_inserted_unknown') }} as product
-left join {{ ref('int_brand_denormalized') }} as brand on product.brand_id = brand.brand_id
-left join {{ ref('int_vendor_denormalized') }} as vendor on product.vendor_id = vendor.vendor_id
+from {{ ref('int_product__inserted_unknown') }} as product
+left join {{ ref('int_brand__denormalized') }} as brand on product.brand_id = brand.brand_id
+left join {{ ref('int_vendor__denormalized') }} as vendor on product.vendor_id = vendor.vendor_id
 ```
 
 - **Role playing dimensions** — a mart may expose the same base dimension multiple times under different roles (e.g. `dim_order_date`, `dim_ship_date` from one date dimension), per [Role playing dimension](dimensional-modeling-standards.md#17-role-playing-dimension).
@@ -415,11 +419,11 @@ select
     line.order_line_id,
     order_header.order_date,
     order_header.customer_id,
-    line.course_id,
+    line.wp_course_id,
     line.sale_amt
 from {{ ref('stg_wordpress__order_line') }} as line
 join {{ ref('stg_wordpress__order') }} as order_header on line.order_id = order_header.order_id
--- should be: int_order_line_joined_to_header.sql in 02_intermediate,
+-- should be: int_order_line__joined_to_header.sql in 02_intermediate,
 -- with fact_order_line.sql in 03_mart referencing that instead
 ```
 

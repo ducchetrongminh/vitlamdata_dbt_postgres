@@ -1,0 +1,252 @@
+models:
+  - name: base_wordpress__wp_post
+    description: >
+      wp_posts without trashed and auto-draft posts, cleaned once for every post type.
+      Read by one staging model per post type. Ephemeral: post_title holds raw emails
+      for leads. Times are Vietnam time.
+    columns:
+      - name: wp_post_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_wordpress__wp_course
+    description: >
+      Tutor LMS courses and course bundles (post_type courses and course-bundle),
+      one row per course or bundle. wp_course_type tells them apart.
+    columns:
+      - name: wp_course_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_course_summary
+        description: The course excerpt (wp_posts.post_excerpt).
+      - name: wp_course_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Course', 'Course Bundle']
+      - name: wp_course_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Published', 'Draft', 'Pending Review', 'Private', 'Scheduled']
+      - name: published_at
+        description: wp_posts.post_date_gmt in Vietnam time.
+      - name: updated_at
+        description: wp_posts.post_modified_gmt in Vietnam time.
+      - name: instructor_wp_user_id
+        description: wp_users.ID of the course author. -1 when none.
+
+  - name: base_wordpress__wp_user
+    description: >
+      wp_users renamed and cast, display_name still raw. Ephemeral, so never
+      stored. Read by stg_wordpress__wp_user (hashed) and stg_wordpress__wp_instructor.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null
+
+  - name: stg_wordpress__wp_user
+    description: >
+      WordPress accounts, one row per wp_users row. Names and emails are not selected:
+      no downstream model uses them yet. Times are Vietnam time.
+    columns:
+      - name: wp_user_id
+        data_tests:
+          - unique
+          - not_null
+      - name: registered_at
+        description: wp_users.user_registered (UTC) in Vietnam time.
+
+  - name: stg_wordpress__wp_order
+    description: >
+      Tutor LMS orders (wp_tutor_orders), one row per order, without trashed orders.
+      Header of stg_wordpress__wp_order_line; amounts come from the lines. Times are Vietnam time.
+    columns:
+      - name: wp_order_no
+        data_tests:
+          - unique
+          - not_null
+      - name: ordered_by_wp_user_id
+        description: wp_users.ID of the buyer (user_id). -1 when none.
+      - name: payment_transaction_no
+        description: >
+          Payment gateway transaction id. transaction_id when set, otherwise the SePay id
+          parsed from the order note. 'Unknown' when neither has one.
+      - name: wp_order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Incomplete', 'Completed', 'Cancelled', 'Refunded', 'Partially Refunded']
+      - name: payment_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Paid', 'Unpaid', 'Failed', 'Refunded', 'Partially Refunded']
+      - name: payment_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Bank Transfer']
+      - name: ordered_at
+        description: created_at_gmt in Vietnam time.
+
+  - name: stg_wordpress__wp_order_line
+    description: >
+      Tutor LMS order lines (wp_tutor_order_items), one row per course or course bundle
+      bought in an order. Each line is one unit. Prices are VND.
+    columns:
+      - name: wp_order_line_no
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_order_no
+        description: The order header (stg_wordpress__wp_order). -1 when none.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_wordpress__wp_order')
+                field: wp_order_no
+      - name: wp_course_id
+        description: >
+          wp_posts.ID of the item bought: a course (post_type courses) or a course bundle
+          (course-bundle). Courses and bundles are one entity, wp_course. -1 when none.
+      - name: wp_coupon_code
+        description: Coupon applied to this line. 'UNKNOWN' when none.
+      - name: regular_unit_price
+        description: The item's regular price.
+      - name: sale_unit_price
+        description: The item's sale price at checkout. Null when the item was not on sale.
+      - name: discounted_unit_price
+        description: The price after the coupon (discount_price). Null when no coupon applied.
+      - name: gross_amt
+        description: The regular price; each line is one unit.
+      - name: net_amt
+        description: >
+          What the line costs after sale price and coupon: discounted_unit_price, else
+          sale_unit_price, else regular_unit_price. Sums to the order's total_amt.
+      - name: discount_amt
+        description: gross_amt minus net_amt, from the sale price and the coupon together.
+
+  - name: stg_wordpress__wp_enrollment
+    description: >
+      Tutor LMS enrollments (post_type tutor_enrolled), one row per student per course
+      or course bundle. Times are Vietnam time.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:   # one enrollment per student per course
+          arguments:
+            combination_of_columns: ['student_wp_user_id', 'wp_course_id']
+    columns:
+      - name: wp_enrollment_id
+        data_tests:
+          - unique
+          - not_null
+      - name: student_wp_user_id
+        description: wp_users.ID of the enrolled student (post_author). -1 when none.
+      - name: wp_course_id
+        description: The course or course bundle enrolled in (post_parent). -1 when none.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_wordpress__wp_course')
+                field: wp_course_id
+      - name: wp_enrollment_status
+        description: >
+          'Enrolled' for Tutor's 'completed', meaning the enrollment went through,
+          not that the student finished the course.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Enrolled', 'Pending', 'Cancelled']
+      - name: enrolled_at
+        description: wp_posts.post_date_gmt in Vietnam time.
+      - name: updated_at
+        description: wp_posts.post_modified_gmt in Vietnam time.
+
+  - name: stg_wordpress__wp_post_meta
+    description: >
+      Key-value attributes of wp_posts (wp_postmeta), one row per post per meta key.
+      Kept in key-value shape; pivoted per entity in intermediate (int_<entity>__meta_pivoted).
+      Only keys reviewed in the seed wp_post_meta_key_allowlist pass; meta_value is
+      hashed for keys marked 'PII' there.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['wp_post_id', 'meta_key']
+    columns:
+      - name: wp_post_meta_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_post_id
+        description: >
+          The post this attribute belongs to. Includes meta of posts that the base model
+          filters out (trash, auto-draft); the pivot drops them by joining to the entity.
+
+  - name: stg_wordpress__wp_instructor
+    description: >
+      Instructors whose names are public on the course pages, listed by id in the
+      model (public_instructor_ids). One row per instructor. The only wp_users whose
+      display name leaves staging unhashed.
+    columns:
+      - name: wp_instructor_id
+        description: wp_users.ID of the instructor.
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_instructor_name
+        description: display_name, unhashed; public on the course pages.
+
+  - name: stg_wordpress__wp_coupon
+    description: >
+      Tutor LMS coupons (wp_tutor_coupons), one row per coupon, without trashed coupons.
+      Times are Vietnam time.
+    columns:
+      - name: wp_coupon_id
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_coupon_code
+        description: >
+          The code buyers enter. A secret while the coupon is usable: only the lookup
+          from order lines (which carry the code) to wp_coupon_id uses it, in
+          intermediate. Never in a mart.
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_coupon_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Active', 'Inactive']
+      - name: wp_coupon_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Code', 'Automatic']
+      - name: wp_coupon_discount_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Flat', 'Percentage']
+      - name: wp_coupon_discount_value
+        description: VND for a flat discount, percent for a percentage discount (discount_amount).
+      - name: wp_coupon_applies_to
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['All Courses and Bundles', 'All Courses', 'All Bundles', 'Specific Courses', 'Specific Bundles', 'Specific Category']
+
+  - name: stg_wordpress__wp_lead
+    description: >
+      Leads from the site's sign-up forms (post_type vld_lead), one row per lead. The
+      lead's email (post_title) is not selected. Times are Vietnam time.
+    columns:
+      - name: wp_lead_id
+        data_tests:
+          - unique
+          - not_null
+      - name: submitted_at
+        description: wp_posts.post_date_gmt in Vietnam time.

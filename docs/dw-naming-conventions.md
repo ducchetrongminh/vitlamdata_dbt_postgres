@@ -59,7 +59,7 @@ select
     frequency_percentile,
     monetary_percentile,
     customer_rfm_segment
-from {{ ref('int_customer_scored_rfm') }}
+from {{ ref('int_customer__scored_rfm') }}
 ```
 
 ```sql
@@ -70,7 +70,7 @@ select
     frequency,
     monetary,
     rfm_segment
-from {{ ref('int_customer_scored_rfm') }}
+from {{ ref('int_customer__scored_rfm') }}
 ```
 
 Same for table aliases: use the shortest name that still says what the table is.
@@ -140,16 +140,16 @@ from {{ source('crm', 'customer') }}
 
 Source systems often expose columns named after internal implementation details — a table code, a legacy field name, a system-specific abbreviation — that mean nothing to a business user reading a report.
 
-Rename every source column to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
+Rename every source column that staging selects to its business meaning at the staging layer. Retain the original source field name only as a code comment or in the column's `description` in `_<source>__sources.yml`, never as the column name past `01_staging`.
 
 ```sql
--- Yes: stg_wordpress__course.sql renames WordPress's generic post columns to their business meaning
+-- Yes: stg_wordpress__wp_course.sql renames WordPress's generic post columns to their business meaning
 select
-    post_id as course_id,
-    post_title as course_title,
-    post_excerpt as course_summary
-from {{ ref('base_wordpress__post') }}
-where post_type = 'courses'
+    wp_post_id as wp_course_id,
+    wp_post_title as wp_course_title,
+    wp_post_excerpt as wp_course_summary
+from {{ ref('base_wordpress__wp_post') }}
+where wp_post_type = 'courses'
 ```
 
 
@@ -190,7 +190,9 @@ Use only the abbreviations below. To add a new one, propose it in a PR that upda
 
 **Domain/system-specific** — full form is itself jargon or a proper system name
 
-None yet.
+| Abbreviation | Meaning |
+|---|---|
+| `wp` | WordPress — system qualifier on WordPress entities (`wp_post`, `wp_course`, `wp_user`), see [3.2](#32-singular-nouns-for-entity-names) |
 
 **Model layer prefixes** — see [Model File Naming](#3-model-file-naming) for full rules on where each applies
 
@@ -246,7 +248,7 @@ Marts use `fact_`, not dbt Labs' `fct_`.
 ```
 -- Yes:
 models/01_staging/wordpress/stg_wordpress__order_line.sql
-models/02_intermediate/sales/int_order_line_joined_to_header.sql
+models/02_intermediate/sales/int_order_line__joined_to_header.sql
 models/03_mart/sales/dim_course.sql
 models/03_mart/sales/fact_order_line.sql
 ```
@@ -270,16 +272,20 @@ An entity name is the noun portion of a model name after its layer prefix — `c
 
 #### Cons
 - Departs from the [dbt best practices guide](https://docs.getdbt.com/best-practices/how-we-structure/2-staging) and most dbt community examples, which use plural
-- Some intermediate names read less naturally (`int_payment_pivoted_to_order` vs. plural `int_payments_pivoted_to_orders`)
+- Some intermediate names read less naturally (`int_order__payment_pivoted` vs. plural `int_orders__payments_pivoted`)
 
 #### Decision
 Use the singular noun for the entity portion of a model name in every layer: `stg_`, `int_`, `dim_`, and `fact_`. Raw source table names keep their own spelling in `_<source>__sources.yml` and `source()`, since they must match the database — staging renames them.
+
+Qualify the entity with its source system when the entity is that system's own object, not a conformed business entity: `wp_post`, `wp_course`, `wp_user`, `facebook_post`. Several systems can each have posts or users, with different meanings and separate ID spaces; the qualifier keeps them apart once they are joined or unioned. Use the approved abbreviation from [2.1](#21-approved-abbreviations) when one exists (`wp`), otherwise the full system name (`facebook`, `discord`). The qualified entity is used everywhere: in the model name (`stg_wordpress__wp_course`) and as the column prefix from [4.4](#44-entity-prefix-on-common-column-names) (`wp_course_id`, `author_wp_user_id`). A conformed entity that integrates several systems drops the qualifier (`dim_user`), while the natural key it keeps from each system stays qualified (`wp_user_id`, `discord_user_id`).
 
 ```
 -- Yes:
 stg_crm__customer.sql
 dim_customer.sql
 fact_order.sql
+stg_wordpress__wp_post.sql      -- WordPress post, apart from a future facebook_post
+dim_user.sql                    -- conformed across WordPress, Metabase, Discord: no qualifier
 ```
 
 ```
@@ -311,40 +317,49 @@ Name every staging model `stg_<source>__<entity>`, using the singular entity nou
 -- Yes:
 models/01_staging/wordpress/stg_wordpress__order_line.sql
 models/01_staging/metabase/stg_metabase__dashboard.sql
-models/01_staging/wordpress/base/base_wordpress__post.sql   -- wp_posts, every post type
-models/01_staging/wordpress/stg_wordpress__course.sql       -- reads base_wordpress__post
+models/01_staging/wordpress/base/base_wordpress__wp_post.sql   -- wp_posts, every post type
+models/01_staging/wordpress/stg_wordpress__wp_course.sql       -- reads base_wordpress__wp_post
 ```
 
 ```
 -- No: raw source table name (wp_tutor_order_items) carried straight into the model name
+-- (plural, Tutor LMS jargon); the wp_ system qualifier alone is allowed: stg_wordpress__wp_order_line
 models/01_staging/wordpress/stg_wordpress__wp_tutor_order_items.sql
 ```
 
 ### 3.4 Intermediate naming
-Name intermediate models after the main transformation they perform: `int_<entity>_<verb_phrase>`.
+Name intermediate models after their grain and the main transformation they perform: `int_<entity>__<verb_phrase>`.
 
 #### Definition
-An intermediate model has one purpose — a pivot, a join, a fan-out, an aggregation — on its way from staging to a mart. It may take several CTE steps to get there (`int_order_line_joined_to_header` joins, then allocates the header discount). The verb phrase names the main transformation, not just the entity being transformed.
+An intermediate model has one purpose — a pivot, a join, a fan-out, an aggregation — on its way from staging to a mart. It may take several CTE steps to get there (`int_order_line__joined_to_header` joins, then allocates the header discount). The entity is the model's grain, what one row of its output is — not the input it starts from. The verb phrase names the main transformation. The double underscore separates the two.
 
 #### Pros
 - A reader understands what the model does from its name alone, without opening the SQL
-- Distinguishes multiple intermediate models over the same entity by what each one does to it (`int_order_joined_to_payment` vs. `int_order_aggregated_to_customer`)
+- The grain is readable before the double underscore, so models scan and sort by grain: every `int_order__*` model has one row per order
+- Distinguishes multiple intermediate models at the same grain by what each one does (`int_order__joined_to_payment` vs. `int_order__payment_pivoted`)
 
 #### Cons
 - Verb-phrase names run longer than a bare entity name
+- Naming by output grain means a model reading payments may be named after orders; the input shows in the verb phrase, not the entity
 
 #### Decision
-Name every intermediate model `int_<entity>_<verb_phrase>`, where the verb phrase states its main transformation in plain English (`pivoted`, `joined`, `aggregated_to_<grain>`). Supporting steps don't need their own model or a place in the name. Split a model only when its steps serve different purposes, or another model needs one step on its own. Drop the source-system double underscore at this layer — intermediate models are business-conformed, not source-specific. Group them into subfolders by business domain (`02_intermediate/sales/`), not into the file name.
+Name every intermediate model `int_<entity>__<verb_phrase>`. `<entity>` is the model's grain — one row per what — using the singular, system-qualified entity name from [3.2](#32-singular-nouns-for-entity-names). The verb phrase states the main transformation in plain English (`meta_pivoted`, `joined_to_header`, `order_aggregated`). Supporting steps don't need their own model or a place in the name. Split a model only when its steps serve different purposes, or another model needs one step on its own. Leave out the source-system name — intermediate models are business-conformed, not source-specific; the double underscore here separates grain from transformation, not source from entity. Group them into subfolders by business domain (`02_intermediate/learning/`), not into the file name.
 
 ```
 -- Yes:
-int_payment_pivoted_to_order.sql
-int_order_aggregated_to_customer.sql
+int_order__payment_pivoted.sql        -- one row per order
+int_customer__order_aggregated.sql    -- one row per customer
+int_wp_course__meta_pivoted.sql       -- one row per wp_course
 ```
 
 ```
 -- No: verb missing — model does an aggregation, but the name doesn't say so
 int_order_customer.sql
+```
+
+```
+-- No: named after its input (payment), not its grain (order); single underscore hides where the entity ends
+int_payment_pivoted_to_order.sql
 ```
 
 ---
@@ -467,7 +482,7 @@ A common column name (`key`, `id`, `code`, `name`, `status`) is a generic attrib
 - Feels redundant in a model scoped to a single entity, where ambiguity can't yet occur
 
 #### Decision
-Never name a column `key`, `id`, `code`, `name`, or `status` on its own. Always prefix it with the entity it belongs to: `customer_id`, `customer_name`, `customer_status`, `customer_key`, `coupon_code`. Apply this even in single-entity staging models — intermediate and mart models join multiple entities together and inherit the column name via `ref()`.
+Never name a column `key`, `id`, `code`, `name`, or `status` on its own. Always prefix it with the entity it belongs to: `customer_id`, `customer_name`, `customer_status`, `customer_key`, `coupon_code`. When the entity is system-qualified ([3.2](#32-singular-nouns-for-entity-names)), the prefix includes the qualifier: `wp_post_id`, `wp_course_title`. Apply this even in single-entity staging models — intermediate and mart models join multiple entities together and inherit the column name via `ref()`.
 
 ```sql
 -- Yes: every common column is prefixed with its entity

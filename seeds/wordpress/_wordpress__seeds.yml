@@ -1,0 +1,23 @@
+seeds:
+  - name: wp_post_meta_key_allowlist
+    description: >
+      Reviewed wp_postmeta keys. stg_wordpress__wp_post_meta keeps only keys matching a
+      pattern here and hashes meta_value for 'PII' keys. A new key stays out of the
+      warehouse until someone reviews it and adds it here; the test
+      assert_wp_post_meta_keys_reviewed lists it meanwhile.
+    config:
+      column_types:
+        meta_key_pattern: text
+        pii_indicator: text
+        description: text
+    columns:
+      - name: meta_key_pattern
+        description: Anchored Postgres regex for one meta key, or a family of keys like _tutor_order_for_course_id_<id>.
+        data_tests:
+          - unique
+          - not_null
+      - name: pii_indicator
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['PII', 'Not PII']

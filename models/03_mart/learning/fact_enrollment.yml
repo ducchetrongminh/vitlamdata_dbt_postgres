@@ -1,0 +1,37 @@
+models:
+  - name: fact_enrollment
+    description: >
+      Tutor LMS enrollments, one row per student per course or course bundle. Factless:
+      count rows to count enrollments. Incremental on updated_at. Times are Vietnam time.
+    columns:
+      - name: wp_enrollment_id
+        data_type: bigint
+        constraints:
+          - type: primary_key
+      - name: student_wp_user_id
+        data_type: bigint
+      - name: wp_course_id
+        data_type: bigint
+      - name: wp_enrollment_status
+        data_type: text
+        description: >
+          'Enrolled' when the enrollment went through (Tutor's 'completed'), not
+          that the student finished the course.
+      - name: student_wp_user_key
+        data_type: text
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wp_user')
+                field: wp_user_key
+      - name: wp_course_key
+        data_type: text
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wp_course')
+                field: wp_course_key
+      - name: enrolled_at
+        data_type: timestamp
+      - name: updated_at
+        data_type: timestamp

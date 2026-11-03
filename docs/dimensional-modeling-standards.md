@@ -13,14 +13,17 @@ Dimensional modeling (Kimball) is the modeling approach for this warehouse. Thes
    6. [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)
    7. [Role playing dimension](#17-role-playing-dimension)
    8. [Conformed Dimensions](#18-conformed-dimensions)
+   9. [Dimension Column Order](#19-dimension-column-order)
 2. [Fact table standards](#2-fact-table-standards)
    1. [Header/Line Fact Tables](#21-headerline-fact-tables)
    2. [Derived additive facts](#22-derived-additive-facts)
    3. [Null Measures](#23-null-measures)
    4. [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables)
    5. [Conformed Facts](#25-conformed-facts)
+   6. [Fact Column Order](#26-fact-column-order)
 3. [Dimension Advanced Standards](#3-dimension-advanced-standards)
    1. [Slowly Changing Dimensions (SCD)](#31-slowly-changing-dimensions-scd)
+   2. [Late-Arriving and Deleted Dimension Members](#32-late-arriving-and-deleted-dimension-members)
 
 ---
 
@@ -28,7 +31,7 @@ Dimensional modeling (Kimball) is the modeling approach for this warehouse. Thes
 
 ### 1.1 Dimension Surrogate Keys
 
-Create a surrogate key on every dimension and fact table using `dbt_utils.generate_surrogate_key`.
+Create a surrogate key on every dimension, and on a fact table only when its grain spans several columns, using `dbt_utils.generate_surrogate_key`.
 
 #### Definition
 A surrogate key is a warehouse-managed primary key assigned to every dimension row, independent of the operational source system's natural key.
@@ -44,7 +47,7 @@ A surrogate key is a warehouse-managed primary key assigned to every dimension r
 - Requires a consistent generation strategy across all models
 
 #### Decision
-Create a surrogate key on every dimension and fact table. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns. On a fact, those are the columns of its grain (e.g. `order_no`, `line_no` on `fact_order_line`).
+Create a surrogate key on every dimension. Name it `<entity>_key` in snake_case — see [Data Warehouse Naming Conventions, Key column suffixes](dw-naming-conventions.md#41-key-column-suffixes). Generate it with `dbt_utils.generate_surrogate_key` over the natural key columns. Give a fact table a surrogate key only when its grain spans several columns, generated over those columns (e.g. `order_no`, `line_no` on `fact_order_line`), so the fact has a one-column primary key. A fact whose grain is one column uses that column as its primary key: nothing joins to a fact's key, so a hash of one column adds nothing.
 
 Exception: the date dimension is a special case — key it by the date value itself, not a generated hash, since a date is already unique, stable, and meaningful without hashing. Its unknown row is the date `'1900-01-01'`, with `'Unknown'` in every text attribute; a fact fills a null date foreign key with `'1900-01-01'` in staging.
 
@@ -124,10 +127,10 @@ Dimension tables must include a default row — representing "no dimension attac
 - Every dimension needs an extra unioned row, kept in sync with the real-row key generation strategy
 
 #### Decision
-Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
+Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule. A fact key that isn't null but has no member in the dimension's source (deleted or not loaded yet) gets an inferred row, not the unknown row — see [Late-Arriving and Deleted Dimension Members](#32-late-arriving-and-deleted-dimension-members).
 
 ```sql
--- Yes: int_customer_inserted_unknown.sql
+-- Yes: int_customer__inserted_unknown.sql
 with
 
 customer as (
@@ -158,7 +161,7 @@ select
     {{ dbt_utils.generate_surrogate_key(['customer_id']) }} as customer_key,
     customer_id,
     customer_name
-from {{ ref('int_customer_inserted_unknown') }}
+from {{ ref('int_customer__inserted_unknown') }}
 ```
 
 ### 1.3 Denormalized Flattened Dimensions
@@ -489,6 +492,61 @@ group by calendar_month
 -- results from both queries align in a drill-across report on calendar_month
 ```
 
+### 1.9 Dimension Column Order
+
+List a dimension's columns in a fixed order: its own keys, its name, its own attributes, then the columns flattened in from other dimensions.
+
+#### Definition
+Column order is the order of columns in a dimension model's final `select`, which is the order users see in Metabase and in the published docs.
+
+#### Pros
+- Every dimension reads the same way — key, natural key and name are always the first three columns
+- Columns flattened from another dimension (see [Denormalized Flattened Dimensions](#13-denormalized-flattened-dimensions)) stay grouped, so it is clear which entity each one describes
+- Reviewers spot a missing key or name at a glance
+
+#### Cons
+- Adding a column means placing it in its group, not appending it at the end
+
+#### Decision
+Order the columns of every dimension in the groups below.
+
+1. Primary key — the surrogate key `<entity>_key`
+2. Natural key — `<entity>_id` or `<entity>_code`
+3. Name and description — `<entity>_name`, `<entity>_description`
+4. The dimension's own attributes — e.g. `product_status`, `product_group`
+5. Columns from other dimensions, one block per dimension, each block in key, natural key, name order — e.g. `brand_key`, `brand_id`, `brand_name`
+
+```sql
+-- Yes: dim_product.sql
+select
+    -- Keys
+    product_key,
+    product_id,
+    -- Name, desc
+    product_name,
+    product_description,
+    -- Attributes
+    product_status,
+    product_group,
+    -- Brand
+    brand_key,
+    brand_id,
+    brand_name
+```
+
+```sql
+-- No: key buried mid-table, brand columns split up, own attributes after another dimension's columns
+select
+    product_name,
+    brand_name,
+    product_key,
+    product_status,
+    brand_id,
+    product_id,
+    product_group
+```
+
+
 
 
 
@@ -765,6 +823,76 @@ group by product_key, period_key
 -- summed sales_line revenue (incl. tax) is compared against budget revenue (excl. tax) — variance is bogus
 ```
 
+### 2.6 Fact Column Order
+
+List a fact's columns in a fixed order: keys first, then dates, then measures from quantity to amount.
+
+#### Definition
+Column order is the order of columns in a fact model's final `select`, which is the order users see in Metabase and in the published docs.
+
+#### Pros
+- Every fact reads the same way — grain first, then what the row joins to, then when, then how much
+- Measures sit together at the end, in the same order on every fact, so related measures (`net_sales_qty`, `unit_price`, `net_amt`) scan side by side
+- Reviewers can check the grain and the foreign keys from the first columns alone
+
+#### Cons
+- Adding a column means placing it in its group, not appending it at the end
+
+#### Decision
+Order the columns of every fact table in the groups below.
+
+1. Primary key — the surrogate key `<entity>_key`
+2. Grain columns the primary key is generated from — e.g. `order_no`, `line_no`
+3. Name and description, when the fact has one — e.g. `order_description`
+4. Natural keys `_id` / `_code` — the fact's own first, then the dimensions' (e.g. `inventory_transaction_id`, then `product_id`)
+5. Degenerate textual attributes — decoded statuses and types, e.g. `order_status`
+6. Dimension surrogate keys `_key` — in the same order as their natural keys in group 4
+7. Dates and datetimes — `_date`, `_at` (see [Data Warehouse Naming Conventions, Date and time suffixes](dw-naming-conventions.md#46-date-and-time-suffixes))
+8. Quantities — `_qty`, `_count`
+9. Prices — `_unit_price`
+10. Amounts — `_amt`, `_amt_in_<currency>`, `_amt_in_currency`
+11. Other measures — e.g. `_pct`, `_rate`
+
+Inside each group, put header-level columns before line-level columns (see [Header/Line Fact Tables](#21-headerline-fact-tables)). Measure suffixes follow [Data Warehouse Naming Conventions, Standard fact prefixes and suffixes](dw-naming-conventions.md#47-standard-fact-prefixes-and-suffixes).
+
+```sql
+-- Yes: fact_order_line.sql
+select
+    -- Keys
+    order_line_key,     -- 1. primary key
+    order_no,           -- 2. grain, header-level
+    line_no,            -- 2. grain, line-level
+    -- Foreign keys
+    customer_id,        -- 4. natural keys, header-level
+    product_id,         -- 4. natural keys, line-level
+    -- Attributes
+    order_status,       -- 5. degenerate textual attribute
+    -- Foreign keys
+    customer_key,       -- 6. dimension keys, header-level
+    product_key,        -- 6. dimension keys, line-level
+    -- Dates
+    order_date,         -- 7. dates
+    -- Measures
+    sales_qty,          -- 8. quantities
+    unit_price,         -- 9. prices
+    discount_amt,       -- 10. amounts
+    net_amt,            -- 10. amounts
+    discount_pct        -- 11. other measures
+```
+
+```sql
+-- No: measures before keys, grain columns split up, line-level key before header-level key
+select
+    net_amt,
+    order_line_key,
+    product_key,
+    order_date,
+    customer_key,
+    line_no,
+    sales_qty,
+    order_no
+```
+
 ## 3. Dimension Advanced Standards
 
 ### 3.1 Slowly Changing Dimensions (SCD)
@@ -807,3 +935,94 @@ Only when a report must show the value that was true when a fact happened, track
 | d1a8f6c3 | QZ-8810-M | Nova Blender 3000 | Small Appliances | Small Appliances | 2013-07-01 | 9999-12-31 | Current |
 
 `historic_department_name` holds the value valid for that row's own period and never changes after the row is inserted (Type 2). `current_department_name` is overwritten in place across every row for the member on each new change, so all three rows always show today's value (Type 3 column, maintained via Type 1 response) — this is why row `3f9c21ab`'s `current_department_name` reads "Small Appliances" even though that row's own period predates "Kitchen Appliances" entirely.
+
+### 3.2 Late-Arriving and Deleted Dimension Members
+
+Add an inferred dimension row for every natural key a fact references that the dimension's source doesn't hold, and label why it is missing.
+
+#### Definition
+A fact can reference a dimension member that isn't in the dimension's source:
+
+- **Late-arriving** — the member exists in the operational system but hasn't been loaded yet. It was created after its table was extracted, while the fact's table was extracted later in the same load. The next load brings it in.
+- **Deleted** — the member was deleted in the operational system, while the facts that reference it were kept (e.g. a customer account deleted after its orders).
+
+An inferred member is a placeholder dimension row for such a key: real natural key, `'Unknown'` attributes, and a status saying why it is a placeholder.
+
+#### Pros
+- Every fact foreign key resolves to a dimension row, so joins in reports don't silently drop facts
+- The fact keeps its real natural key instead of being re-pointed to the unknown row, so counts per member stay correct and the row heals itself when a late member arrives
+- A status attribute separates "deleted" from "not loaded yet" from "no member at all" (`-1`)
+
+#### Cons
+- Building the dimension requires reading the facts' source rows to find referenced keys, and that step must be extended whenever a new fact references the dimension
+- Telling deleted from late-arriving needs a signal from the source; without one, both look identical
+
+#### Decision
+Build every dimension from three sets of rows: the real members from its source, an inferred row for each natural key that a fact references but the dimension's source lacks, and the unknown row from [Null foreign keys](#12-null-foreign-keys). Add the inferred rows before the surrogate key is generated, so they get keys from the same formula as every other row. Give inferred rows `'Unknown'` text attributes, null dates, and a status attribute:
+
+| Status | Meaning |
+|---|---|
+| `Active` | the member is in the source |
+| `Deleted` | the member existed and was deleted |
+| `Not Loaded Yet` | the member was created after the last load; the next load replaces the row |
+| `Unknown` | the unknown row, `-1` |
+
+Decide `Deleted` vs `Not Loaded Yet` from the best signal the source offers. When the signal is a heuristic, write down where it breaks next to the logic:
+
+- **Auto-increment ids (default)** — an id below the highest id in the source existed, since a later id was handed out after it: `Deleted`. An id above it was created after the load: `Not Loaded Yet`. Breaks if ids are reused or imported out of order.
+- **History** — an id present in an earlier copy of the source (see [Slowly Changing Dimensions](#31-slowly-changing-dimensions-scd)) and absent now: `Deleted`; never seen: `Not Loaded Yet`. Use it once the source's history is kept.
+
+The fact itself never changes: it builds its key from the natural key with the dimension's formula, as for every row. The dimension is rebuilt each load, so a late-arriving member's inferred row is replaced by the real one at the next load.
+
+Orders reference customers 105 and 120, which the customer source doesn't hold; its highest id is 110.
+
+```sql
+-- Yes: int_customer__inserted_inferred.sql
+customer as (
+    select customer_id, customer_name, 'Active' as customer_status
+    from {{ ref('stg_shop__customer') }}
+),
+
+referenced_customer as (
+    select customer_id from {{ ref('stg_shop__order') }}
+),
+
+inferred_customer as (
+    select distinct
+        referenced_customer.customer_id,
+        'Unknown' as customer_name,
+        case
+            when referenced_customer.customer_id < (select max(customer_id) from customer) then 'Deleted'
+            else 'Not Loaded Yet'
+        end as customer_status
+    from referenced_customer
+    where
+        referenced_customer.customer_id <> -1
+        and not exists (select 1 from customer where customer.customer_id = referenced_customer.customer_id)
+),
+
+inserted_inferred as (
+    select * from customer
+    union all
+    select * from inferred_customer
+)
+
+select * from inserted_inferred
+```
+
+| customer_id | customer_name | customer_status |
+|---|---|---|
+| 101 | Acme Corp | Active |
+| 110 | Globex Inc | Active |
+| 105 | Unknown | Deleted |
+| 120 | Unknown | Not Loaded Yet |
+
+```sql
+-- No: the order's customer re-pointed to the unknown row — customer 105's orders now count
+-- as "no customer", and customer 120's orders stay there after customer 120 arrives
+select
+    order_no,
+    coalesce(customer.customer_id, -1) as customer_id
+from {{ ref('stg_shop__order') }} as shop_order
+left join {{ ref('stg_shop__customer') }} as customer on shop_order.customer_id = customer.customer_id
+```

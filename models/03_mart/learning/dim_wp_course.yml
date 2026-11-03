@@ -1,0 +1,56 @@
+models:
+  - name: dim_wp_course
+    description: >
+      Tutor LMS courses and course bundles, one row per wp_course, plus the unknown
+      course (wp_course_id -1). Type 1. Prices are VND. Times are Vietnam time.
+    columns:
+      - name: wp_course_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: wp_course_id
+        data_type: bigint
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: wp_course_title
+        data_type: text
+      - name: wp_course_summary
+        data_type: text
+      - name: wp_course_type
+        data_type: text
+        description: "'Course' or 'Course Bundle'."
+      - name: wp_course_status
+        data_type: text
+      - name: wp_course_slug
+        data_type: text
+      - name: wp_course_price_type
+        data_type: text
+      - name: wp_course_level
+        data_type: text
+        description: "'Unknown' for bundles, which have no level."
+      - name: wp_course_public_indicator
+        data_type: text
+      - name: regular_unit_price
+        data_type: numeric
+      - name: sale_unit_price
+        data_type: numeric
+        description: Null when not on sale.
+      - name: published_at
+        data_type: timestamp
+      - name: updated_at
+        data_type: timestamp
+      - name: wp_instructor_key
+        data_type: text
+        description: Key of the course author in dim_wp_instructor.
+        data_tests:
+          - relationships:   # author missing from public_instructor_ids in stg_wordpress__wp_instructor
+              arguments:
+                to: ref('dim_wp_instructor')
+                field: wp_instructor_key
+              config:
+                severity: warn
+                where: "wp_course_status = 'Published'"
+      - name: wp_instructor_id
+        data_type: bigint
+        description: wp_users.ID of the course author. -1 when none.
