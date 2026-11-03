@@ -201,9 +201,17 @@ models:
   - name: stg_wordpress__wp_coupon
     description: >
       Tutor LMS coupons (wp_tutor_coupons), one row per coupon, without trashed coupons.
-      Keyed by code, the value order lines carry. Times are Vietnam time.
+      Times are Vietnam time.
     columns:
+      - name: wp_coupon_id
+        data_tests:
+          - unique
+          - not_null
       - name: wp_coupon_code
+        description: >
+          The code buyers enter. A secret while the coupon is usable: only the lookup
+          from order lines (which carry the code) to wp_coupon_id uses it, in
+          intermediate. Never in a mart.
         data_tests:
           - unique
           - not_null

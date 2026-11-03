@@ -8,6 +8,10 @@ order_header as (
     select * from {{ ref('stg_wordpress__wp_order') }}
 ),
 
+coupon as (
+    select * from {{ ref('stg_wordpress__wp_coupon') }}
+),
+
 joined_to_header as (
     select
         -- Keys
@@ -16,7 +20,7 @@ joined_to_header as (
         -- Foreign keys
         order_header.ordered_by_wp_user_id,
         order_line.wp_course_id,
-        order_line.wp_coupon_code,
+        coalesce(coupon.wp_coupon_id, -1) as wp_coupon_id,   -- order lines carry the code; the mart never sees it
         -- Attributes
         order_header.payment_transaction_no,
         order_header.wp_order_type,
@@ -35,6 +39,7 @@ joined_to_header as (
         order_line.net_amt
     from order_line
     inner join order_header on order_line.wp_order_no = order_header.wp_order_no
+    left join coupon on order_line.wp_coupon_code = coupon.wp_coupon_code
 )
 
 select * from joined_to_header

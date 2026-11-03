@@ -12,7 +12,8 @@ filtered as (
 renamed as (
     select
         -- Keys
-        coupon_code as wp_coupon_code,
+        id as wp_coupon_id,
+        coupon_code as wp_coupon_code,     -- secret while the coupon is usable; never past intermediate
         -- Name, desc
         coupon_title as wp_coupon_title,
         -- Attributes
@@ -29,6 +30,7 @@ renamed as (
 casted as (
     select
         -- Keys
+        cast(wp_coupon_id as bigint) as wp_coupon_id,
         cast(wp_coupon_code as text) as wp_coupon_code,
         -- Name, desc
         cast(wp_coupon_title as text) as wp_coupon_title,
@@ -76,6 +78,7 @@ decoded as (
 null_handled as (
     select
         -- Keys
+        wp_coupon_id,
         wp_coupon_code,
         -- Name, desc
         coalesce(nullif(trim(wp_coupon_title), ''), 'Unknown') as wp_coupon_title,

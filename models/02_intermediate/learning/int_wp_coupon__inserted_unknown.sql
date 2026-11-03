@@ -1,13 +1,26 @@
 with
 
 coupon as (
-    select * from {{ ref('stg_wordpress__wp_coupon') }}
+    select
+        -- Keys
+        wp_coupon_id,
+        -- Name, desc
+        wp_coupon_title,
+        -- Attributes
+        wp_coupon_status,
+        wp_coupon_type,
+        wp_coupon_discount_type,
+        wp_coupon_discount_value,
+        wp_coupon_applies_to,
+        starts_at,
+        expires_at
+    from {{ ref('stg_wordpress__wp_coupon') }}
 ),
 
 unknown_coupon as (
     select
         -- Keys
-        'UNKNOWN' as wp_coupon_code,
+        -1 as wp_coupon_id,
         -- Name, desc
         'Unknown' as wp_coupon_title,
         -- Attributes

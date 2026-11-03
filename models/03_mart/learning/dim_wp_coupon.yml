@@ -1,15 +1,15 @@
 models:
   - name: dim_wp_coupon
     description: >
-      Tutor LMS coupons, one row per coupon code, plus the unknown coupon ('UNKNOWN') for
-      order lines without one. Type 1. Times are Vietnam time.
+      Tutor LMS coupons, one row per coupon, plus the unknown coupon (-1) for order lines
+      without one. No coupon code: a usable code is a secret. Type 1. Times are Vietnam time.
     columns:
       - name: wp_coupon_key
         data_type: text
         constraints:
           - type: primary_key
-      - name: wp_coupon_code
-        data_type: text
+      - name: wp_coupon_id
+        data_type: bigint
         constraints:
           - type: not_null
           - type: unique

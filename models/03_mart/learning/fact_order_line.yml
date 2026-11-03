@@ -20,9 +20,9 @@ models:
         data_type: bigint
       - name: wp_course_id
         data_type: bigint
-      - name: wp_coupon_code
-        data_type: text
-        description: "'UNKNOWN' when no coupon."
+      - name: wp_coupon_id
+        data_type: bigint
+        description: wp_tutor_coupons.id of the coupon used. -1 when none.
       - name: payment_transaction_no
         data_type: text
       - name: wp_order_type

@@ -189,7 +189,8 @@ encode(hmac(lower(trim({{ col }})), (select key from private.pii_key), 'sha256')
 - **Rotating the key changes every hash.** Rotation requires a full refresh of all
   incremental models.
 - The singular test `assert_no_pii_in_marts` fails if any column in a `mart_%` schema
-  matches `email|phone|name|address`, or ends in `_hash`. Hashes are join keys for
+  matches `email|phone|name|address`, ends in `_hash`, or holds a coupon code (a usable
+  code is a working discount for anyone who reads it). Hashes are join keys for
   staging and intermediate only (e.g. matching the same person across systems by email
   hash); marts join on surrogate keys. A hash in a public mart would let anyone holding
   the key, or a leaked copy of the data, link a person across every system.

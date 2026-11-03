@@ -7,8 +7,8 @@ coupon as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['wp_coupon_code']) }} as wp_coupon_key,
-        wp_coupon_code,
+        {{ dbt_utils.generate_surrogate_key(['wp_coupon_id']) }} as wp_coupon_key,
+        wp_coupon_id,
         -- Name, desc
         wp_coupon_title,
         -- Attributes
