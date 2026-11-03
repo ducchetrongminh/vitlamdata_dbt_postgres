@@ -23,6 +23,7 @@ Dimensional modeling (Kimball) is the modeling approach for this warehouse. Thes
    6. [Fact Column Order](#26-fact-column-order)
 3. [Dimension Advanced Standards](#3-dimension-advanced-standards)
    1. [Slowly Changing Dimensions (SCD)](#31-slowly-changing-dimensions-scd)
+   2. [Late-Arriving and Deleted Dimension Members](#32-late-arriving-and-deleted-dimension-members)
 
 ---
 
@@ -126,7 +127,7 @@ Dimension tables must include a default row — representing "no dimension attac
 - Every dimension needs an extra unioned row, kept in sync with the real-row key generation strategy
 
 #### Decision
-Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule.
+Every dimension must ship a default row for the "no dimension attached" case. Give it the natural key `-1` (or `'UNKNOWN'` when the natural key is text) and `'Unknown'` in every text attribute (see [Null Attributes in Dimensions](#16-null-attributes-in-dimensions)). Check that `-1` doesn't collide with a real source id. Generate its surrogate key from that natural key exactly like every real row, so the unknown key is always `generate_surrogate_key` over `-1`. On a [Type 6 dimension](#31-slowly-changing-dimensions-scd), whose key also covers `row_effective_date`, give the unknown row `row_effective_date = '1900-01-01'`, `row_expiration_date = '9999-12-31'` and `current_row_indicator = 'Current'`, so it is one row valid for every fact date. Add the row in the intermediate model at the dimension's grain — see [dbt Layers Conventions, Typical intermediate transformations](dbt-layers-conventions.md#32-typical-intermediate-transformations) — and generate the key in the dimension. Never leave a fact table foreign key null; point it at the default row's key instead. See [Null Foreign Keys in Fact Tables](#24-null-foreign-keys-in-fact-tables) for the fact-table side of this rule. A fact key that isn't null but has no member in the dimension's source (deleted or not loaded yet) gets an inferred row, not the unknown row — see [Late-Arriving and Deleted Dimension Members](#32-late-arriving-and-deleted-dimension-members).
 
 ```sql
 -- Yes: int_customer__inserted_unknown.sql
@@ -934,3 +935,96 @@ Only when a report must show the value that was true when a fact happened, track
 | d1a8f6c3 | QZ-8810-M | Nova Blender 3000 | Small Appliances | Small Appliances | 2013-07-01 | 9999-12-31 | Current |
 
 `historic_department_name` holds the value valid for that row's own period and never changes after the row is inserted (Type 2). `current_department_name` is overwritten in place across every row for the member on each new change, so all three rows always show today's value (Type 3 column, maintained via Type 1 response) — this is why row `3f9c21ab`'s `current_department_name` reads "Small Appliances" even though that row's own period predates "Kitchen Appliances" entirely.
+
+### 3.2 Late-Arriving and Deleted Dimension Members
+
+Add an inferred dimension row for every natural key a fact references that the dimension's source doesn't hold, and label why it is missing.
+
+#### Definition
+A fact can reference a dimension member that isn't in the dimension's source:
+
+- **Late-arriving** — the member exists in the operational system but hasn't been loaded yet. It was created after its table was extracted, while the fact's table was extracted later in the same load. The next load brings it in.
+- **Deleted** — the member was deleted in the operational system, while the facts that reference it were kept (e.g. a WordPress account deleted after its Tutor enrollment).
+
+An inferred member is a placeholder dimension row for such a key: real natural key, `'Unknown'` attributes, and a status saying why it is a placeholder.
+
+#### Pros
+- Every fact foreign key resolves to a dimension row, so joins in reports don't silently drop facts
+- The fact keeps its real natural key instead of being re-pointed to the unknown row, so counts per member stay correct and the row heals itself when a late member arrives
+- A status attribute separates "deleted" from "not loaded yet" from "no member at all" (`-1`)
+
+#### Cons
+- The dimension's intermediate model must read the fact's staging model to find referenced keys, and must be updated whenever a new fact references the dimension
+- Telling deleted from late-arriving needs a signal from the source; without one, both look identical
+
+#### Decision
+In the dimension's intermediate model (`int_<entity>__inserted_inferred`), union three sets: the real members from staging, an inferred row for each natural key that a fact's staging model references but the dimension's staging model lacks, and the unknown row from [Null foreign keys](#12-null-foreign-keys). Give inferred rows `'Unknown'` text attributes, null dates, and a status attribute (`<entity>_status`):
+
+| Status | Meaning |
+|---|---|
+| `Active` | the member is in the source |
+| `Deleted` | the member existed and was deleted |
+| `Not Loaded Yet` | the member was created after the last load; the next load replaces the row |
+| `Unknown` | the unknown row, `-1` |
+
+Decide `Deleted` vs `Not Loaded Yet` from the best signal the source offers, and state the signal in a `shortcut:` comment when it is a heuristic:
+
+- **Auto-increment ids (default)** — an id below the highest id in the source existed, since a later id was handed out after it: `Deleted`. An id above it was created after the load: `Not Loaded Yet`. Breaks if ids are reused or imported out of order.
+- **Snapshot history** — an id present in an earlier snapshot ([Slowly Changing Dimensions](#31-slowly-changing-dimensions-scd), [dbt Layers Conventions, Snapshots](dbt-layers-conventions.md#6-snapshots)) and absent now: `Deleted`; never seen: `Not Loaded Yet`. Use it once the dimension's source has a snapshot.
+
+The fact itself never changes: it builds its key from the natural key with the dimension's formula, as for every row ([dbt Layers Conventions, Mart structural constraints](dbt-layers-conventions.md#41-mart-structural-constraints)). The dimension is rebuilt each run, so a late-arriving member's inferred row is replaced by the real one at the next load.
+
+```sql
+-- Yes: int_wp_user__inserted_inferred.sql
+wp_user as (
+    select wp_user_id, 'Active' as wp_user_status, registered_at
+    from {{ ref('stg_wordpress__wp_user') }}
+),
+
+referenced_user as (
+    -- user ids that facts point to; add each new fact's user column here
+    select student_wp_user_id as wp_user_id from {{ ref('stg_wordpress__wp_enrollment') }}
+),
+
+inferred_user as (
+    -- shortcut: assumes ids are auto-increment and never reused; switch to a wp_users snapshot once one exists
+    select distinct
+        referenced_user.wp_user_id,
+        case
+            when referenced_user.wp_user_id < (select max(wp_user_id) from wp_user) then 'Deleted'
+            else 'Not Loaded Yet'
+        end as wp_user_status,
+        null::timestamp as registered_at
+    from referenced_user
+    where
+        referenced_user.wp_user_id <> -1
+        and not exists (select 1 from wp_user where wp_user.wp_user_id = referenced_user.wp_user_id)
+),
+
+unknown_user as (
+    select -1 as wp_user_id, 'Unknown' as wp_user_status, null::timestamp as registered_at
+),
+
+inserted_inferred as (
+    select * from wp_user
+    union all
+    select * from inferred_user
+    union all
+    select * from unknown_user
+)
+
+select * from inserted_inferred
+```
+
+```sql
+-- No: the fact re-points a missing member to the unknown row — it must join the dimension
+-- to find out, and per-member counts and the self-healing of late members are lost
+select
+    case
+        when dim_wp_user.wp_user_key is null then {{ dbt_utils.generate_surrogate_key(['-1']) }}
+        else dim_wp_user.wp_user_key
+    end as student_wp_user_key
+from {{ ref('stg_wordpress__wp_enrollment') }} as enrollment
+left join {{ ref('dim_wp_user') }} as dim_wp_user
+    on {{ dbt_utils.generate_surrogate_key(['enrollment.student_wp_user_id']) }} = dim_wp_user.wp_user_key
+```
