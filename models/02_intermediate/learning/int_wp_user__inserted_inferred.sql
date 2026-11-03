@@ -13,6 +13,8 @@ wp_user as (
 referenced_user as (
     -- user ids that facts point to; add each new fact's user column here
     select student_wp_user_id as wp_user_id from {{ ref('stg_wordpress__wp_enrollment') }}
+    union
+    select ordered_by_wp_user_id as wp_user_id from {{ ref('stg_wordpress__wp_order') }}
 ),
 
 inferred_user as (

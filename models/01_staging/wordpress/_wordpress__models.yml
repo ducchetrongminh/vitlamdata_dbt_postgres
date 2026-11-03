@@ -143,6 +143,14 @@ models:
         description: The item's sale price at checkout. Null when the item was not on sale.
       - name: discounted_unit_price
         description: The price after the coupon (discount_price). Null when no coupon applied.
+      - name: gross_amt
+        description: The regular price; each line is one unit.
+      - name: net_amt
+        description: >
+          What the line costs after sale price and coupon: discounted_unit_price, else
+          sale_unit_price, else regular_unit_price. Sums to the order's total_amt.
+      - name: discount_amt
+        description: gross_amt minus net_amt, from the sale price and the coupon together.
 
   - name: stg_wordpress__wp_enrollment
     description: >

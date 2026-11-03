@@ -47,6 +47,15 @@ null_handled as (
         sale_unit_price,
         discounted_unit_price
     from casted
+),
+
+derived as (
+    select
+        *,
+        regular_unit_price as gross_amt,                                                              -- one unit per line
+        coalesce(discounted_unit_price, sale_unit_price, regular_unit_price) as net_amt,              -- matches the order's total_amt
+        regular_unit_price - coalesce(discounted_unit_price, sale_unit_price, regular_unit_price) as discount_amt
+    from null_handled
 )
 
-select * from null_handled
+select * from derived
