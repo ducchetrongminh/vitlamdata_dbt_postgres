@@ -1001,16 +1001,10 @@ inferred_customer as (
         and not exists (select 1 from customer where customer.customer_id = referenced_customer.customer_id)
 ),
 
-unknown_customer as (
-    select -1 as customer_id, 'Unknown' as customer_name, 'Unknown' as customer_status
-),
-
 inserted_inferred as (
     select * from customer
     union all
     select * from inferred_customer
-    union all
-    select * from unknown_customer
 )
 
 select * from inserted_inferred
@@ -1022,7 +1016,6 @@ select * from inserted_inferred
 | 110 | Globex Inc | Active |
 | 105 | Unknown | Deleted |
 | 120 | Unknown | Not Loaded Yet |
-| -1 | Unknown | Unknown |
 
 ```sql
 -- No: the order's customer re-pointed to the unknown row — customer 105's orders now count
