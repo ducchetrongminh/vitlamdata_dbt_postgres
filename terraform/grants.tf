@@ -22,7 +22,7 @@ locals {
   # role => schemas it may read but does not own. Owners need no grant.
   schema_readers = {
     transformer = concat(local.raw_schemas, ["private", "public"])
-    developer   = concat(local.raw_schemas, ["staging", "intermediate", "private", "public"])
+    developer   = concat(local.raw_schemas, local.mart_schemas, ["staging", "intermediate", "private", "public"])
   }
 
   schema_usage = merge([

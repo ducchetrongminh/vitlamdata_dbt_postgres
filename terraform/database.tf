@@ -4,10 +4,14 @@ locals {
   # Each raw schema gets a *_staging twin for dlt's merge loads (§3).
   raw_schemas = ["raw_wordpress", "raw_metabase", "raw_sheets"]
 
-  # schema => owner. Add mart_<domain> schemas (owner transformer) as marts arrive.
+  # One mart_<domain> schema per folder in models/03_mart (dbt_project.yml).
+  mart_schemas = ["mart_learning", "mart_marketing"]
+
+  # schema => owner.
   schemas = merge(
     { for s in local.raw_schemas : s => "loader" },
     { for s in local.raw_schemas : "${s}_staging" => "loader" },
+    { for s in local.mart_schemas : s => "transformer" },
     {
       staging      = "transformer"
       intermediate = "transformer"
