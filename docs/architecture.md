@@ -120,7 +120,7 @@ ingestion/<source>/pipeline.py, ingestion/<source>/.dlt/config.toml, ingestion/c
 models/01_staging/<source>/      _<source>__sources.yml, _<source>__models.yml, stg_<source>__<entity>.sql
 models/01_staging/<source>/base/ base_<source>__<entity>.sql (only when one table holds several entities)
 models/02_intermediate/<domain>/ int_<entity>__<verb_phrase>.sql
-models/03_mart/<domain>/         fact_*.sql, dim_*.sql, _<domain>__models.yml
+models/03_mart/<domain>/         fact_*.sql, dim_*.sql, one <model>.yml per model
 snapshots/<source>/              snap_<source>__<table>.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql

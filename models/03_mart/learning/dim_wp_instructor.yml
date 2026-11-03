@@ -1,0 +1,20 @@
+models:
+  - name: dim_wp_instructor
+    description: >
+      Course authors whose names are public on the course pages
+      (stg_wordpress__wp_instructor), one row per instructor, plus the unknown instructor (-1).
+      Type 1.
+    columns:
+      - name: wp_instructor_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: wp_instructor_id
+        data_type: bigint
+        description: wp_users.ID of the instructor.
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: wp_instructor_name
+        data_type: text
+        description: The instructor's display name as published on the course pages.
