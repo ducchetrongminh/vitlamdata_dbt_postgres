@@ -77,8 +77,9 @@ models:
 
   - name: dim_wp_user
     description: >
-      WordPress accounts (learners, instructors, admins), one row per wp_user, plus the
-      unknown user (-1). No names or emails, hashed or not. Type 1. Times are Vietnam time.
+      WordPress accounts (learners, instructors, admins), one row per wp_user, plus users
+      that facts reference but wp_users lacks (wp_user_status 'Deleted' or 'Not Loaded
+      Yet'), plus the unknown user (-1). No names or emails, hashed or not. Type 1. Times are Vietnam time.
     columns:
       - name: wp_user_key
         data_type: text
@@ -89,6 +90,59 @@ models:
         constraints:
           - type: not_null
           - type: unique
+      - name: wp_user_status
+        data_type: text
+        description: >
+          'Active' for accounts in wp_users. For an account a fact references but
+          wp_users lacks: 'Deleted' when its id is below the highest wp_users id (it
+          existed), 'Not Loaded Yet' when above (created after the load; replaced by
+          the real row next run). 'Unknown' for the unknown user.
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Active', 'Deleted', 'Not Loaded Yet', 'Unknown']
       - name: registered_at
         data_type: timestamp
-        description: When the account was created. Null for the unknown user.
+        description: When the account was created. Null for inferred users and the unknown user.
+
+  - name: fact_enrollment
+    description: >
+      Tutor LMS enrollments, one row per student per course or course bundle. Factless:
+      count rows to count enrollments. Incremental on updated_at. Times are Vietnam time.
+    columns:
+      - name: wp_enrollment_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: wp_enrollment_id
+        data_type: bigint
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: student_wp_user_id
+        data_type: bigint
+      - name: wp_course_id
+        data_type: bigint
+      - name: wp_enrollment_status
+        data_type: text
+        description: >
+          'Enrolled' when the enrollment went through (Tutor's 'completed'), not
+          that the student finished the course.
+      - name: student_wp_user_key
+        data_type: text
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wp_user')
+                field: wp_user_key
+      - name: wp_course_key
+        data_type: text
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wp_course')
+                field: wp_course_key
+      - name: enrolled_at
+        data_type: timestamp
+      - name: updated_at
+        data_type: timestamp

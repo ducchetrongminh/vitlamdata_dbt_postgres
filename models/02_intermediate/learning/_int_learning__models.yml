@@ -46,10 +46,11 @@ models:
           - unique
           - not_null
 
-  - name: int_wp_user__inserted_unknown
+  - name: int_wp_user__inserted_inferred
     description: >
-      WordPress accounts plus the unknown user (-1), one row per wp_user. Hashes stay
-      out: they are join keys for intermediate only. Read by dim_wp_user.
+      WordPress accounts, plus inferred users that a fact references but wp_users no
+      longer or not yet holds, plus the unknown user (-1). One row per wp_user. Hashes
+      stay out: they are join keys for intermediate only. Read by dim_wp_user.
     columns:
       - name: wp_user_id
         data_tests:
