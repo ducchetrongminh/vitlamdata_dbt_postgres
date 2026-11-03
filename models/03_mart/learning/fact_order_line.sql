@@ -25,6 +25,7 @@ final as (
         -- Foreign keys
         {{ dbt_utils.generate_surrogate_key(['ordered_by_wp_user_id']) }} as ordered_by_wp_user_key,
         {{ dbt_utils.generate_surrogate_key(['wp_course_id']) }} as wp_course_key,
+        {{ dbt_utils.generate_surrogate_key(['wp_coupon_code']) }} as wp_coupon_key,
         -- Dates
         ordered_at,
         updated_at,

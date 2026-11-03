@@ -67,3 +67,13 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: int_wp_coupon__inserted_unknown
+    description: >
+      Coupons plus the unknown coupon ('UNKNOWN', for order lines without one). One row
+      per coupon. Read by dim_wp_coupon.
+    columns:
+      - name: wp_coupon_code
+        data_tests:
+          - unique
+          - not_null

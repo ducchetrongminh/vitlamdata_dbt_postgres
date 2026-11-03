@@ -197,3 +197,35 @@ models:
           - not_null
       - name: wp_instructor_name
         description: display_name, unhashed; public on the course pages.
+
+  - name: stg_wordpress__wp_coupon
+    description: >
+      Tutor LMS coupons (wp_tutor_coupons), one row per coupon, without trashed coupons.
+      Keyed by code, the value order lines carry. Times are Vietnam time.
+    columns:
+      - name: wp_coupon_code
+        data_tests:
+          - unique
+          - not_null
+      - name: wp_coupon_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Active', 'Inactive']
+      - name: wp_coupon_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Code', 'Automatic']
+      - name: wp_coupon_discount_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['Flat', 'Percentage']
+      - name: wp_coupon_discount_value
+        description: VND for a flat discount, percent for a percentage discount (discount_amount).
+      - name: wp_coupon_applies_to
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ['All Courses and Bundles', 'All Courses', 'All Bundles', 'Specific Courses', 'Specific Bundles', 'Specific Category']

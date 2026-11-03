@@ -47,6 +47,13 @@ models:
               arguments:
                 to: ref('dim_wp_course')
                 field: wp_course_key
+      - name: wp_coupon_key
+        data_type: text
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_wp_coupon')
+                field: wp_coupon_key
       - name: ordered_at
         data_type: timestamp
       - name: updated_at
