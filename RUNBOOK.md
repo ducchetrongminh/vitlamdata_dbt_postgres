@@ -60,7 +60,7 @@ as `loader`. Each source is a folder, `ingestion/<source>/`: `pipeline.py` runs 
 `.dlt/config.toml` holds its tables, write dispositions and cursors.
 Credentials for all sources are in `ingestion/credentials.toml` as `${VAR}`
 references to env vars, like `env_var()` in `profiles.yml`; `ingestion/setup.py`
-fills them in. Sources: `wordpress`.
+fills them in. Sources: `wordpress`, `iowa_liquor`.
 
 Its dependencies are the `ingestion` group in `pyproject.toml`, in the same `.venv`.
 
