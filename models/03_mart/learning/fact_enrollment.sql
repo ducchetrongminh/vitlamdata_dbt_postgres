@@ -1,9 +1,9 @@
 {{
     config(
         materialized='incremental',
-        incremental_strategy='delete+insert',
+        incremental_strategy='merge',
         unique_key='wp_enrollment_id',
-        on_schema_change='append_new_columns'
+        on_schema_change='fail'
     )
 }}
 

@@ -322,8 +322,8 @@ select * from pivoted
 ### 4.1 Mart structural constraints
 Materialize as table or incremental, grouped into subfolders by business domain, one dim/fact per file at entity grain.
 
-- **Materialization** — table for dimensions; transaction facts are `incremental` with `incremental_strategy: delete+insert` and a `unique_key` ([Architecture §5](architecture.md#materializations)); view for [role playing dimensions](dimensional-modeling-standards.md#17-role-playing-dimension), since a role-playing dimension is a thin wrapper aliasing the base dimension, not a table of its own.
-- **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `delete+insert` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
+- **Materialization** — table for dimensions; transaction facts are `incremental` with `incremental_strategy: merge`, a `unique_key` and `on_schema_change: fail` ([Architecture §5](architecture.md#materializations)); view for [role playing dimensions](dimensional-modeling-standards.md#17-role-playing-dimension), since a role-playing dimension is a thin wrapper aliasing the base dimension, not a table of its own.
+- **Incremental filter** — an incremental fact reads only rows changed since its last run, by the max updated timestamp already in the table. With `merge` on the `unique_key`, `>=` reprocesses the boundary rows safely. A fact whose source has no reliable updated timestamp stays a table.
 
 ```sql
 -- Yes: fact_order_line.sql

@@ -139,10 +139,12 @@ and [Dimensional Modeling Standards](dimensional-modeling-standards.md).
 |---|---|---|
 | `01_staging` | view | |
 | `02_intermediate` | ephemeral | a model may override to view/table; it then lands in `intermediate` |
-| `03_mart` | table | transaction facts are `incremental`, `incremental_strategy: delete+insert`, with a `unique_key` |
+| `03_mart` | table | transaction facts are `incremental`, `incremental_strategy: merge`, with a `unique_key` |
 
-Incremental marts with an enforced contract set `on_schema_change: append_new_columns`
-(or `fail`).
+Incremental marts with an enforced contract set `on_schema_change: fail`. A new column
+then stops the run, and a deliberate `--full-refresh` fills it on every row.
+`append_new_columns` would add it silently with null on every row outside the
+incremental window.
 
 ### Schema naming
 
@@ -386,7 +388,7 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | Database | new `vitlamdata_dw`, old ones retired later | clean cutover |
 | PII | HMAC with global key in `private.pii_key` | deterministic joins; key never in compiled SQL |
 | Prod schema naming | `staging`, `intermediate`, `mart_<domain>` | per-domain grants for public Metabase |
-| Facts | incremental `delete+insert` | works on every Postgres version |
+| Facts | incremental `merge` | updates matching rows in place; needs Postgres 15+ (the warehouse runs 16) |
 | Scheduled full refresh | none; manual `full_refresh` dispatch | dbt-only refresh cannot fix deletes that dlt merge never saw |
 | Slim CI | `state:modified+ --defer`, manifest in GCS | fast PR builds; schemas kept until PR closes |
 | Deploy | on merge | prod reflects `main` within minutes |
