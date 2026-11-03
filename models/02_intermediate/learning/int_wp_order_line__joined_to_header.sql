@@ -11,8 +11,8 @@ order_header as (
 joined_to_header as (
     select
         -- Keys
-        order_line.wp_order_no,
         order_line.wp_order_line_no,
+        order_line.wp_order_no,
         -- Foreign keys
         order_header.ordered_by_wp_user_id,
         order_line.wp_course_id,
