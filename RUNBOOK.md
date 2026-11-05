@@ -91,8 +91,9 @@ next load into a fresh schema skip rows.
 
 ### Nightly and manual loads
 
-`nightly.yml` runs at 02:00 ICT: `ingest.yml` loads every source, then (#9)
-dbt builds prod. Both run in GitHub Environment `prod`, as `dbt-runner`.
+`nightly.yml` runs at 02:00 ICT: `ingest.yml` loads every source, then
+`dbt-build.yml` builds prod, then `notify` posts the result to Lark. All run in
+GitHub Environment `prod`, as `dbt-runner`.
 
 Each run's summary page lists, per source, the rows loaded into each table. A
 `merge` table shows only new or changed rows, often 0. The job log has dlt's
@@ -101,10 +102,32 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
 - **Load now, without dbt:** Actions → ingest → Run workflow.
 - **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
   to repeat: merge tables update in place, replace tables are reloaded.
+- **Build now, without loading:** Actions → dbt-build → Run workflow.
 - **full_refresh:** tick it after rows were hard-deleted in a source, or after
-  a model logic change. It reloads every table from scratch and (#9) rebuilds
+  a model logic change. It reloads every table from scratch and rebuilds
   every model with `--full-refresh`. Use it on nightly, not on ingest alone:
   reloading raw without the dbt rebuild leaves incremental marts stale.
+
+### Read a Lark alert
+
+`nightly passed` or `nightly FAILED`, then the result of each job and the run link:
+
+- `ingest: failure`, `build: skipped`: a source did not load. Open the run, then the
+  `ingest` job's "Load sources" step; each source is its own log group. dbt did
+  not run, so prod still holds yesterday's data.
+- `ingest: success`, `build: failure`: open the `build` job. "Source freshness"
+  fails when a source has not loaded for 50 h; "dbt build" lists the failed models
+  and tests. The manifest and docs were not updated.
+- No alert at all: the `notify` job failed (Lark rejected the message; its log
+  says why) or the Lark secrets are not set (the job logs a warning).
+
+Fix, then re-run (above). Rotating the PII key changes every hash: run nightly
+with `full_refresh` after it (see "Warehouse Terraform").
+
+### dbt docs
+
+`dbt-build.yml` publishes `dbt docs generate --static` to GitHub Pages after each
+successful build. It holds SQL and column names, no data and no key (architecture §10).
 
 ### Add a table
 
