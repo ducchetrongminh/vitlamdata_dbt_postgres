@@ -1,0 +1,101 @@
+name: dbt-build
+
+# Build prod with dbt as `transformer` (docs/architecture.md §8, §10): source
+# freshness, dbt build, then the manifest for slim CI and deploy, then the docs on
+# GitHub Pages. nightly.yml calls it after ingest; Run workflow (workflow_dispatch)
+# builds on its own, without loading.
+#
+# full_refresh: dbt build --full-refresh, so incremental models rebuild from scratch.
+on:
+  workflow_dispatch:
+    inputs:
+      full_refresh:
+        description: Rebuild every model from scratch
+        type: boolean
+        default: false
+  workflow_call:
+    inputs:
+      full_refresh:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write # WIF, and the Pages deploy
+  pages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Environment prod: the only OIDC subject (with ci) dbt-runner accepts.
+    environment: prod
+    # Shared with every job that writes prod, so they never overlap.
+    concurrency: prod
+    env:
+      PGUSER: transformer
+      DBT_PROFILES_DIR: .
+      DBT_TARGET: prod # every dbt command; profiles.yml defaults to dev
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/541617847124/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: dbt-runner@vit-lam-data.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Same flags as ingest.yml (architecture §8).
+      - name: Open SSH tunnel to postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes -L 5433:127.0.0.1:5433
+
+      - name: Password from dw-transformer
+        run: |
+          pw="$(gcloud secrets versions access latest --secret=dw-transformer)"
+          [ -n "$pw" ] || { echo "dw-transformer is empty"; exit 1; }
+          echo "::add-mask::$pw"
+          echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
+
+      # .venv on PATH for every later step: no `source .venv/bin/activate`.
+      - uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+
+      # dbt only: the dev and ingestion groups are not needed here.
+      - run: uv sync --frozen --no-default-groups
+
+      - run: dbt deps
+
+      # Warns after 26 h, errors after 50 h without a load (architecture §10).
+      - name: Source freshness
+        run: dbt source freshness
+
+      - name: dbt build
+        run: dbt build ${{ inputs.full_refresh && '--full-refresh' || '' }}
+
+      # Only after a successful build: slim CI and deploy compare against it (§8).
+      - name: Upload manifest
+        run: gcloud storage cp target/manifest.json gs://vitlamdata_dbt_postgres/dbt-state/manifest.json
+
+      # --static: one self-contained page. Publish only that, not the rest of target/.
+      - name: dbt docs
+        run: |
+          dbt docs generate --static
+          mkdir site && cp target/static_index.html site/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  docs:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deploy

@@ -266,9 +266,9 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 
 | Workflow | Trigger | Steps |
 |---|---|---|
-| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | job `ingest` (calls `ingest.yml`) → job `build` (calls `dbt-build.yml`, `needs: ingest`). `full_refresh` goes to both |
+| `nightly.yml` | cron `0 19 * * *` (02:00 ICT); `workflow_dispatch` with a `full_refresh` input | job `ingest` (calls `ingest.yml`) → job `build` (calls `dbt-build.yml`, `needs: ingest`) → job `notify` (Lark, success and failure, `if: always()`). `full_refresh` goes to `ingest` and `build` |
 | `ingest.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | tunnel → `python -m ingestion.<source>.pipeline` for each source as `loader` (`REFRESH=drop_data` on `full_refresh`) |
-| `dbt-build.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | `dbt source freshness` → `dbt build --target prod` (`--full-refresh` on `full_refresh`) → upload `manifest.json` → `dbt docs generate` → publish to GitHub Pages → Lark (success and failure) |
+| `dbt-build.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | `dbt source freshness` → `dbt build --target prod` (`--full-refresh` on `full_refresh`) → upload `manifest.json` → `dbt docs generate --static` → publish to GitHub Pages |
 | `deploy.yml` | push to `main` touching dbt paths | download manifest → `dbt build -s state:modified+ --state prod-state --target prod` → upload manifest |
 | `ci.yml` | `pull_request` | `lint`: `sqlfluff lint`, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
 | `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>_*` |
@@ -280,8 +280,10 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 - The prod manifest lives at `gs://vitlamdata_dbt_postgres/dbt-state/`.
   It is uploaded only by runs that actually built prod. A stale manifest is safe: CI then
   rebuilds a few extra models.
-- **Lark alerts are sent by nightly only.** They use a group custom bot with signature
-  verification enabled. Everything else reports in GitHub.
+- **Lark alerts are sent by nightly only**, from its own `notify` job, so a failed `ingest`
+  (which skips `build`) alerts too. They reuse the infras Lark custom bot, whose signature
+  verification is off: the `prod` environment secret `LARK_WEBHOOK_URL` is copied from
+  `vitlamdata-env` in Secret Manager. `notify` signs only if `LARK_SIGNING_SECRET` is set. Everything else reports in GitHub.
 
 ## 9. Infrastructure as code (this repo)
 
@@ -374,7 +376,6 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | WordPress/Tutor table list and write disposition per table | implementing its `ingestion/` pipeline |
 | Google Sheets list | implementing its `ingestion/` pipeline |
 | Delete check for hard deletes | only if source row counts drift |
-| Lark group and bot | before nightly goes live |
 | Porting the old `vitlamdata` models | separate spec |
 
 ## 14. Decision log
