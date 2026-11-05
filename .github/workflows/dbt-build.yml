@@ -3,9 +3,11 @@ name: dbt-build
 # Build prod with dbt as `transformer` (docs/architecture.md §8, §10): source
 # freshness, dbt build, then the manifest for slim CI and deploy, then the docs on
 # GitHub Pages. nightly.yml calls it after ingest; Run workflow (workflow_dispatch)
-# builds on its own, without loading.
+# builds on its own, without loading. deploy.yml calls it with slim on merge.
 #
 # full_refresh: dbt build --full-refresh, so incremental models rebuild from scratch.
+# slim: no freshness check; build only state:modified+ against the last prod manifest
+# (everything when there is none yet).
 on:
   workflow_dispatch:
     inputs:
@@ -16,6 +18,9 @@ on:
   workflow_call:
     inputs:
       full_refresh:
+        type: boolean
+        default: false
+      slim:
         type: boolean
         default: false
 
@@ -70,11 +75,31 @@ jobs:
       - run: dbt deps
 
       # Warns after 26 h, errors after 50 h without a load (architecture §10).
+      # Not on slim: a deploy ships model changes and does not depend on the last load.
       - name: Source freshness
+        if: ${{ !inputs.slim }}
         run: dbt source freshness
 
+      # Same as ci.yml: missing (before the first prod build) means a full build.
+      - name: Download prod manifest
+        id: state
+        if: inputs.slim
+        run: |
+          if err="$(gcloud storage cp gs://vitlamdata_dbt_postgres/dbt-state/manifest.json prod-state/manifest.json 2>&1)"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          elif echo "$err" | grep -qiE "matched no objects|404|not ?found"; then
+            echo "::warning::No prod manifest yet: full build"
+          else
+            echo "$err"; exit 1
+          fi
+
       - name: dbt build
-        run: dbt build ${{ inputs.full_refresh && '--full-refresh' || '' }}
+        run: |
+          if [ "${{ steps.state.outputs.found }}" = true ]; then
+            dbt build -s state:modified+ --state prod-state
+          else
+            dbt build ${{ inputs.full_refresh && '--full-refresh' || '' }}
+          fi
 
       # Only after a successful build: slim CI and deploy compare against it (§8).
       - name: Upload manifest

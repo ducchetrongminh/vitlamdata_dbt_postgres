@@ -103,6 +103,11 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
 - **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
   to repeat: merge tables update in place, replace tables are reloaded.
 - **Build now, without loading:** Actions → dbt-build → Run workflow.
+- **Deploy on merge:** a merge to `main` that touches `models/`, `macros/`,
+  `tests/`, `seeds/`, `snapshots/` or the dbt config files runs `deploy.yml`. It
+  builds in prod only the changed models and their children, then uploads the
+  manifest and the docs. It waits while nightly holds prod. If it fails, fix in a
+  new PR: its merge deploys again. Or run dbt-build for a full build.
 - **full_refresh:** tick it after rows were hard-deleted in a source, or after
   a model logic change. It reloads every table from scratch and rebuilds
   every model with `--full-refresh`. Use it on nightly, not on ingest alone:
