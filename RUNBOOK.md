@@ -107,6 +107,9 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
   a model logic change. It reloads every table from scratch and rebuilds
   every model with `--full-refresh`. Use it on nightly, not on ingest alone:
   reloading raw without the dbt rebuild leaves incremental marts stale.
+- **Pause the schedule:** `gh workflow disable nightly.yml`, e.g. while the VM
+  disk is nearly full. Turn it back on with `gh workflow enable nightly.yml`.
+  A disabled workflow cannot be run by hand either: use ingest and dbt-build.
 
 ### Read a Lark alert
 
@@ -137,6 +140,9 @@ with `full_refresh` after it (see "Warehouse Terraform").
 
 `dbt-build.yml` publishes `dbt docs generate --static` to GitHub Pages after each
 successful build. It holds SQL and column names, no data and no key (architecture §10).
+
+One-time setup: Settings → Pages → Source: GitHub Actions. Without it the `docs`
+job fails; the build, manifest and alert are not affected.
 
 ### Add a table
 
