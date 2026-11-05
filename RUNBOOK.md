@@ -142,7 +142,7 @@ with `full_refresh` after it (see "Warehouse Terraform").
 successful build. It holds SQL and column names, no data and no key (architecture §10).
 
 One-time setup: Settings → Pages → Source: GitHub Actions. Without it the `docs`
-job fails; the build, manifest and alert are not affected.
+job fails, and nightly alerts `build: failure` although models and manifest are fine.
 
 ### Add a table
 
