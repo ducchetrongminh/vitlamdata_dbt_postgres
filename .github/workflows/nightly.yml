@@ -1,8 +1,9 @@
 name: nightly
 
-# Nightly prod run (docs/architecture.md §8): ingest every source, then (#9) dbt.
+# Nightly prod run (docs/architecture.md §8): ingest every source, build prod with
+# dbt, then post the result to Lark.
 # Run workflow with full_refresh after a hard delete in a source or a model logic
-# change: it reloads raw from scratch and (#9) rebuilds dbt with --full-refresh.
+# change: it reloads raw from scratch and rebuilds dbt with --full-refresh.
 on:
   schedule:
     - cron: "0 19 * * *" # 02:00 ICT
@@ -15,10 +16,63 @@ on:
 
 permissions:
   contents: read
-  id-token: write # WIF, in the called workflows
+  id-token: write # WIF and the Pages deploy, in the called workflows
+  pages: write
 
 jobs:
   ingest:
     uses: ./.github/workflows/ingest.yml
     with:
       full_refresh: ${{ inputs.full_refresh || false }}
+
+  build:
+    needs: ingest
+    uses: ./.github/workflows/dbt-build.yml
+    with:
+      full_refresh: ${{ inputs.full_refresh || false }}
+
+  # Here, not in dbt-build.yml: a failed ingest skips build, and must alert too.
+  # Only nightly alerts; other workflows report in GitHub (§8).
+  notify:
+    needs: [ingest, build]
+    if: always()
+    runs-on: ubuntu-latest
+    environment: prod # the Lark secrets
+    steps:
+      - name: Post to Lark
+        env:
+          LARK_WEBHOOK_URL: ${{ secrets.LARK_WEBHOOK_URL }}
+          LARK_SIGNING_SECRET: ${{ secrets.LARK_SIGNING_SECRET }}
+          INGEST: ${{ needs.ingest.result }}
+          BUILD: ${{ needs.build.result }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$LARK_WEBHOOK_URL" ] || [ -z "$LARK_SIGNING_SECRET" ]; then
+            echo "::warning::Lark secrets not set in environment prod: no alert sent"
+            exit 0
+          fi
+          python3 - <<'EOF'
+          import base64, hashlib, hmac, json, os, time, urllib.request
+
+          e = os.environ
+          ok = e["INGEST"] == e["BUILD"] == "success"
+          text = "\n".join([
+              "nightly passed" if ok else "nightly FAILED",
+              f"ingest: {e['INGEST']}",
+              f"build: {e['BUILD']}",
+              e["RUN_URL"],
+          ])
+          # Lark custom bot signature: HMAC-SHA256 keyed with "<timestamp>\n<secret>", empty message.
+          ts = str(int(time.time()))
+          key = f"{ts}\n{e['LARK_SIGNING_SECRET']}".encode()
+          sign = base64.b64encode(hmac.new(key, digestmod=hashlib.sha256).digest()).decode()
+          body = {"timestamp": ts, "sign": sign, "msg_type": "text", "content": {"text": text}}
+          req = urllib.request.Request(
+              e["LARK_WEBHOOK_URL"], json.dumps(body).encode(), {"Content-Type": "application/json"}
+          )
+          with urllib.request.urlopen(req, timeout=30) as r:
+              resp = json.load(r)
+          # Lark answers HTTP 200 even when it rejects the message; the code says.
+          if resp.get("code", 0) != 0:
+              raise SystemExit(f"Lark rejected the message: {resp}")
+          EOF
