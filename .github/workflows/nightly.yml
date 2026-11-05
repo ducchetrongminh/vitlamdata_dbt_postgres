@@ -47,8 +47,8 @@ jobs:
           BUILD: ${{ needs.build.result }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          if [ -z "$LARK_WEBHOOK_URL" ] || [ -z "$LARK_SIGNING_SECRET" ]; then
-            echo "::warning::Lark secrets not set in environment prod: no alert sent"
+          if [ -z "$LARK_WEBHOOK_URL" ]; then
+            echo "::warning::LARK_WEBHOOK_URL not set in environment prod: no alert sent"
             exit 0
           fi
           python3 - <<'EOF'
@@ -62,11 +62,14 @@ jobs:
               f"build: {e['BUILD']}",
               e["RUN_URL"],
           ])
-          # Lark custom bot signature: HMAC-SHA256 keyed with "<timestamp>\n<secret>", empty message.
-          ts = str(int(time.time()))
-          key = f"{ts}\n{e['LARK_SIGNING_SECRET']}".encode()
-          sign = base64.b64encode(hmac.new(key, digestmod=hashlib.sha256).digest()).decode()
-          body = {"timestamp": ts, "sign": sign, "msg_type": "text", "content": {"text": text}}
+          body = {"msg_type": "text", "content": {"text": text}}
+          # The shared infras bot has signature verification off. Sign only when the
+          # bot has it on: HMAC-SHA256 keyed with "<timestamp>\n<secret>", empty message.
+          if secret := e.get("LARK_SIGNING_SECRET"):
+              ts = str(int(time.time()))
+              key = f"{ts}\n{secret}".encode()
+              body["timestamp"] = ts
+              body["sign"] = base64.b64encode(hmac.new(key, digestmod=hashlib.sha256).digest()).decode()
           req = urllib.request.Request(
               e["LARK_WEBHOOK_URL"], json.dumps(body).encode(), {"Content-Type": "application/json"}
           )

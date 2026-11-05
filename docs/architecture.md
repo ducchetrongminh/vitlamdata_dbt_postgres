@@ -281,9 +281,9 @@ Fork PRs receive no OIDC token, so they can never reach a database.
   It is uploaded only by runs that actually built prod. A stale manifest is safe: CI then
   rebuilds a few extra models.
 - **Lark alerts are sent by nightly only**, from its own `notify` job, so a failed `ingest`
-  (which skips `build`) alerts too. They use a group custom bot with signature verification
-  enabled; the webhook and signing secret are the `prod` environment secrets
-  `LARK_WEBHOOK_URL` and `LARK_SIGNING_SECRET`. Everything else reports in GitHub.
+  (which skips `build`) alerts too. They reuse the infras Lark custom bot, whose signature
+  verification is off: the `prod` environment secret `LARK_WEBHOOK_URL` is copied from
+  `vitlamdata-env` in Secret Manager. `notify` signs only if `LARK_SIGNING_SECRET` is set. Everything else reports in GitHub.
 
 ## 9. Infrastructure as code (this repo)
 
@@ -376,7 +376,6 @@ stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
 | WordPress/Tutor table list and write disposition per table | implementing its `ingestion/` pipeline |
 | Google Sheets list | implementing its `ingestion/` pipeline |
 | Delete check for hard deletes | only if source row counts drift |
-| Lark group and bot | before nightly goes live |
 | Porting the old `vitlamdata` models | separate spec |
 
 ## 14. Decision log

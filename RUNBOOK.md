@@ -119,7 +119,16 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
   fails when a source has not loaded for 50 h; "dbt build" lists the failed models
   and tests. The manifest and docs were not updated.
 - No alert at all: the `notify` job failed (Lark rejected the message; its log
-  says why) or the Lark secrets are not set (the job logs a warning).
+  says why) or `LARK_WEBHOOK_URL` is not set (the job logs a warning).
+
+The bot is the infras one (signature verification off). Its URL is
+`LARK_WEBHOOK_URL` in `vitlamdata-env`; to copy it into environment `prod`:
+
+```bash
+gcloud secrets versions access latest --secret=vitlamdata-env --project vit-lam-data \
+  | sed -n 's/^LARK_WEBHOOK_URL=//p' | tail -1 | sed -E 's/^"(.*)"$/\1/' \
+  | gh secret set LARK_WEBHOOK_URL --env prod -R ducchetrongminh/vitlamdata_dbt_postgres
+```
 
 Fix, then re-run (above). Rotating the PII key changes every hash: run nightly
 with `full_refresh` after it (see "Warehouse Terraform").
