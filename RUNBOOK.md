@@ -124,14 +124,21 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
 - No alert at all: the `notify` job failed (Lark rejected the message; its log
   says why) or `LARK_WEBHOOK_URL` is not set (the job logs a warning).
 
-The bot is the infras one (signature verification off). Its URL is
-`LARK_WEBHOOK_URL` in `vitlamdata-env`; to copy it into environment `prod`:
+The bot is the custom bot in the infras report group in Lark. Not the one in
+`vitlamdata-env`: that URL posts to the CS group. To set or rotate it:
 
-```bash
-gcloud secrets versions access latest --secret=vitlamdata-env --project vit-lam-data \
-  | sed -n 's/^LARK_WEBHOOK_URL=//p' | tail -1 | sed -E 's/^"(.*)"$/\1/' \
-  | gh secret set LARK_WEBHOOK_URL --env prod -R ducchetrongminh/vitlamdata_dbt_postgres
-```
+1. In the Lark group: Settings → Bots → the custom bot → copy the webhook URL.
+   If "Signature verification" is on, copy its secret too.
+2. Set them in environment `prod`. Each command prompts for the value, so it
+   never lands in shell history:
+
+   ```bash
+   gh secret set LARK_WEBHOOK_URL --env prod -R ducchetrongminh/vitlamdata_dbt_postgres
+   # only if signature verification is on:
+   gh secret set LARK_SIGNING_SECRET --env prod -R ducchetrongminh/vitlamdata_dbt_postgres
+   ```
+
+3. Run nightly (or wait for it) and check the alert lands in the group.
 
 Fix, then re-run (above). Rotating the PII key changes every hash: run nightly
 with `full_refresh` after it (see "Warehouse Terraform").
