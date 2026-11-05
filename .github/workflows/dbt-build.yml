@@ -34,6 +34,7 @@ jobs:
     env:
       PGUSER: transformer
       DBT_PROFILES_DIR: .
+      DBT_TARGET: prod # every dbt command; profiles.yml defaults to dev
     steps:
       - uses: actions/checkout@v4
 
@@ -58,19 +59,22 @@ jobs:
           echo "::add-mask::$pw"
           echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
 
+      # .venv on PATH for every later step: no `source .venv/bin/activate`.
       - uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
 
       # dbt only: the dev and ingestion groups are not needed here.
       - run: uv sync --frozen --no-default-groups
 
-      - run: source .venv/bin/activate && dbt deps
+      - run: dbt deps
 
       # Warns after 26 h, errors after 50 h without a load (architecture §10).
       - name: Source freshness
-        run: source .venv/bin/activate && dbt source freshness --target prod
+        run: dbt source freshness
 
       - name: dbt build
-        run: source .venv/bin/activate && dbt build --target prod ${{ inputs.full_refresh && '--full-refresh' || '' }}
+        run: dbt build ${{ inputs.full_refresh && '--full-refresh' || '' }}
 
       # Only after a successful build: slim CI and deploy compare against it (§8).
       - name: Upload manifest
@@ -79,8 +83,7 @@ jobs:
       # --static: one self-contained page. Publish only that, not the rest of target/.
       - name: dbt docs
         run: |
-          source .venv/bin/activate
-          dbt docs generate --target prod --static
+          dbt docs generate --static
           mkdir site && cp target/static_index.html site/index.html
 
       - uses: actions/upload-pages-artifact@v3
