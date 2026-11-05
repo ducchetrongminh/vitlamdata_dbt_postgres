@@ -89,7 +89,7 @@ models:
         data_tests:
           - accepted_values:
               arguments:
-                values: ['Bank Transfer']
+                values: ['Bank Transfer', 'Manual']
       - name: ordered_at
         description: created_at_gmt in Vietnam time.
 

@@ -72,8 +72,10 @@ decoded as (
             when 'partially-refunded' then 'Partially Refunded'
             else 'Unknown'
         end as payment_status,
-        case payment_method_code
+        case coalesce(payment_method_code, '')
             when 'chuyen-khoan' then 'Bank Transfer'
+            -- Tutor leaves it empty when an admin enrols a learner by hand
+            when '' then 'Manual'
             else 'Unknown'
         end as payment_method,
         -- SePay writes its transaction id into the note ("SePay 87456092: 49.000₫"); Tutor leaves transaction_id empty
