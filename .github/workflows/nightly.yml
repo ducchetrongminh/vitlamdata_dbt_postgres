@@ -63,8 +63,8 @@ jobs:
               e["RUN_URL"],
           ])
           body = {"msg_type": "text", "content": {"text": text}}
-          # The shared infras bot has signature verification off. Sign only when the
-          # bot has it on: HMAC-SHA256 keyed with "<timestamp>\n<secret>", empty message.
+          # Sign only when the bot has signature verification on (LARK_SIGNING_SECRET set):
+          # HMAC-SHA256 keyed with "<timestamp>\n<secret>", empty message.
           if secret := e.get("LARK_SIGNING_SECRET"):
               ts = str(int(time.time()))
               key = f"{ts}\n{secret}".encode()

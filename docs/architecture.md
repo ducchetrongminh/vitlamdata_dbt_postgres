@@ -281,9 +281,10 @@ Fork PRs receive no OIDC token, so they can never reach a database.
   It is uploaded only by runs that actually built prod. A stale manifest is safe: CI then
   rebuilds a few extra models.
 - **Lark alerts are sent by nightly only**, from its own `notify` job, so a failed `ingest`
-  (which skips `build`) alerts too. They reuse the infras Lark custom bot, whose signature
-  verification is off: the `prod` environment secret `LARK_WEBHOOK_URL` is copied from
-  `vitlamdata-env` in Secret Manager. `notify` signs only if `LARK_SIGNING_SECRET` is set. Everything else reports in GitHub.
+  (which skips `build`) alerts too. They post through the custom bot in the infras report group.
+  Its webhook URL is the `prod` environment secret `LARK_WEBHOOK_URL`, set by hand from
+  the bot's settings (not `vitlamdata-env`: that URL is the CS group's). `notify` signs
+  only if `LARK_SIGNING_SECRET` is set, for a bot with signature verification on. Everything else reports in GitHub.
 
 ## 9. Infrastructure as code (this repo)
 
