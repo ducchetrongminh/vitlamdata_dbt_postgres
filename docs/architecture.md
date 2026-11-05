@@ -270,8 +270,8 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 | `ingest.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | tunnel → `python -m ingestion.<source>.pipeline` for each source as `loader` (`REFRESH=drop_data` on `full_refresh`) |
 | `dbt-build.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | `dbt source freshness` → `dbt build --target prod` (`--full-refresh` on `full_refresh`) → upload `manifest.json` → `dbt docs generate --static` → publish to GitHub Pages |
 | `deploy.yml` | push to `main` touching dbt paths | download manifest → `dbt build -s state:modified+ --state prod-state --target prod` → upload manifest |
-| `ci.yml` | `pull_request` | `lint`: `sqlfluff lint`, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
-| `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>_*` |
+| `ci.yml` | `pull_request` | `lint`: `sqlfluff lint` on the PR's changed `.sql` files, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
+| `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>` and `ci_pr_<n>_*` (regex, exact PR number) |
 | `terraform.yml` | PR touching `terraform/` → plan + PR comment; push to `main` → apply | env `admin`; after apply, write `private.pii_key` |
 
 - The jobs that write prod (`ingest`, `build`, `deploy`) share `concurrency: prod`, so they never overlap.

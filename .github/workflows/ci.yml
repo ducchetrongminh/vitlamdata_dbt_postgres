@@ -1,0 +1,115 @@
+name: ci
+
+# Per-PR checks (docs/architecture.md §8).
+# lint: sqlfluff on the .sql files this PR changes. No secrets, so fork PRs run it too.
+# build: same-repo PRs only. Slim build of the changed models and their children into
+# ci_pr_<n>_*, reading the rest from prod (--defer). The schemas stay for review;
+# ci-cleanup.yml drops them when the PR closes.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write # WIF, build job only
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      # Depth 2: the PR merge commit and its first parent, the base branch tip.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      # Only changed files: the existing models still fail lint (issue #8).
+      # macros/ is skipped: macro files are not models and do not lint cleanly.
+      - name: Changed .sql files
+        id: files
+        run: |
+          files="$(git diff --name-only --diff-filter=AMR HEAD^1 HEAD -- '*.sql' ':!macros/')"
+          echo "$files"
+          { echo "list<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - uses: astral-sh/setup-uv@v6
+        if: steps.files.outputs.list != ''
+        with:
+          activate-environment: true
+
+      # sqlfluff only (dev group): the jinja templater needs no dbt and no database.
+      - if: steps.files.outputs.list != ''
+        run: uv sync --frozen --only-group dev
+
+      - name: sqlfluff lint
+        if: steps.files.outputs.list != ''
+        env:
+          FILES: ${{ steps.files.outputs.list }}
+        run: echo "$FILES" | xargs sqlfluff lint
+
+  build:
+    # Fork PRs get no OIDC token, so they could never reach the database (§8).
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    # Environment ci: the only OIDC subject (with prod) dbt-runner accepts.
+    environment: ci
+    # A new push cancels the build of the previous one; ci-cleanup.yml joins this group.
+    concurrency:
+      group: ci-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PGUSER: ci
+      DBT_PROFILES_DIR: .
+      DBT_TARGET: ci
+      DBT_PR_NUMBER: ${{ github.event.pull_request.number }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/541617847124/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: dbt-runner@vit-lam-data.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Same flags as ingest.yml (architecture §8).
+      - name: Open SSH tunnel to postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes -L 5433:127.0.0.1:5433
+
+      - name: Password from dw-ci
+        run: |
+          pw="$(gcloud secrets versions access latest --secret=dw-ci)"
+          [ -n "$pw" ] || { echo "dw-ci is empty"; exit 1; }
+          echo "::add-mask::$pw"
+          echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          activate-environment: true
+
+      - run: uv sync --frozen --no-default-groups
+
+      - run: dbt deps
+
+      # dbt-build.yml uploads it after each successful prod build. Missing (before the
+      # first one): build everything. Any other error fails the job.
+      - name: Download prod manifest
+        id: state
+        run: |
+          if err="$(gcloud storage cp gs://vitlamdata_dbt_postgres/dbt-state/manifest.json prod-state/manifest.json 2>&1)"; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          elif echo "$err" | grep -qiE "matched no objects|404|not ?found"; then
+            echo "::warning::No prod manifest yet: full build"
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "$err"; exit 1
+          fi
+
+      - name: dbt build
+        run: |
+          if [ "${{ steps.state.outputs.found }}" = true ]; then
+            dbt build -s state:modified+ --defer --state prod-state
+          else
+            dbt build
+          fi

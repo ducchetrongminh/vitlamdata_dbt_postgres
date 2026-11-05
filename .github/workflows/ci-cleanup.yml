@@ -1,0 +1,59 @@
+name: ci-cleanup
+
+# Drop a PR's CI schemas when it closes, merged or not (docs/architecture.md §8).
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+  id-token: write # WIF
+
+jobs:
+  cleanup:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    environment: ci
+    # Same group as ci.yml's build: cancels a build still running for this PR.
+    concurrency:
+      group: ci-pr-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      PGHOST: localhost
+      PGPORT: 5433
+      PGDATABASE: vitlamdata_dw
+      PGUSER: ci
+    steps:
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/541617847124/locations/global/workloadIdentityPools/github/providers/github-actions
+          service_account: dbt-runner@vit-lam-data.iam.gserviceaccount.com
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      - name: Open SSH tunnel to postgres-dw
+        run: |
+          gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c \
+            --ssh-key-expire-after=30m --strict-host-key-checking=yes --quiet \
+            -- -f -N -o ExitOnForwardFailure=yes -L 5433:127.0.0.1:5433
+
+      - name: Password from dw-ci
+        run: |
+          pw="$(gcloud secrets versions access latest --secret=dw-ci)"
+          [ -n "$pw" ] || { echo "dw-ci is empty"; exit 1; }
+          echo "::add-mask::$pw"
+          echo "PGPASSWORD=$pw" >> "$GITHUB_ENV"
+
+      # Exact match on the PR number: ci_pr_1 and ci_pr_1_*, never ci_pr_12_*. A regex,
+      # not LIKE: in LIKE, `_` matches any character. Only schemas `ci` owns.
+      - name: Drop ci_pr_${{ github.event.pull_request.number }} schemas
+        env:
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -v pr="$PR" <<'EOF'
+          SELECT format('DROP SCHEMA %I CASCADE', nspname)
+          FROM pg_namespace
+          WHERE nspname ~ ('^ci_pr_' || :'pr' || '(_|$)')
+            AND nspowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+          \gexec
+          EOF

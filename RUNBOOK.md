@@ -182,6 +182,55 @@ Only when the table has a cursor column that changes on every update
 Merge does not see hard deletes. Nightly with `full_refresh` truncates every
 table and reloads it, which catches them.
 
+## PR checks (`ci.yml`, `ci-cleanup.yml`)
+
+Every PR runs two jobs:
+
+- `lint`: `sqlfluff lint` on the `.sql` files the PR adds or changes, not
+  `macros/`. Older models still fail lint, so touching one means fixing its
+  violations too. Same check locally: `sqlfluff lint <file>`.
+- `build`: same-repo PRs only (a fork PR runs `lint` alone). It builds the
+  changed models and their children into `ci_pr_<n>_*` as login `ci`, and reads
+  everything else from prod (`--defer`). A new push cancels the build still
+  running for the same PR.
+
+### Find a PR's schemas
+
+PR 12's models land in `ci_pr_12_<custom>`, e.g. `ci_pr_12_staging`,
+`ci_pr_12_mart_sales`. They stay after the run, for review:
+
+```sql
+select nspname from pg_namespace where nspname ~ '^ci_pr_12(_|$)';
+```
+
+### Drop leftovers by hand
+
+`ci-cleanup.yml` drops `ci_pr_<n>` and `ci_pr_<n>_*` when the PR closes, merged
+or not. Fork PRs and a failed cleanup leave them behind. List every CI schema
+with `select nspname from pg_namespace where nspname ~ '^ci_pr_'`, then drop
+one PR's as `ci` (the owner), or as superuser:
+
+```sql
+select format('drop schema %I cascade', nspname)
+from pg_namespace where nspname ~ '^ci_pr_12(_|$)'
+\gexec
+```
+
+Use the regex, not `like 'ci_pr_1_%'`: in `like`, `_` matches any character,
+so that also drops PR 12's schemas.
+
+### Missing or stale prod manifest
+
+`build` compares the PR with `gs://vitlamdata_dbt_postgres/dbt-state/manifest.json`,
+uploaded by each successful prod build (`dbt-build.yml`).
+
+- **Missing** (before the first prod build): the job warns
+  `No prod manifest yet: full build` and builds every model into `ci_pr_<n>_*`.
+- **Stale** (last prod build failed, or a merged PR not yet built): models
+  that differ from that manifest count as modified, so the PR also rebuilds
+  them. `--defer` reads unchanged parents from prod as they are now. To refresh
+  it, run Actions → dbt-build, then re-run the PR's `ci` workflow.
+
 ## Claude Code Remote Control
 
 Recommended. `.devcontainer/postCreate.sh` turns it on for all your sessions in
