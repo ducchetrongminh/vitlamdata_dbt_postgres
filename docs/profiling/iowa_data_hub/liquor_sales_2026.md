@@ -1,6 +1,6 @@
 # raw_iowa_data_hub.liquor_sales_2026
 
-Profiled 2026-11-06, data as of 2026-11-06 18:00 +07 (load `1793962806.355714`). 2,029,764
+Profiled 2026-11-06, data as of 2026-11-06 18:00 +07. 2,029,764
 rows, ordered 2026-01-01 – 2026-10-30, the same as the publisher's count. One row is one line
 of a store's order from the state (an invoice line). The publisher says `invoice_id`
 identifies the line, but it does not in 2026 (#1).
@@ -44,8 +44,6 @@ record date. The descriptions from `store_name` to `sales_bottles` are shifted b
 | `sales_dollars` | text → numeric | | -3,240 – 260,832 | ≠ bottles × retail on 1.2% of lines (#3) |
 | `sales_liters` | text → numeric | | -120 – 13,200 | = bottles × volume / 1,000, except Jan (#2) |
 | `sales_gallons` | text → numeric | | -31.70 – 3,487 | = bottles × volume / 3,785.41, except Jan (#2) |
-| `_dlt_load_id` | text | `1793962806.355714` | | one load (replace on every run) |
-| `_dlt_id` | text | `OkklfS5Eg+c5+Q` | | dlt row id, unique; changes on every reload |
 
 - Nulls: none, except the store location columns (#5) and category on 26 lines (#4).
 - Casts: clean. All 8 numeric columns match `^-?[0-9]+(\.[0-9]+)?$` and `ordered_on` matches
@@ -94,7 +92,7 @@ same item on several lines, e.g. a full case plus loose bottles:
 
 Even the whole row is not unique: 14 rows repeat another row in every column. The table
 matches the publisher's row count, so they are likely real repeated lines (guess). There is
-no natural line key, and dlt's `_dlt_id` changes on every reload.
+no natural line key.
 
 <details><summary>Query</summary>
 
