@@ -5,12 +5,6 @@
 # Any key can be overridden with an env var: sections joined by __, upper case.
 # IOWA_DATA_HUB__DATASET_NAME=dbt_duc_raw_iowa_data_hub
 
-# TEMP (Arrow test): drop and recreate the tables of the resources in each run, so
-# products and 2026 come back without the NOT NULL _dlt_id / _dlt_load_id
-# columns. Other years are untouched. Remove after the test: until then every run
-# reloads products and 2026 from scratch.
-refresh = "drop_resources"
-
 [runtime]
 log_level = "INFO"
 
