@@ -197,7 +197,7 @@ Ingest [42253230128](https://github.com/ducchetrongminh/vitlamdata_dbt_postgres/
 | Size of `raw_iowa_data_hub` | not measured | 8.9 GB |
 
 Same rows as before (the run summary matches the first reload table by table:
-2,082,059 for 2012 through 2,029,764 for 2026), in a quarter less space per
+2,082,059 for 2012 through 2,029,764 for 2026), in about 22% less space per
 table, and the load went from 3 hours to 11 minutes. The whole job is now
 mostly download and CSV reading, not the disk.
 
