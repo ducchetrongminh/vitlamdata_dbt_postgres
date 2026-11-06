@@ -14,7 +14,6 @@ dev = [
 ]
 # ingestion/: dlt loads into raw_*. CI can install only these: uv sync --only-group ingestion
 ingestion = [
-    "adbc-driver-postgresql>=1.13.0",
     "dlt[postgres,sql-database]>=1.31.0",
     "pyarrow>=26.0.1",
     "pymysql>=1.2.3",
