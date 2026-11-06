@@ -1,5 +1,8 @@
 # raw_iowa_data_hub.liquor_sales_2025, liquor_sales_2026
 
+2026 is now profiled on its own in [liquor_sales_2026.md](liquor_sales_2026.md). This file stays
+until 2025 gets its own file.
+
 Profiled 2026-11-06. Covers `liquor_sales_2025` and `liquor_sales_2026` only, not the other years. Both
 tables share one schema (only the column order differs).
 

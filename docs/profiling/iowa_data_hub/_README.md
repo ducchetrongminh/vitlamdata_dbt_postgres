@@ -24,7 +24,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | Table | Rows | Grain | Profile |
 |---|---|---|---|
 | `liquor_products` | 14,040 | one row per item per category (`item_no`, `category_name`), not per item | [liquor_products.md](liquor_products.md) |
-| `liquor_sales_2025`, `liquor_sales_2026` | 2,978,001 (2025, 487,388 of them doubled), 2,029,764 (2026) | one row per invoice line; no unique key from 2025-09-01 (sales #1) | [liquor_sales.md](liquor_sales.md) |
+| `liquor_sales_2026` | 2,029,764 | one row per invoice line; no unique key (2026 #1) | [liquor_sales_2026.md](liquor_sales_2026.md), the reference for the other years |
+| `liquor_sales_2025` | 2,978,001 (487,388 of them doubled) | one row per invoice line; no unique key from 2025-09-01 | [liquor_sales.md](liquor_sales.md), still combined with 2026; to be split |
 | `liquor_sales_2012` … `liquor_sales_2024` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
@@ -68,16 +69,16 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   (`TEMPORARY & SPECIALTY PACKAGES`). Products use mixed case. Sales also carry a
   `category_code`, but products do not. A join on category needs `upper()` on both sides.
   The sales category is the item's category at the time of sale and changes over time,
-  e.g. in and out of `TEMPORARY & SPECIALTY PACKAGES` (sales #6). `IOWA SPIRITS
+  e.g. in and out of `TEMPORARY & SPECIALTY PACKAGES` (2026 #4). `IOWA SPIRITS
   MANUFACTURERS` never appears on a sales line. Since 2025-07-01 the sales names match the
-  `liquor_products` names in upper case. Before, four names were plural (sales #6).
+  `liquor_products` names in upper case. Before, four names were plural (liquor_sales.md #6).
 - Cardinality: `liquor_products` has 2,354 items listed under 2 or 3 categories (products issue #1).
   In the 2026 sample, 6.2% of sales lines (1,206 of 19,452) are for such items. On all rows it
   is 6.0% in both years (178,769 lines in 2025, 121,269 in 2026). A join on `item_no` alone
   multiplies those lines. Joining on (`item_no`, `upper(category_name)`) avoids that: in Oct
   2026, every sales line's category is one of its item's `liquor_products` categories.
 - Attributes: sales lines carry the item's description, vendor, pack, volume, cost and
-  retail as of the sale. They change over time (sales #8). In Oct 2026 all of them match the
+  retail as of the sale. They change over time (2026 #6). In Oct 2026 all of them match the
   current `liquor_products` row on every line. Older lines may differ.
 
 ## Questions for the human
@@ -99,18 +100,21 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 7. Price and pack errors: is Old Elk 920301 bottle cost `1250` a typo for `40`? Which value
    is wrong on the 36 rows where case cost ≠ bottle cost × pack? (products issues #7, #8)
 8. Sales `invoice_id` has held only the invoice number since 2025-09-01, without the line
-   number, and no column set is unique (sales #1). Can the publisher restore a line number?
+   number, and no column set is unique (2026 #1). Can the publisher restore a line number?
    If not, is a line key built in staging from the row's content acceptable, given that an
    invoice can repeat an identical line?
 9. Every 2025 sales line from 2025-10-27 to 2025-12-31 is loaded twice: 487,388 extra rows
-   against the publisher's count of 2,490,620 (sales #2). Should we re-download the 2025
+   against the publisher's count of 2,490,620 (liquor_sales.md #2). Should we re-download the 2025
    export to see whether the doubling is in the export or in our load, then fix it there or
    dedupe in staging?
 10. Cost, retail, dollars, liters and gallons are rounded to whole numbers on all lines from
-    2025-11-01 to 2026-01-31 (sales #3). Is the publisher aware? Do we accept rounded money for
+    2025-11-01 to 2026-01-31 (2026 #2, liquor_sales.md #3). Is the publisher aware? Do we accept rounded money for
     those three months, or take prices from elsewhere?
-11. `sales_dollars` ≠ bottles × `state_bottle_retail` on 1–3% of lines (sales #5). Which one is
+11. `sales_dollars` ≠ bottles × `state_bottle_retail` on 1–3% of lines (2026 #3). Which one is
     the amount the store paid? Are these discounts?
-12. Store 2687 has zip `57222` (South Dakota). Is `52722` (Bettendorf) correct? (sales #7)
+12. Store 2687 has zip `57222` (South Dakota). Is `52722` (Bettendorf) correct? (2026 #5)
 13. Item 921635 `TEMPLETON USA 250 STRAIGHT BOURBON WHISKEY` has no category on 26 lines in
-    2026 (sales #6). Which category is it?
+    2026 (2026 #4). Which category is it?
+14. Stores 010830 and 010860 each carry two names on the same days, in different towns
+    (`VENTURA TOWN MART` and `GARNER TOWN MART`; `PUMP & PANTRY 70` and `HY-VEE GAS`). Were
+    those lines keyed to the wrong store number? (2026 #5)
