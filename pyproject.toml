@@ -15,6 +15,7 @@ dev = [
 # ingestion/: dlt loads into raw_*. CI can install only these: uv sync --only-group ingestion
 ingestion = [
     "dlt[postgres,sql-database]>=1.31.0",
+    "pyarrow>=26.0.1",
     "pymysql>=1.2.3",
 ]
 
