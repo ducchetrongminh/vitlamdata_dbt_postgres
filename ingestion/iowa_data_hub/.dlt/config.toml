@@ -6,9 +6,9 @@
 # IOWA_DATA_HUB__DATASET_NAME=dbt_duc_raw_iowa_data_hub
 
 # TEMP (Arrow test): drop and recreate the tables of the resources in each run, so
-# products, 2025 and 2026 come back without the NOT NULL _dlt_id / _dlt_load_id
+# products and 2026 come back without the NOT NULL _dlt_id / _dlt_load_id
 # columns. Other years are untouched. Remove after the test: until then every run
-# reloads 2025 too.
+# reloads products and 2026 from scratch.
 refresh = "drop_resources"
 
 [runtime]
@@ -31,7 +31,7 @@ liquor_products_dataset = 1029
 # so load the yearly ones. Iowa publishes a new id each January: add it here. The
 # last year is reloaded every run; earlier years load once (pipeline.py).
 # 2026 is partial until Iowa's last monthly update for the year.
-# TEMP (PR #41 test): only 2025 and 2026 load. Uncomment the rest after the test.
+# TEMP (Arrow test): only 2026 loads. Uncomment the rest after the test.
 [sources.iowa_data_hub.liquor_sales_datasets]
 # 2012 = 1249
 # 2013 = 1250
@@ -46,5 +46,5 @@ liquor_products_dataset = 1029
 # 2022 = 1259
 # 2023 = 1260
 # 2024 = 1261
-2025 = 1262
+# 2025 = 1262
 2026 = 1263
