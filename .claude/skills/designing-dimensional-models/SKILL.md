@@ -12,8 +12,8 @@ naming, history handling and materialization come later, in detailed design.
 ## Before step 1
 
 - Read the profiling record of each source table (`docs/profiling/<source>/`).
-  Missing or partial: ask the human, then profile with profiling-data. Data issues
-  go there, not here.
+  Missing or partial: ask the human, then profile with profiling-data. Cite a data
+  issue by its number; its fix stays in the profiling record.
 - Read `docs/design/_bus_matrix.md`. Reuse its conformed dimensions.
 
 ## The four steps
