@@ -38,35 +38,33 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2015` | 2,184,483 | one row per invoice line; `invoice_id` unique | [liquor_sales_2015.md](liquor_sales_2015.md) |
 | `liquor_sales_2014` | 2,097,796 | one row per invoice line; `invoice_id` unique | [liquor_sales_2014.md](liquor_sales_2014.md) |
 | `liquor_sales_2013` | 2,063,763 | one row per invoice line; `invoice_id` unique | [liquor_sales_2013.md](liquor_sales_2013.md) |
-| `liquor_sales_2012` | 2.1M (catalog estimate) | not profiled | — |
+| `liquor_sales_2012` | 2,082,059 | one row per invoice line; `invoice_id` unique | [liquor_sales_2012.md](liquor_sales_2012.md) |
 
 ## Relationships
 
 - `liquor_sales_<year>.item_no` → `liquor_products.item_no`, many to one. Taken from the shared column and
   the publisher's statement that `item_no` identifies a product. No database constraint
   exists: the raw schema has no constraints. Confirm this with
-  the human (question 1). Tested on a 1% sample (`TABLESAMPLE SYSTEM (1) REPEATABLE (42)`) of
-  three years, then on all rows of 2025 and 2026:
+  the human (question 1). Tested on all rows of every year (repeated lines of 2025 #1
+  included):
 
-  | Sales year | Sampled lines | Orphan lines | Sampled items | Orphan items |
+  | Sales year | Lines | Orphan lines | Items | Orphan items |
   |---|---|---|---|---|
-  | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
-  | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
-  | 2026 | 19,452 | 0 | 2,615 | 0 |
-  | 2013, all rows | 2,063,763 | 209,971 | 3,359 | 1,880 |
-  | 2014, all rows | 2,097,796 | 196,372 | 3,592 | 1,913 |
-  | 2015, all rows | 2,184,483 | 156,750 | 3,595 | 1,735 |
-  | 2016, all rows | 2,279,893 | 127,120 | 3,724 | 1,606 |
-  | 2017, all rows | 2,291,276 | 103,219 | 3,901 | 1,523 |
-  | 2018, all rows | 2,355,558 | 86,439 | 3,954 | 1,331 |
-  | 2019, all rows | 2,380,345 | 47,897 | 4,008 | 975 |
-  | 2020, all rows | 3,147,745 | 10,172 | 4,176 | 400 |
-  | 2021, all rows | 3,098,706 | 1,949 | 4,472 | 14 |
-  | 2022, all rows | 2,958,969 | 12 | 4,786 | 2 |
-  | 2023, all rows | 2,639,557 | 0 | 5,231 | 0 |
-  | 2024, all rows | 2,590,975 | 0 | 5,211 | 0 |
-  | 2025, all rows | 3,007,599 | 0 | 5,048 | 0 |
-  | 2026, all rows | 2,029,764 | 0 | 4,792 | 0 |
+  | 2012 | 2,082,059 | 221,386 (10.6%) | 3,146 | 1,794 |
+  | 2013 | 2,063,763 | 209,971 | 3,359 | 1,880 |
+  | 2014 | 2,097,796 | 196,372 | 3,592 | 1,913 |
+  | 2015 | 2,184,483 | 156,750 | 3,595 | 1,735 |
+  | 2016 | 2,279,893 | 127,120 | 3,724 | 1,606 |
+  | 2017 | 2,291,276 | 103,219 | 3,901 | 1,523 |
+  | 2018 | 2,355,558 | 86,439 | 3,954 | 1,331 |
+  | 2019 | 2,380,345 | 47,897 | 4,008 | 975 |
+  | 2020 | 3,147,745 | 10,172 | 4,176 | 400 |
+  | 2021 | 3,098,706 | 1,949 | 4,472 | 14 |
+  | 2022 | 2,958,969 | 12 | 4,786 | 2 |
+  | 2023 | 2,639,557 | 0 | 5,231 | 0 |
+  | 2024 | 2,590,975 | 0 | 5,211 | 0 |
+  | 2025 | 3,007,599 | 0 | 5,048 | 0 |
+  | 2026 | 2,029,764 | 0 | 4,792 | 0 |
 
   Orphans grow with age. `liquor_products` is a current snapshot replaced on every load, so items
   sold in the past but no longer in the catalog are missing, e.g. `73050 RUMCHATA` and
@@ -79,8 +77,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   <details><summary>Query</summary>
 
   ```sql
-  -- swap the year to test another table; drop the tablesample for all rows
-  with s as (select item_no from raw_iowa_data_hub.liquor_sales_2012 tablesample system (1) repeatable (42)),
+  -- swap the year to test another table
+  with s as (select item_no from raw_iowa_data_hub.liquor_sales_2012),
        p as (select item_no, count(*) as n from raw_iowa_data_hub.liquor_products group by 1)
   select count(*) as lines, count(*) filter (where p.item_no is null) as orphan_lines,
          count(distinct s.item_no) as items,
@@ -157,7 +155,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
     (`RINV-`) and 6-digit store numbers first appear. Was there a system change then? Were
     returns before it left out of the data?
 18. In 2017 (833 lines) and Jan–Jul 2018 (500 lines), lines have bottles but `sales_dollars` = 0 (2018 #2). Are
-    these free goods or samples? Should they count in bottles sold?
+    these free goods or samples? Should they count in bottles sold? In Feb 2012, 3,072 Luxco
+    lines (Paramount brands) have $0 (2012 table): did they lose their price?
 19. Until 2016-08-26 sales use an older category taxonomy (2016 #1), and some codes mean
     another category after (`1011300` TENNESSEE WHISKIES, then SINGLE BARREL BOURBON
     WHISKIES). Is there a mapping from the old codes to the new? Without one, staging must
