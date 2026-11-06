@@ -30,7 +30,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2023` | 2,639,557 | one row per invoice line; `invoice_id` unique | [liquor_sales_2023.md](liquor_sales_2023.md) |
 | `liquor_sales_2022` | 2,958,969 (394,404 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2022.md](liquor_sales_2022.md) |
 | `liquor_sales_2021` | 3,098,706 (475,994 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2021.md](liquor_sales_2021.md) |
-| `liquor_sales_2012` … `liquor_sales_2020` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2020` | 3,147,745 (533,380 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2020.md](liquor_sales_2020.md) |
+| `liquor_sales_2012` … `liquor_sales_2019` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -45,6 +46,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2020, all rows | 3,147,745 | 10,172 | 4,176 | 400 |
   | 2021, all rows | 3,098,706 | 1,949 | 4,472 | 14 |
   | 2022, all rows | 2,958,969 | 12 | 4,786 | 2 |
   | 2023, all rows | 2,639,557 | 0 | 5,231 | 0 |
@@ -112,8 +114,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
    If not, is a line key built in staging from the row's content acceptable, given that an
    invoice can repeat an identical line?
 9. The 2025 export repeats a slice of lines in an extra CSV part: 516,986 extra rows, ordered
-   2025-07-29 – 2025-10-14 (2025 #1). The slice moved between downloads. The 2022 and 2021
-   exports do the same for Nov–Dec (394,404 and 475,994 extra rows). Without the repeats
+   2025-07-29 – 2025-10-14 (2025 #1). The slice moved between downloads. The 2022, 2021 and
+   2020 exports do the same at year end (394,404, 475,994 and 533,380 extra rows). Without the repeats
    the table matches the publisher's count exactly. Should the loader skip a part whose rows
    all appear in an earlier part? Should we report the export bug to the publisher?
 10. Cost, retail, dollars, liters and gallons are rounded to whole numbers on all lines from
