@@ -50,3 +50,16 @@ resource "postgresql_schema" "this" {
     prevent_destroy = true
   }
 }
+
+# Source iowa_liquor became iowa_data_hub (PR #38). Same state entry under the new
+# key, so the provider runs ALTER SCHEMA ... RENAME TO and keeps the data, instead
+# of a drop and create (which prevent_destroy blocks).
+moved {
+  from = postgresql_schema.this["raw_iowa_liquor"]
+  to   = postgresql_schema.this["raw_iowa_data_hub"]
+}
+
+moved {
+  from = postgresql_schema.this["raw_iowa_liquor_staging"]
+  to   = postgresql_schema.this["raw_iowa_data_hub_staging"]
+}
