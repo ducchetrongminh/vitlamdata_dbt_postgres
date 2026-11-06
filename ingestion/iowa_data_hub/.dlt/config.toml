@@ -11,6 +11,12 @@ log_level = "INFO"
 [iowa_data_hub]
 dataset_name = "raw_iowa_data_hub"
 
+# No UNIQUE index on _dlt_id. Each row lands at a random spot in it, and on the
+# cold HDD those scattered writes made a full reload take hours. Nothing reads
+# raw rows by _dlt_id. Applies to tables dlt creates, not existing ones.
+[iowa_data_hub.destination.postgres]
+create_indexes = false
+
 [sources.iowa_data_hub]
 # Product catalog, updated monthly; each load replaces it.
 liquor_products_dataset = 1029
