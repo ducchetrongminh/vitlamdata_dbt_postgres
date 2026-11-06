@@ -29,9 +29,9 @@ query. It is not a log of every check run.
      a guess until the human answers.
 2. **Check each table.** Write queries on the fly. Look for anomalies, and for
    values and distributions that make no business sense.
-   - **Size first:** estimate rows from the catalog (`pg_class.reltuples`). On a
-     big table, explore with `TABLESAMPLE`. Scan it all only where you need an
-     exact answer, like key uniqueness. Say in the record when evidence came
+   - **Size first:** estimate the row count from table metadata, not a full
+     count. On a big table, explore on a sample. Scan it all only where you need
+     an exact answer, like key uniqueness. Say in the record when evidence came
      from a sample.
    - **Grain:** find the key, check it is unique. If not, find what is.
    - **Low-cardinality text (attributes):** count by value, sorted by value (spots
