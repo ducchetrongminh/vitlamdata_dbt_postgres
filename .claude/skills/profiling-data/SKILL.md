@@ -1,86 +1,65 @@
 ---
 name: profiling-data
-description: Use when exploring a new source, schema or raw table before modeling it, when asked to profile data or check data quality, or when staging needs to know a table's grain, types and value problems.
+description: Use when profiling a new source or raw table before modeling it, or checking its grain, types and data quality.
 ---
 
 # Profiling data
 
-## Overview
+Leave a record a human reviews in one read: conclusions and issues with evidence
+and query, not a log of checks.
 
-Understand the data before modeling it, and leave a record a human reviews in one
-read. The record is a list of conclusions and issues, each with its evidence and its
-query. It is not a log of every check run.
+## 1. Understand the source
 
-## Process
+- Read the loader: load mode, types as loaded. List tables, columns, sample rows.
+- Read the publisher's docs. Missing, empty or unreadable: ask the human.
+- Take relationships from constraints, docs or the human. Never guess.
+- Run no checks here: a join or full count can overload the database.
+- Ask the human what docs cannot tell (how data is created, what a code means).
+  Label guesses "guess".
 
-1. **Understand the source.**
-   - Read the loader and its config: how each table is loaded (replace, merge,
-     append), types as loaded.
-   - List schemas, tables and columns.
-   - Relationships: take them from database constraints and comments, the
-     source's docs, or the human. Do not guess them from column names.
-   - Read the publisher's data dictionary or docs (fetch them if public). If they
-     are missing, empty or unreadable, say so in the README and ask the human.
-   - Look at sample rows.
-   - Run no checks in this step: a join or full count can overload the database
-     on a big table.
-   - What you cannot learn from data or docs (how the data is created, who enters
-     it, what a code means) goes to the human as a question. A guess stays labeled
-     a guess until the human answers.
-2. **Check each table.** Write queries on the fly. Look for anomalies, and for
-   values and distributions that make no business sense.
-   - **Size first:** estimate the row count from table metadata, not a full
-     count. On a big table, explore on a sample. Scan it all only where you need
-     an exact answer, like key uniqueness. Sample with a fixed seed so it can be
-     rerun, and state the sample % in the record.
-   - **Grain:** find the key, check it is unique. If not, find what is.
-   - **Low-cardinality text (attributes):** count by value, sorted by value (spots
-     near-duplicates, casing, typos) and by count desc (spots rare values).
-     Placeholders like `N/A` or `000000000000`.
-   - **Dates:** count by year, then month or day where it helps; min/max.
-     Gaps, spikes, future dates, defaults like `1900-01-01`.
-   - **Numbers:** min/max, count by bin. Zeros, negatives, sentinels like `9999`.
-   - **Relationships:** test each known one with a join, on a sample for a big
-     table: orphans and key shape (one-to-one, many-to-one). Record the result
-     and its query under Relationships in the README.
-   - When something is off, dig until you can say what it is, or until only the
-     human can say.
-3. **Write the record** in the shape below.
+## 2. Check each table
 
-## The record
+Look for values and distributions without business sense.
+
+- **Size first:** estimate rows from metadata. Big table: sample with a fixed seed,
+  state the %. Full scan only for exact answers (key uniqueness).
+- **Cast first:** min/max on text sorts as text (`9` after `10`).
+- **Grain:** find the key and check it is unique.
+- **Attributes:** count by value, sorted by value (near-duplicates) and by count
+  desc (rare values). Placeholders like `N/A`, `000000000000`.
+- **Dates:** min/max, count by year (month, day if useful). Gaps, spikes, future
+  dates, defaults like `1900-01-01`.
+- **Numbers:** min/max, count by bin. Zeros, negatives, sentinels like `9999`.
+- **Relationships:** test known ones with a join: orphans, key shape.
+- Something off: dig until you can name it, or only the human can.
+
+## 3. Write the record
 
 `docs/profiling/<source>/_README.md`:
 
 ```markdown
 # <source>
-
-<Where the data comes from, how it is created and loaded. Mark guesses.>
+<Origin, how it is created and loaded.>
 
 | Table | Rows | Grain | Profile |
 |---|---|---|---|
 
 ## Relationships
-<join, key shape, where it came from (constraint, docs, human); orphan count
-and its query once checked>
+<join, key shape, source, orphans, query>
 
 ## Questions for the human
-1. ...
 ```
 
 `docs/profiling/<source>/<table>.md`:
 
 ````markdown
 # <schema>.<table>
-
 Profiled <date>, data as of <latest load time>. <rows> rows. One row is <grain>.
 
 ## Columns
 | Column | Type | Sample values | Range | Note |
 |---|---|---|---|---|
-| `item_no` | text | `100015`, `27102` | | |
-| `list_on` | text → date | | 1963-06-01 – 2027-01-01 | 110 future dates (#7) |
-<every column. Type: as loaded, `→ <type>` if staging should cast. Sample values
-for text, Range for numbers and dates. Note only when there is something to know.>
+| `list_on` | text → date | | 1963-06-01 – 2027-01-01 | 110 future dates (#3) |
 
 ## Issues
 | # | Column | Issue | Action | Status |
@@ -88,7 +67,7 @@ for text, Range for numbers and dates. Note only when there is something to know
 | 1 | `age` | Mixes years and months | ask | open |
 
 ### 1. `age` mixes years and months
-<Evidence: one sentence, plus only the rows that prove it.>
+<One sentence, plus only the rows that prove it.>
 
 <details><summary>Query</summary>
 
@@ -98,30 +77,13 @@ for text, Range for numbers and dates. Note only when there is something to know
 </details>
 ````
 
-- **Action:** `clean in staging: <how>`, `ask`, or `accept`.
-- **Status:** `open` until the human agrees the action, then `decided`.
-- **Evidence:** show the part of a distribution that proves the point. Show all
-  of it only when it is short and every row matters.
-- Every issue has its query, runnable as-is against the raw table.
-- **Partial profile:** if checks could not finish, say so under the title and
-  list what is left. Those issues stay `open` with their queries.
-- A concern that checked out fine (a suspect value that is real) is one line,
-  not an issue.
-- A check that found nothing is one line, not a section ("casts: clean for all
-  numeric and date columns").
-- **Full checks, on request:** the human may ask to review every distribution,
-  not only the issues. Then write `<table>__checks.md`: each check run, with
-  its result and query. The human reads it to judge whether each distribution
-  makes business sense, and new issues go into the issues log.
-
-## Common mistakes
-
-| Mistake | Fix |
-|---|---|
-| One section per column, with every stat | Columns table plus issues. Stats appear only as evidence. |
-| Recommendations in a separate list | Put each one in its issue's Action. |
-| "Likely discontinued" written as fact | Write "guess" and ask the human. |
-| Only min/max for a date | Count by year too. Min/max hide gaps and spikes. |
-| Min/max on a number or date loaded as text | Cast first. As text, `9` sorts after `10`. |
-| Join count to find relationships | Ask the human, read docs or constraints. |
-| Queries collected at the end, or lost | One per issue, folded under it. |
+- **Columns:** every one. `→ <type>` if staging should cast. Samples for text,
+  range for numbers and dates.
+- **Action:** `clean in staging: <how>`, `ask` or `accept`.
+- **Status:** `open`, then `decided` once the human agrees.
+- **Evidence:** only the part of a distribution that proves the point.
+- **Query:** one per issue, runnable as-is.
+- **One line each:** a check that found nothing; a suspect value that is real.
+- **Partial:** say so under the title, list what is left.
+- **Full checks, on request:** `<table>__checks.md`, every check with result and
+  query, for the human to judge distributions.
