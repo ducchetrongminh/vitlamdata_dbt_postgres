@@ -31,7 +31,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2022` | 2,958,969 (394,404 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2022.md](liquor_sales_2022.md) |
 | `liquor_sales_2021` | 3,098,706 (475,994 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2021.md](liquor_sales_2021.md) |
 | `liquor_sales_2020` | 3,147,745 (533,380 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2020.md](liquor_sales_2020.md) |
-| `liquor_sales_2012` … `liquor_sales_2019` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2019` | 2,380,345 | one row per invoice line; `invoice_id` unique | [liquor_sales_2019.md](liquor_sales_2019.md) |
+| `liquor_sales_2012` … `liquor_sales_2018` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -46,6 +47,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2019, all rows | 2,380,345 | 47,897 | 4,008 | 975 |
   | 2020, all rows | 3,147,745 | 10,172 | 4,176 | 400 |
   | 2021, all rows | 3,098,706 | 1,949 | 4,472 | 14 |
   | 2022, all rows | 2,958,969 | 12 | 4,786 | 2 |
@@ -129,7 +131,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 14. Stores 010830 and 010860 each carry two names on the same days, in different towns
     (`VENTURA TOWN MART` and `GARNER TOWN MART`; `PUMP & PANTRY 70` and `HY-VEE GAS`). Were
     those lines keyed to the wrong store number? (2026 #5)
-15. Before 2025-09-01, 18 multi-pack items carry the pack's total ml in `bottle_volume_ml`
+15. On 2019-08-01, 106 items switch `bottle_volume_ml` from the pack's total to one bottle (2019 #1).
+    Before 2025-09-01, 18 more multi-pack items carry the pack's total ml in `bottle_volume_ml`
     (Twisted Shotz party pack 1,800 ml), and one bottle's ml after (25 ml) (2025 #2). Is the
     newer value right? Then liters before Sep 2025 are overstated for these items. Two
     Twisted Tea items drop 750 → 25 ml and 50 → 25 ml: is 25 correct for them?
