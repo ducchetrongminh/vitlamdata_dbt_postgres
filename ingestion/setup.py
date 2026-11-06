@@ -31,7 +31,16 @@ def setup(pipeline_file):
 
 def report(pipeline, load_info):
     """Print rows loaded per table, and add them to the GitHub Actions run summary."""
-    rows = pipeline.last_trace.last_normalize_info.row_counts
+    # Normalize counts are cells, not rows, for the csv file format: dlt's CsvWriter adds
+    # len(row) per row (dlt <= 1.32, issue #31). Extract counts rows right, but only for
+    # root tables, so nested tables keep the normalize count.
+    # shortcut: a nested table loaded as csv still shows cells; fix if a csv source nests.
+    rows = dict(pipeline.last_trace.last_normalize_info.row_counts)
+    extract = pipeline.last_trace.last_extract_info
+    for load_id in extract.loads_ids:
+        for metrics in extract.metrics[load_id]:
+            for table, m in metrics["table_metrics"].items():
+                rows[table] = m.items_count
     lines = [
         f"### {pipeline.pipeline_name} → `{pipeline.dataset_name}`",
         "",
