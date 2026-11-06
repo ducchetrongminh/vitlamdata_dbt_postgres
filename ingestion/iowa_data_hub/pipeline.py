@@ -8,11 +8,12 @@ source credentials: the data is public. From the repo root:
 
 import csv
 import io
-import itertools
 import tempfile
 import zipfile
 
 import dlt
+import pyarrow as pa
+import pyarrow.csv as pacsv
 from dlt.sources.helpers import requests
 
 from ingestion.setup import report, setup
@@ -22,7 +23,7 @@ DOWNLOAD_URL = "https://data.iowa.gov/api/dataset-download?path=datasets%2F{}%2F
 
 
 def read_csv_zip(dataset_id):
-    """Yield the rows of a dataset's zip export in pages. A big dataset is split into part_000N.csv files."""
+    """Yield a dataset's zip export as Arrow tables. A big dataset is split into part_000N.csv files."""
     # On disk, not in memory: one year of sales is ~450 MB zipped.
     with tempfile.TemporaryFile() as f:
         with requests.get(DOWNLOAD_URL.format(dataset_id), stream=True, timeout=600) as r:
@@ -35,12 +36,25 @@ def read_csv_zip(dataset_id):
             if not parts:
                 raise ValueError(f"dataset {dataset_id}: zip has no CSV")
             for part in parts:
+                # Header first: every column is forced to text, so codes keep leading
+                # zeros (vendor "035"); staging casts.
                 with z.open(part) as member:
-                    rows = csv.DictReader(io.TextIOWrapper(member, encoding="utf-8-sig", newline=""))
-                    # Every column lands as text, so codes keep leading zeros (vendor "035");
-                    # staging casts. An empty cell is NULL.
-                    for page in itertools.batched(rows, 10_000):
-                        yield [{k: v or None for k, v in row.items()} for row in page]
+                    header = next(csv.reader(io.TextIOWrapper(member, encoding="utf-8-sig", newline="")))
+                # Arrow, not dicts: column-wise and faster, and dlt adds no _dlt_id or
+                # _dlt_load_id to Arrow tables. An empty cell is NULL.
+                with z.open(part) as member:
+                    batches = pacsv.open_csv(
+                        member,
+                        read_options=pacsv.ReadOptions(column_names=header, skip_rows=1),
+                        parse_options=pacsv.ParseOptions(newlines_in_values=True),
+                        convert_options=pacsv.ConvertOptions(
+                            column_types={c: pa.string() for c in header},
+                            strings_can_be_null=True,
+                            null_values=[""],
+                        ),
+                    )
+                    for batch in batches:
+                        yield pa.Table.from_batches([batch])
 
 
 @dlt.source(name="iowa_data_hub")
