@@ -1,4 +1,4 @@
-# iowa_liquor
+# iowa_data_hub
 
 Iowa liquor product catalog and sales from the Iowa Data Hub (data.iowa.gov), published by
 the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
@@ -9,7 +9,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   `DATE_` → `report_as_of`, …). The publisher declares `item_no` as the unique identifier and
   says the data updates monthly. Who enters products and how categories are assigned is
   unknown (question 2).
-- **How it is loaded:** `ingestion/iowa_liquor/pipeline.py` (dlt) downloads the CSV export.
+- **How it is loaded:** `ingestion/iowa_data_hub/pipeline.py` (dlt) downloads the CSV export.
   Every column lands as text (`varchar`), and an empty cell becomes NULL. `products` is
   replaced whole on each run, so it holds only the latest monthly snapshot, with no history.
   Each `sales_<year>` table is replaced whole. Past years load once. The latest year reloads
@@ -55,8 +55,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 
   ```sql
   -- swap the year to test another table; drop the tablesample for all rows
-  with s as (select item_no from raw_iowa_liquor.sales_2012 tablesample system (1) repeatable (42)),
-       p as (select item_no, count(*) as n from raw_iowa_liquor.products group by 1)
+  with s as (select item_no from raw_iowa_data_hub.sales_2012 tablesample system (1) repeatable (42)),
+       p as (select item_no, count(*) as n from raw_iowa_data_hub.products group by 1)
   select count(*) as lines, count(*) filter (where p.item_no is null) as orphan_lines,
          count(distinct s.item_no) as items,
          count(distinct s.item_no) filter (where p.item_no is null) as orphan_items,

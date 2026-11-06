@@ -1,9 +1,9 @@
-"""Iowa liquor products and sales (data.iowa.gov, CC BY 4.0) -> raw_iowa_liquor.
+"""Iowa liquor products and sales (data.iowa.gov, CC BY 4.0) -> raw_iowa_data_hub.
 
 Dataset ids and the yearly sales list: .dlt/config.toml next to this file. No
 source credentials: the data is public. From the repo root:
 
-    python -m ingestion.iowa_liquor.pipeline
+    python -m ingestion.iowa_data_hub.pipeline
 """
 
 import csv
@@ -43,8 +43,8 @@ def read_csv_zip(dataset_id):
                         yield [{k: v or None for k, v in row.items()} for row in page]
 
 
-@dlt.source(name="iowa_liquor")
-def iowa_liquor(products_dataset=dlt.config.value, sales_datasets=dlt.config.value):
+@dlt.source(name="iowa_data_hub")
+def iowa_data_hub(products_dataset=dlt.config.value, sales_datasets=dlt.config.value):
     # Monthly snapshot of the current catalog.
     @dlt.resource(write_disposition="replace")
     def products():
@@ -75,9 +75,9 @@ def iowa_liquor(products_dataset=dlt.config.value, sales_datasets=dlt.config.val
 
 if __name__ == "__main__":
     setup(__file__)
-    pipeline = dlt.pipeline(pipeline_name="iowa_liquor", destination="postgres")
+    pipeline = dlt.pipeline(pipeline_name="iowa_data_hub", destination="postgres")
     # The source picks which years to load from the state, so restore it from the
     # warehouse first: a fresh CI runner has none, and run() restores it too late.
     pipeline.sync_destination()
     # csv loads with COPY: much faster than INSERT for ~35M sales rows.
-    report(pipeline, pipeline.run(iowa_liquor(), loader_file_format="csv"))
+    report(pipeline, pipeline.run(iowa_data_hub(), loader_file_format="csv"))

@@ -2,7 +2,7 @@
 # CI (ci_pr_<n>_*) schemas are created by dbt, not here.
 locals {
   # Each raw schema gets a *_staging twin for dlt's merge loads (§3).
-  raw_schemas = ["raw_wordpress", "raw_metabase", "raw_sheets", "raw_iowa_liquor"]
+  raw_schemas = ["raw_wordpress", "raw_metabase", "raw_sheets", "raw_iowa_data_hub"]
 
   # One mart_<domain> schema per folder in models/03_mart (dbt_project.yml).
   mart_schemas = ["mart_learning", "mart_marketing"]

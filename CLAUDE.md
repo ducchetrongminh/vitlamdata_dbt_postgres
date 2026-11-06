@@ -38,11 +38,11 @@ Read before changing any model:
 ## External datasets
 
 This repo centres on VitLamData data. An external dataset with no link to it
-(e.g. `iowa_liquor`, a public practice dataset) is its own bus: design files and
+(e.g. `iowa_data_hub`, a public data portal used for practice) is its own bus: design files and
 bus matrix go in `docs/design-external/<source>/`, not `docs/design/`, and its
 conformed dimensions do not mix with VitLamData's. So its dimensions can take
 simple names (Store, Vendor). dbt model names are unique across the whole
 project, so prefix every intermediate and mart model of an external dataset
 with its source, and set `alias` to the simple table name: model
-`iowa_liquor__dim_store`, table `dim_store`. Staging models already carry the
-source (`stg_iowa_liquor__…`).
+`iowa_data_hub__dim_store`, table `dim_store`. Staging models already carry the
+source (`stg_iowa_data_hub__…`).

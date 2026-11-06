@@ -1,17 +1,17 @@
-# dlt config for iowa_liquor: Iowa liquor products and sales from the Iowa Data Hub
+# dlt config for iowa_data_hub: Iowa liquor products and sales from the Iowa Data Hub
 # (CC BY 4.0, Iowa Alcoholic Beverages Division), architecture §3.
 # Catalog: https://data.iowa.gov/catalog/dataset/1051
 #
 # Any key can be overridden with an env var: sections joined by __, upper case.
-# IOWA_LIQUOR__DATASET_NAME=dbt_duc_raw_iowa_liquor
+# IOWA_DATA_HUB__DATASET_NAME=dbt_duc_raw_iowa_data_hub
 
 [runtime]
 log_level = "INFO"
 
-[iowa_liquor]
-dataset_name = "raw_iowa_liquor"
+[iowa_data_hub]
+dataset_name = "raw_iowa_data_hub"
 
-[sources.iowa_liquor]
+[sources.iowa_data_hub]
 # Product catalog, updated monthly; each load replaces it.
 products_dataset = 1029
 
@@ -19,7 +19,7 @@ products_dataset = 1029
 # so load the yearly ones. Iowa publishes a new id each January: add it here. The
 # last year is reloaded every run; earlier years load once (pipeline.py).
 # 2026 is partial until Iowa's last monthly update for the year.
-[sources.iowa_liquor.sales_datasets]
+[sources.iowa_data_hub.sales_datasets]
 2012 = 1249
 2013 = 1250
 2014 = 1251

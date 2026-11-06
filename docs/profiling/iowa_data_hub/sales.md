@@ -1,4 +1,4 @@
-# raw_iowa_liquor.sales_2025, sales_2026
+# raw_iowa_data_hub.sales_2025, sales_2026
 
 Profiled 2026-11-06. Covers `sales_2025` and `sales_2026` only, not the other years. Both
 tables share one schema (only the column order differs).
@@ -112,7 +112,7 @@ key from 2025-09-01, and dlt's `_dlt_id` changes on every reload.
 -- swap the year to test the other table
 select regexp_replace(invoice_id, '\d', '9', 'g') as shape, count(*), count(distinct invoice_id),
        min(ordered_on), max(ordered_on)
-from raw_iowa_liquor.sales_2026 group by 1 order by 2 desc;
+from raw_iowa_data_hub.sales_2026 group by 1 order by 2 desc;
 
 select count(*) as rows, count(distinct invoice_id) as ids,
        count(distinct (invoice_id, item_no)) as invoice_items,
@@ -121,7 +121,7 @@ select count(*) as rows, count(distinct invoice_id) as ids,
                        vendor_number, vendor_name, item_no, im_desc, pack, bottle_volume_ml,
                        state_bottle_cost, state_bottle_retail, sales_bottles, sales_dollars,
                        sales_liters, sales_gallons)) as distinct_rows
-from raw_iowa_liquor.sales_2026;
+from raw_iowa_data_hub.sales_2026;
 ```
 </details>
 
@@ -152,7 +152,7 @@ halving each group's count keeps them.
 ```sql
 with g as (
   select substr(ordered_on, 1, 7) as month, count(*) as n
-  from raw_iowa_liquor.sales_2025
+  from raw_iowa_data_hub.sales_2025
   group by invoice_id, ordered_on, store_no, store_name, store_address, store_city,
            store_zip_code, county_fips_code, county_name, category_code, category_name,
            vendor_number, vendor_name, item_no, im_desc, pack, bottle_volume_ml,
@@ -200,7 +200,7 @@ select substr(ordered_on, 1, 7) as month, count(*) as lines,
                         - sales_bottles::numeric * state_bottle_retail::numeric) > 0.01) as dollars_off,
        count(*) filter (where (state_bottle_cost || state_bottle_retail || sales_dollars || sales_gallons) ~ '\.') as has_decimals,
        count(*) filter (where state_bottle_cost::numeric = 0) as zero_cost
-from raw_iowa_liquor.sales_2025 group by 1 order by 1;
+from raw_iowa_data_hub.sales_2025 group by 1 order by 1;
 ```
 </details>
 
@@ -214,7 +214,7 @@ available before 7/1/2025". `sales_dollars` is present on every line. 2026 has n
 
 ```sql
 select substr(ordered_on, 1, 7) as month, count(*), count(*) filter (where state_bottle_cost is null)
-from raw_iowa_liquor.sales_2025 group by 1 order by 1;
+from raw_iowa_data_hub.sales_2025 group by 1 order by 1;
 ```
 </details>
 
@@ -240,7 +240,7 @@ Separately, retail is not 1.5 × cost on 119 (2025-07) and 102 (2025-08) lines, 
 ```sql
 select ordered_on, item_no, im_desc, state_bottle_retail, sales_bottles, sales_dollars,
        round(sales_dollars::numeric / nullif(sales_bottles::numeric, 0), 2) as per_bottle
-from raw_iowa_liquor.sales_2026
+from raw_iowa_data_hub.sales_2026
 where ordered_on >= '2026-02-01'
   and abs(sales_dollars::numeric - sales_bottles::numeric * state_bottle_retail::numeric) > 0.01
 limit 20;
@@ -272,11 +272,11 @@ WHISKEY`, ordered 2026-06-15 – 2026-08-25.
 
 ```sql
 select category_code, category_name, count(*), min(ordered_on), max(ordered_on)
-from raw_iowa_liquor.sales_2025 group by 1, 2 order by 1, 2;
+from raw_iowa_data_hub.sales_2025 group by 1, 2 order by 1, 2;
 
 with s as (select item_no, category_code, category_name, count(*) as n,
                   min(ordered_on) as first_on, max(ordered_on) as last_on
-           from raw_iowa_liquor.sales_2026 group by 1, 2, 3)
+           from raw_iowa_data_hub.sales_2026 group by 1, 2, 3)
 select * from s
 where item_no in (select item_no from s group by 1 having count(distinct category_code) > 1)
 order by item_no, first_on;
@@ -301,12 +301,12 @@ Store 2687 `HY-VEE FAST & FRESH EXPRESS- BETTENDORF` has zip `57222`, a South Da
 ```sql
 with s as (select store_no, store_name, store_address, store_city, store_zip_code, county_name,
                   count(*) as n, min(ordered_on) as first_on, max(ordered_on) as last_on
-           from raw_iowa_liquor.sales_2025 group by 1, 2, 3, 4, 5, 6)
+           from raw_iowa_data_hub.sales_2025 group by 1, 2, 3, 4, 5, 6)
 select * from s where store_no in (select store_no from s group by 1 having count(*) > 1)
 order by store_no, first_on;
 
 select store_no, store_name, store_city, store_zip_code, count(*)
-from raw_iowa_liquor.sales_2026 where store_zip_code !~ '^5[0-2]' group by 1, 2, 3, 4;
+from raw_iowa_data_hub.sales_2026 where store_zip_code !~ '^5[0-2]' group by 1, 2, 3, 4;
 ```
 </details>
 
@@ -331,7 +331,7 @@ and category match the current `products` row, so the latest lines agree with th
 ```sql
 with s as (select item_no, im_desc, pack, bottle_volume_ml, count(*) as n,
                   min(ordered_on) as first_on, max(ordered_on) as last_on
-           from raw_iowa_liquor.sales_2026 group by 1, 2, 3, 4)
+           from raw_iowa_data_hub.sales_2026 group by 1, 2, 3, 4)
 select * from s where item_no in (select item_no from s group by 1 having count(*) > 1)
 order by item_no, first_on;
 ```
@@ -348,7 +348,7 @@ in 2025). Guess: returns of small bottles rounded to 0 liters in #3.
 
 ```sql
 select left(invoice_id, 4) as prefix, sign(sales_bottles::numeric) as sign, count(*)
-from raw_iowa_liquor.sales_2026 group by 1, 2 order by 1, 2;
+from raw_iowa_data_hub.sales_2026 group by 1, 2 order by 1, 2;
 ```
 </details>
 
@@ -362,7 +362,7 @@ Neither shape collides with the other as a number, but keep it as text like the 
 ```sql
 select regexp_replace(store_no, '\d', '9', 'g') as shape, count(*), count(distinct store_no),
        min(store_no), max(store_no)
-from raw_iowa_liquor.sales_2026 tablesample system (5) repeatable (42) group by 1;
+from raw_iowa_data_hub.sales_2026 tablesample system (5) repeatable (42) group by 1;
 ```
 </details>
 
@@ -377,7 +377,7 @@ Sample rows with double spaces, 2025 / 2026: `vendor_name` 30,134 / 21,899, `sto
 ```sql
 select col, count(*) filter (where v <> btrim(v)) as edge_ws, count(*) filter (where v ~ '  ') as dbl_ws,
        count(*) filter (where v ~ '[^ -~]') as non_ascii
-from raw_iowa_liquor.sales_2026 tablesample system (5) repeatable (42),
+from raw_iowa_data_hub.sales_2026 tablesample system (5) repeatable (42),
      lateral (values ('store_name', store_name), ('store_address', store_address),
                      ('vendor_name', vendor_name), ('im_desc', im_desc)) t(col, v)
 group by 1;
