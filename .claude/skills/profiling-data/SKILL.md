@@ -31,8 +31,8 @@ query. It is not a log of every check run.
    values and distributions that make no business sense.
    - **Size first:** estimate the row count from table metadata, not a full
      count. On a big table, explore on a sample. Scan it all only where you need
-     an exact answer, like key uniqueness. Say in the record when evidence came
-     from a sample.
+     an exact answer, like key uniqueness. Sample with a fixed seed so it can be
+     rerun, and state the sample % in the record.
    - **Grain:** find the key, check it is unique. If not, find what is.
    - **Low-cardinality text (attributes):** count by value, sorted by value (spots
      near-duplicates, casing, typos) and by count desc (spots rare values).
@@ -41,7 +41,8 @@ query. It is not a log of every check run.
      Gaps, spikes, future dates, defaults like `1900-01-01`.
    - **Numbers:** min/max, count by bin. Zeros, negatives, sentinels like `9999`.
    - **Relationships:** test each known one with a join, on a sample for a big
-     table: orphans and cardinality.
+     table: orphans and key shape (one-to-one, many-to-one). Record the result
+     and its query under Relationships in the README.
    - When something is off, dig until you can say what it is, or until only the
      human can say.
 3. **Write the record** in the shape below.
@@ -59,7 +60,8 @@ query. It is not a log of every check run.
 |---|---|---|---|
 
 ## Relationships
-<join, cardinality, where it came from (constraint, docs, human); orphan count once checked>
+<join, key shape, where it came from (constraint, docs, human); orphan count
+and its query once checked>
 
 ## Questions for the human
 1. ...
@@ -103,6 +105,8 @@ for text, Range for numbers and dates. Note only when there is something to know
 - Every issue has its query, runnable as-is against the raw table.
 - **Partial profile:** if checks could not finish, say so under the title and
   list what is left. Those issues stay `open` with their queries.
+- A concern that checked out fine (a suspect value that is real) is one line,
+  not an issue.
 - A check that found nothing is one line, not a section ("casts: clean for all
   numeric and date columns").
 - **Full checks, on request:** the human may ask to review every distribution,
