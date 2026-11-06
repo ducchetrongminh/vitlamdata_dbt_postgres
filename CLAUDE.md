@@ -42,5 +42,7 @@ This repo centres on VitLamData data. An external dataset with no link to it
 bus matrix go in `docs/design-external/<source>/`, not `docs/design/`, and its
 conformed dimensions do not mix with VitLamData's. So its dimensions can take
 simple names (Store, Vendor). dbt model names are unique across the whole
-project, so a simple table name such as `dim_store` may need a prefixed model
-name plus `alias`.
+project, so prefix every intermediate and mart model of an external dataset
+with its source, and set `alias` to the simple table name: model
+`iowa_liquor__dim_store`, table `dim_store`. Staging models already carry the
+source (`stg_iowa_liquor__…`).
