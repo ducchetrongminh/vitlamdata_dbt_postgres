@@ -13,13 +13,13 @@ dataset_name = "raw_iowa_data_hub"
 
 [sources.iowa_data_hub]
 # Product catalog, updated monthly; each load replaces it.
-products_dataset = 1029
+liquor_products_dataset = 1029
 
 # Sales, one dataset per year. The all-years dataset (1051) exports an empty zip,
 # so load the yearly ones. Iowa publishes a new id each January: add it here. The
 # last year is reloaded every run; earlier years load once (pipeline.py).
 # 2026 is partial until Iowa's last monthly update for the year.
-[sources.iowa_data_hub.sales_datasets]
+[sources.iowa_data_hub.liquor_sales_datasets]
 2012 = 1249
 2013 = 1250
 2014 = 1251

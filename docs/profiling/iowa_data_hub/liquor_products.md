@@ -1,4 +1,4 @@
-# raw_iowa_data_hub.products
+# raw_iowa_data_hub.liquor_products
 
 Profiled 2026-11-06, data as of load `1793883467.6571584` (loaded 2026-11-05 20:01 +07,
 `report_as_of` 2026-11-01). 14,040 rows (all checks are full scans: the table is small). One row
@@ -89,7 +89,7 @@ The 6 two-ordinary pairs:
 - `Special Order Items` plus a spirit category (905377, 907699)
 
 Only 4 of the 1,737 `Temporary & Specialty Packages` rows belong to items with no other
-category. Sales lines carry one category each. In a 1% sample of `sales_2026`, 6.2% of lines
+category. Sales lines carry one category each. In a 1% sample of `liquor_sales_2026`, 6.2% of lines
 are for items with more than one category, so a join on `item_no` alone multiplies those lines.
 Guess: the two groupings are tags added on top of the real category.
 
@@ -98,23 +98,23 @@ Guess: the two groupings are tags added on top of the real category.
 ```sql
 -- shape of the duplication
 select n, count(*) as items
-from (select item_no, count(*) as n from raw_iowa_data_hub.products group by 1) s
+from (select item_no, count(*) as n from raw_iowa_data_hub.liquor_products group by 1) s
 group by 1 order by 1;
 
 -- only category_name differs (returns 0)
 select count(*) from (
-  select item_no from raw_iowa_data_hub.products group by 1
+  select item_no from raw_iowa_data_hub.liquor_products group by 1
   having count(*) > 1
      and count(distinct (im_desc, vendor_no, vendor_name, bottle_volume_ml, pack, inner_pack,
                          age, proof, list_on, upc, coalesce(scc, '~'), state_bottle_cost,
                          state_case_cost, state_bottle_retail)) > 1) s;
 
 -- (item_no, category_name) is unique
-select count(*), count(distinct (item_no, category_name)) from raw_iowa_data_hub.products;
+select count(*), count(distinct (item_no, category_name)) from raw_iowa_data_hub.liquor_products;
 
 -- which categories duplicated items carry
 select item_no, im_desc, string_agg(category_name, ' | ' order by category_name) as cats
-from raw_iowa_data_hub.products group by 1, 2 having count(*) > 1 order by 1;
+from raw_iowa_data_hub.liquor_products group by 1, 2 having count(*) > 1 order by 1;
 ```
 </details>
 
@@ -138,10 +138,10 @@ variant. The mapping in Action assumes the majority form is correct.
 <details><summary>Query</summary>
 
 ```sql
-select category_name, count(*) from raw_iowa_data_hub.products group by 1 order by 1;
+select category_name, count(*) from raw_iowa_data_hub.liquor_products group by 1 order by 1;
 
 select item_no, category_name, im_desc, vendor_name, list_on
-from raw_iowa_data_hub.products
+from raw_iowa_data_hub.liquor_products
 where category_name in ('American Cordials & Liqueurs', 'Imported Cordials & Liqueurs', 'Imported Vodka')
 order by 2, 1;
 ```
@@ -159,9 +159,9 @@ reaches 1,891 in 2026. There are no gaps, spikes or defaults.
 
 ```sql
 select extract(year from list_on::date)::int as year, count(*)
-from raw_iowa_data_hub.products group by 1 order by 1;
+from raw_iowa_data_hub.liquor_products group by 1 order by 1;
 
-select list_on, count(*) from raw_iowa_data_hub.products
+select list_on, count(*) from raw_iowa_data_hub.liquor_products
 where list_on::date > report_as_of::date group by 1 order by 1;
 ```
 </details>
@@ -188,7 +188,7 @@ are 14.
 
 ```sql
 select scc, length(scc), count(*), count(distinct item_no)
-from raw_iowa_data_hub.products group by 1 order by 3 desc;
+from raw_iowa_data_hub.liquor_products group by 1 order by 3 desc;
 ```
 </details>
 
@@ -213,10 +213,10 @@ Extra añejo tequilas use 48–81. So 116 is months, 40 and 50 are years, and th
 <details><summary>Query</summary>
 
 ```sql
-select age::int, count(*) from raw_iowa_data_hub.products group by 1 order by 1;
+select age::int, count(*) from raw_iowa_data_hub.liquor_products group by 1 order by 1;
 
 select item_no, im_desc, category_name, age::int
-from raw_iowa_data_hub.products where age::int >= 40 order by 4 desc, 1;
+from raw_iowa_data_hub.liquor_products where age::int >= 40 order by 4 desc, 1;
 ```
 </details>
 
@@ -232,7 +232,7 @@ magazine row also has 0 in every price. Each of these rows also has `proof = 0`.
 ```sql
 select item_no, category_name, im_desc, bottle_volume_ml, proof,
        state_bottle_cost, state_case_cost, state_bottle_retail
-from raw_iowa_data_hub.products
+from raw_iowa_data_hub.liquor_products
 where bottle_volume_ml::numeric = 0 or proof::numeric = 0
    or state_bottle_cost::numeric = 0 or state_bottle_retail::numeric = 0
 order by 1;
@@ -257,7 +257,7 @@ Banana`). One row has no ratio: the magazine, with cost 0.
 ```sql
 select item_no, category_name, im_desc, pack, state_bottle_cost, state_case_cost, state_bottle_retail,
        round(state_bottle_retail::numeric / nullif(state_bottle_cost::numeric, 0), 2) as markup
-from raw_iowa_data_hub.products
+from raw_iowa_data_hub.liquor_products
 where round(state_bottle_retail::numeric / nullif(state_bottle_cost::numeric, 0), 2) not between 1.49 and 1.52
 order by markup;
 ```
@@ -282,7 +282,7 @@ Either `pack` or a cost is wrong on these rows. Only the human or the source can
 ```sql
 select item_no, im_desc, pack, state_bottle_cost, state_case_cost,
        state_bottle_cost::numeric * pack::numeric as expected
-from raw_iowa_data_hub.products
+from raw_iowa_data_hub.liquor_products
 where abs(state_case_cost::numeric / nullif(state_bottle_cost::numeric * pack::numeric, 0) - 1) > 0.01
 order by 1;
 ```
@@ -299,10 +299,10 @@ Hibiscus Liqueur DISCO`.
 
 ```sql
 select upc, count(distinct item_no) as items, min(im_desc), max(im_desc)
-from raw_iowa_data_hub.products group by 1 having count(distinct item_no) > 1
+from raw_iowa_data_hub.liquor_products group by 1 having count(distinct item_no) > 1
 order by 2 desc limit 20;
 
-select item_no, im_desc, vendor_name from raw_iowa_data_hub.products where upc ~ '^0+$';
+select item_no, im_desc, vendor_name from raw_iowa_data_hub.liquor_products where upc ~ '^0+$';
 ```
 </details>
 
@@ -331,7 +331,7 @@ Their meanings are not documented. `DNO` (24960) may be another code.
 
 ```sql
 select tag, count(*)
-from raw_iowa_data_hub.products,
+from raw_iowa_data_hub.liquor_products,
      lateral (values ('DISCO', im_desc ~ '\mDISCO\M'), ('USE CODE', im_desc ~* 'use code'),
                      ('HA prefix', im_desc ~ '^HA '), ('BP prefix', im_desc ~ '^BP '),
                      ('NO VOR', im_desc ~ 'NO VOR'), ('Ingredient', im_desc ~ '^Ingredient ')) t(tag, hit)
@@ -356,10 +356,10 @@ are all caps.
 ```sql
 select col, count(*) filter (where v <> btrim(v)) as edge_ws,
        count(*) filter (where v ~ '  ') as dbl_ws, count(*) filter (where v ~ '[^ -~]') as non_ascii
-from raw_iowa_data_hub.products,
+from raw_iowa_data_hub.liquor_products,
      lateral (values ('category_name', category_name), ('im_desc', im_desc), ('vendor_name', vendor_name)) t(col, v)
 group by 1;
 
-select item_no, im_desc from raw_iowa_data_hub.products where im_desc ~ '[ÃÂ]';
+select item_no, im_desc from raw_iowa_data_hub.liquor_products where im_desc ~ '[ÃÂ]';
 ```
 </details>
