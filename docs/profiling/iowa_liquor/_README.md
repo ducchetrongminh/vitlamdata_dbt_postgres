@@ -16,12 +16,16 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   on every run.
 - **Publisher docs:** the dataset page gives column labels, the source SQL and the unique
   identifier. Every column description on the page is empty, so there is no data
-  dictionary. Codes and units are not defined (questions 3–6).
+  dictionary. Codes and units are not defined (questions 3–6). The yearly sales pages
+  (datasets 1262 for 2025, 1263 for 2026) do describe each column, give the source SQL (a
+  year's slice of `iowa_data_hub_gold_prod.liquor_sales_combined`) and declare `invoice_id`
+  unique. On the 2026 page the descriptions are shifted by one column (sales.md).
 
 | Table | Rows | Grain | Profile |
 |---|---|---|---|
 | `products` | 14,040 | one row per item per category (`item_no`, `category_name`), not per item | [products.md](products.md) |
-| `sales_2012` … `sales_2026` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `sales_2025`, `sales_2026` | 2,978,001 (2025, 487,388 of them doubled), 2,029,764 (2026) | one row per invoice line; no unique key from 2025-09-01 (sales #1) | [sales.md](sales.md) |
+| `sales_2012` … `sales_2024` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -29,13 +33,15 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   the publisher's statement that `item_no` identifies a product. No database constraint
   exists: the only constraint on `products` is dlt's `UNIQUE (_dlt_id)`. Confirm this with
   the human (question 1). Tested on a 1% sample (`TABLESAMPLE SYSTEM (1) REPEATABLE (42)`) of
-  three years:
+  three years, then on all rows of 2025 and 2026:
 
   | Sales year | Sampled lines | Orphan lines | Sampled items | Orphan items |
   |---|---|---|---|---|
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2025, all rows | 2,978,001 | 0 | 5,048 | 0 |
+  | 2026, all rows | 2,029,764 | 0 | 4,792 | 0 |
 
   Orphans grow with age. `products` is a current snapshot replaced on every load, so items
   sold in the past but no longer in the catalog are missing, e.g. `73050 RUMCHATA` and
@@ -48,7 +54,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   <details><summary>Query</summary>
 
   ```sql
-  -- swap the year to test another table
+  -- swap the year to test another table; drop the tablesample for all rows
   with s as (select item_no from raw_iowa_liquor.sales_2012 tablesample system (1) repeatable (42)),
        p as (select item_no, count(*) as n from raw_iowa_liquor.products group by 1)
   select count(*) as lines, count(*) filter (where p.item_no is null) as orphan_lines,
@@ -61,9 +67,18 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 - Sales carry one `category_name` per line, in upper case
   (`TEMPORARY & SPECIALTY PACKAGES`). Products use mixed case. Sales also carry a
   `category_code`, but products do not. A join on category needs `upper()` on both sides.
+  The sales category is the item's category at the time of sale and changes over time,
+  e.g. in and out of `TEMPORARY & SPECIALTY PACKAGES` (sales #6). `IOWA SPIRITS
+  MANUFACTURERS` never appears on a sales line. Since 2025-07-01 the sales names match the
+  `products` names in upper case. Before, four names were plural (sales #6).
 - Cardinality: `products` has 2,354 items listed under 2 or 3 categories (products issue #1).
-  In the 2026 sample, 6.2% of sales lines (1,206 of 19,452) are for such items. A join on
-  `item_no` alone multiplies those lines.
+  In the 2026 sample, 6.2% of sales lines (1,206 of 19,452) are for such items. On all rows it
+  is 6.0% in both years (178,769 lines in 2025, 121,269 in 2026). A join on `item_no` alone
+  multiplies those lines. Joining on (`item_no`, `upper(category_name)`) avoids that: in Oct
+  2026, every sales line's category is one of its item's `products` categories.
+- Attributes: sales lines carry the item's description, vendor, pack, volume, cost and
+  retail as of the sale. They change over time (sales #8). In Oct 2026 all of them match the
+  current `products` row on every line. Older lines may differ.
 
 ## Questions for the human
 
@@ -83,3 +98,19 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
    in the product dimension? (products issues #6, #10)
 7. Price and pack errors: is Old Elk 920301 bottle cost `1250` a typo for `40`? Which value
    is wrong on the 36 rows where case cost ≠ bottle cost × pack? (products issues #7, #8)
+8. Sales `invoice_id` has held only the invoice number since 2025-09-01, without the line
+   number, and no column set is unique (sales #1). Can the publisher restore a line number?
+   If not, is a line key built in staging from the row's content acceptable, given that an
+   invoice can repeat an identical line?
+9. Every 2025 sales line from 2025-10-27 to 2025-12-31 is loaded twice: 487,388 extra rows
+   against the publisher's count of 2,490,620 (sales #2). Should we re-download the 2025
+   export to see whether the doubling is in the export or in our load, then fix it there or
+   dedupe in staging?
+10. Cost, retail, dollars, liters and gallons are rounded to whole numbers on all lines from
+    2025-11-01 to 2026-01-31 (sales #3). Is the publisher aware? Do we accept rounded money for
+    those three months, or take prices from elsewhere?
+11. `sales_dollars` ≠ bottles × `state_bottle_retail` on 1–3% of lines (sales #5). Which one is
+    the amount the store paid? Are these discounts?
+12. Store 2687 has zip `57222` (South Dakota). Is `52722` (Bettendorf) correct? (sales #7)
+13. Item 921635 `TEMPLETON USA 250 STRAIGHT BOURBON WHISKEY` has no category on 26 lines in
+    2026 (sales #6). Which category is it?
