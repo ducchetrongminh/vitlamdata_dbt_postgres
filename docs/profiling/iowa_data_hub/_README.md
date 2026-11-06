@@ -36,7 +36,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2017` | 2,291,276 | one row per invoice line; `invoice_id` unique | [liquor_sales_2017.md](liquor_sales_2017.md) |
 | `liquor_sales_2016` | 2,279,893 | one row per invoice line; `invoice_id` unique | [liquor_sales_2016.md](liquor_sales_2016.md) |
 | `liquor_sales_2015` | 2,184,483 | one row per invoice line; `invoice_id` unique | [liquor_sales_2015.md](liquor_sales_2015.md) |
-| `liquor_sales_2012` … `liquor_sales_2014` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2014` | 2,097,796 | one row per invoice line; `invoice_id` unique | [liquor_sales_2014.md](liquor_sales_2014.md) |
+| `liquor_sales_2012`, `liquor_sales_2013` | 2.0M–2.1M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -51,6 +52,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2014, all rows | 2,097,796 | 196,372 | 3,592 | 1,913 |
   | 2015, all rows | 2,184,483 | 156,750 | 3,595 | 1,735 |
   | 2016, all rows | 2,279,893 | 127,120 | 3,724 | 1,606 |
   | 2017, all rows | 2,291,276 | 103,219 | 3,901 | 1,523 |

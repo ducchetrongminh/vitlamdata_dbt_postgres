@@ -45,7 +45,7 @@ Only the columns that differ from 2016.
 | 2022 #2 | `item_no` | 1,735 items, 156,750 lines (7.2%), not in the catalog | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
-| 2026 #4 | category | NULL code on 773 lines of 20 items, mostly Oct–Nov gift packs, e.g. 3657 `HERRADURA GOLD REPOSADO 6PAK` (524) | as 2026 #4 | open |
+| 2026 #4 | category | NULL code on 773 lines of 20 items; NULL name with a code on 689 more. Mostly gift packs, e.g. 3657 `HERRADURA GOLD REPOSADO 6PAK` | as 2026 #4 | open |
 | 2026 #9 | text | Double spaces (sample): `store_address` 9,898, `store_name` 2,384, `vendor_name` 826 | as 2026 #9 | open |
 
 No store location is missing (2017 #2 does not occur), and no vendor is renamed.
