@@ -1,6 +1,7 @@
 # raw_iowa_data_hub.liquor_sales_2026
 
-Profiled 2026-11-06, data as of 2026-11-06 18:00 +07. 2,029,764
+Profiled 2026-11-06, data as of 2026-11-06 18:00 +07. Checked again on the reload of
+2026-11-07 00:03 +07, which the older years use: every full-scan result is unchanged. 2,029,764
 rows, ordered 2026-01-01 – 2026-10-30, the same as the publisher's count. One row is one line
 of a store's order from the state (an invoice line). The publisher says `invoice_id`
 identifies the line, but it does not in 2026 (#1).
@@ -10,7 +11,8 @@ where it differs from this one.
 
 Method: key, row counts, null counts, cast checks, ranges and cross-column checks are full
 scans. Value distributions, shapes and text checks use a 5% sample,
-`TABLESAMPLE SYSTEM (5) REPEATABLE (42)` (99,767 rows).
+`TABLESAMPLE SYSTEM (5) REPEATABLE (42)` (99,767 rows on the 18:00 load; the same sample
+takes 100,485 rows after the reload, as it picks pages, not rows).
 
 Publisher docs: the dataset page (data.iowa.gov dataset 1263) gives a column description for
 each column, the source SQL (`SELECT * FROM iowa_data_hub_gold_prod.liquor_sales_combined
