@@ -34,3 +34,13 @@ Read before changing any model:
 - [docs/dw-naming-conventions.md](docs/dw-naming-conventions.md)
 - [docs/dimensional-modeling-standards.md](docs/dimensional-modeling-standards.md)
 - [docs/architecture.md](docs/architecture.md)
+
+## External datasets
+
+This repo centres on VitLamData data. An external dataset with no link to it
+(e.g. `iowa_liquor`, a public practice dataset) is its own bus: design files and
+bus matrix go in `docs/design-external/<source>/`, not `docs/design/`, and its
+conformed dimensions do not mix with VitLamData's. So its dimensions can take
+simple names (Store, Vendor). dbt model names are unique across the whole
+project, so a simple table name such as `dim_store` may need a prefixed model
+name plus `alias`.
