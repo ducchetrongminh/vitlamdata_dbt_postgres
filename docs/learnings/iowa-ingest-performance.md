@@ -1,4 +1,4 @@
-# From 3h45m to minutes: loading Iowa liquor sales
+# From 3h45m to 33 minutes: loading Iowa liquor sales
 
 How a source rename turned into two days of ingest tuning, told in the order it
 happened. Every number comes from an ingest log or a query on the warehouse;
@@ -184,19 +184,22 @@ With every year back in the config, all tables in `raw_iowa_data_hub` were
 dropped (the schemas stay: terraform owns them, and the `USAGE` grants go with
 them), and ingest reloaded everything.
 
-<!-- TODO: fill in from the fresh reload run. -->
-
-Ingest [{{RUN_ID}}](https://github.com/ducchetrongminh/vitlamdata_dbt_postgres/actions/runs/{{RUN_ID}}):
+Ingest [42253230128](https://github.com/ducchetrongminh/vitlamdata_dbt_postgres/actions/runs/42253230128):
 
 | | First reload (nightly 42206816905) | Fresh reload |
 |---|--:|--:|
-| Extract | 19m | {{EXTRACT}} |
-| Normalize | 21m | {{NORMALIZE}} |
-| Load (16 tables) | 3h04m | {{LOAD}} |
-| Whole ingest job | 3h45m | {{TOTAL}} |
-| Size of `raw_iowa_data_hub` | {{SIZE_BEFORE}} | {{SIZE_AFTER}} |
+| Extract | 19m | 12m |
+| Normalize | 21m | 7m45s |
+| Load (16 tables) | 3h04m | **11m18s** |
+| Whole ingest job | 3h45m | **32m53s** |
+| `liquor_sales_2025` size | 950 MB | 730 MB |
+| `liquor_sales_2026` size | 639 MB | 496 MB |
+| Size of `raw_iowa_data_hub` | not measured | 8.9 GB |
 
-{{ONE_SENTENCE_RESULT}}
+Same rows as before (the run summary matches the first reload table by table:
+2,082,059 for 2012 through 2,029,764 for 2026), in a quarter less space per
+table, and the load went from 3 hours to 11 minutes. The whole job is now
+mostly download and CSV reading, not the disk.
 
 ## What we keep
 
