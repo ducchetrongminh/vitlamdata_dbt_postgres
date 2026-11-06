@@ -1,9 +1,9 @@
-"""Iowa liquor products and sales (data.iowa.gov, CC BY 4.0) -> raw_iowa_liquor.
+"""Iowa liquor products and sales (data.iowa.gov, CC BY 4.0) -> raw_iowa_data_hub.
 
 Dataset ids and the yearly sales list: .dlt/config.toml next to this file. No
 source credentials: the data is public. From the repo root:
 
-    python -m ingestion.iowa_liquor.pipeline
+    python -m ingestion.iowa_data_hub.pipeline
 """
 
 import csv
@@ -43,14 +43,14 @@ def read_csv_zip(dataset_id):
                         yield [{k: v or None for k, v in row.items()} for row in page]
 
 
-@dlt.source(name="iowa_liquor")
-def iowa_liquor(products_dataset=dlt.config.value, sales_datasets=dlt.config.value):
+@dlt.source(name="iowa_data_hub")
+def iowa_data_hub(liquor_products_dataset=dlt.config.value, liquor_sales_datasets=dlt.config.value):
     # Monthly snapshot of the current catalog.
     @dlt.resource(write_disposition="replace")
-    def products():
-        yield from read_csv_zip(products_dataset)
+    def liquor_products():
+        yield from read_csv_zip(liquor_products_dataset)
 
-    # One table per yearly dataset, sales_<year>, each replaced whole when it loads.
+    # One table per yearly dataset, liquor_sales_<year>, each replaced whole when it loads.
     # Past years are final: each loads once, then is left out of the run, so its table
     # is never touched. The latest year reloads every run.
     def sales_year(year, dataset_id, final):
@@ -59,25 +59,25 @@ def iowa_liquor(products_dataset=dlt.config.value, sales_datasets=dlt.config.val
             if final:
                 dlt.current.resource_state()["loaded"] = True
 
-        return dlt.resource(rows, name=f"sales_{year}", write_disposition="replace")
+        return dlt.resource(rows, name=f"liquor_sales_{year}", write_disposition="replace")
 
     pipeline = dlt.current.pipeline()
     resources_state = dlt.current.source_state().get("resources", {})
-    latest = max(sales_datasets)
+    latest = max(liquor_sales_datasets)
     sales = [
         sales_year(year, dataset_id, final=year != latest)
-        for year, dataset_id in sorted(sales_datasets.items())
+        for year, dataset_id in sorted(liquor_sales_datasets.items())
         # On refresh, include every year: dlt then wipes each one's state and reloads it.
-        if pipeline.refresh or not resources_state.get(f"sales_{year}", {}).get("loaded")
+        if pipeline.refresh or not resources_state.get(f"liquor_sales_{year}", {}).get("loaded")
     ]
-    return [products, *sales]
+    return [liquor_products, *sales]
 
 
 if __name__ == "__main__":
     setup(__file__)
-    pipeline = dlt.pipeline(pipeline_name="iowa_liquor", destination="postgres")
+    pipeline = dlt.pipeline(pipeline_name="iowa_data_hub", destination="postgres")
     # The source picks which years to load from the state, so restore it from the
     # warehouse first: a fresh CI runner has none, and run() restores it too late.
     pipeline.sync_destination()
     # csv loads with COPY: much faster than INSERT for ~35M sales rows.
-    report(pipeline, pipeline.run(iowa_liquor(), loader_file_format="csv"))
+    report(pipeline, pipeline.run(iowa_data_hub(), loader_file_format="csv"))
