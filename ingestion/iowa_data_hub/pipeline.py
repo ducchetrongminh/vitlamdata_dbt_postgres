@@ -93,5 +93,6 @@ if __name__ == "__main__":
     # The source picks which years to load from the state, so restore it from the
     # warehouse first: a fresh CI runner has none, and run() restores it too late.
     pipeline.sync_destination()
-    # csv loads with COPY: much faster than INSERT for ~35M sales rows.
-    report(pipeline, pipeline.run(iowa_data_hub(), loader_file_format="csv"))
+    # parquet loads through the ADBC driver (adbc-driver-postgresql): the Arrow batches
+    # go straight in, with no CSV step in normalize or on the server.
+    report(pipeline, pipeline.run(iowa_data_hub(), loader_file_format="parquet"))
