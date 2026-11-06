@@ -26,7 +26,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_products` | 14,040 | one row per item per category (`item_no`, `category_name`), not per item | [liquor_products.md](liquor_products.md) |
 | `liquor_sales_2026` | 2,029,764 | one row per invoice line; no unique key (2026 #1) | [liquor_sales_2026.md](liquor_sales_2026.md), the reference for the other years |
 | `liquor_sales_2025` | 3,007,599 (516,986 of them repeated by the export) | one row per invoice line; `invoice_id` unique until 2025-08-29 (2025 #4) | [liquor_sales_2025.md](liquor_sales_2025.md) |
-| `liquor_sales_2012` … `liquor_sales_2024` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2024` | 2,590,975 | one row per invoice line; `invoice_id` unique | [liquor_sales_2024.md](liquor_sales_2024.md) |
+| `liquor_sales_2012` … `liquor_sales_2023` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -41,6 +42,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2024, all rows | 2,590,975 | 0 | 5,211 | 0 |
   | 2025, all rows | 3,007,599 | 0 | 5,048 | 0 |
   | 2026, all rows | 2,029,764 | 0 | 4,792 | 0 |
 
@@ -122,3 +124,6 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
     (Twisted Shotz party pack 1,800 ml), and one bottle's ml after (25 ml) (2025 #2). Is the
     newer value right? Then liters before Sep 2025 are overstated for these items. Two
     Twisted Tea items drop 750 → 25 ml and 50 → 25 ml: is 25 correct for them?
+16. In Jan–Mar 2024, 26 new items carry a group-level category code ending `000` (`1082000
+    IMPORTED CORDIALS & LIQUEURS`), with the same name as a regular code (`1082100`) (2024 #1).
+    Should staging map each group code to the regular code with the same name?
