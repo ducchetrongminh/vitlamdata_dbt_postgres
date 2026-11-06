@@ -24,7 +24,7 @@ Look for values and distributions without business sense.
 - **Size first:** estimate rows from metadata. Big table: sample with a fixed seed,
   state the %. Full scan only for exact answers (key uniqueness).
 - **Cast first:** min/max on text sorts as text (`9` after `10`).
-- **Grain:** find the key and check it is unique.
+- **Grain:** find the key and check it is unique. If not, find what is.
 - **Attributes:** count by value, sorted by value (near-duplicates) and by count
   desc (rare values). Placeholders like `N/A`, `000000000000`.
 - **Dates:** min/max, count by year (month, day if useful). Gaps, spikes, future
@@ -81,7 +81,8 @@ Profiled <date>, data as of <latest load time>. <rows> rows. One row is <grain>.
   range for numbers and dates.
 - **Action:** `clean in staging: <how>`, `ask` or `accept`.
 - **Status:** `open`, then `decided` once the human agrees.
-- **Evidence:** only the part of a distribution that proves the point.
+- **Evidence:** only the part of a distribution that proves the point. All of it
+  when short and every row matters.
 - **Query:** one per issue, runnable as-is.
 - **One line each:** a check that found nothing; a suspect value that is real.
 - **Partial:** say so under the title, list what is left.
