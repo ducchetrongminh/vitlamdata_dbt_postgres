@@ -22,7 +22,8 @@ For each step: propose one decision, its reason and evidence. Stop and wait for 
 human. Write the step into the file once approved, then start the next.
 
 1. **Business process:** the operational activity that creates the events (stores
-   order liquor from the state), not a department or a report.
+   order liquor from the state), not a department or a report. Reason: what the
+   rows record and why that is the process.
 2. **Grain:** what one fact row is, in business terms. Pick the finest grain the
    data supports. Cite the profiling record: key, uniqueness, issues that bear on it.
 3. **Dimensions:** who, what, where, when, why, how. Each has one value per fact row.
