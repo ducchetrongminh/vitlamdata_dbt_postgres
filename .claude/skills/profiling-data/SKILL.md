@@ -19,8 +19,8 @@ query. It is not a log of every check run.
    - List schemas, tables and columns.
    - Relationships: take them from database constraints and comments, the
      source's docs, or the human. Do not guess them from column names.
-   - Read the publisher's data dictionary or docs (fetch them if public). If you
-     cannot read them, say so in the README and ask the human for them.
+   - Read the publisher's data dictionary or docs (fetch them if public). If they
+     are missing, empty or unreadable, say so in the README and ask the human.
    - Look at sample rows.
    - Run no checks in this step: a join or full count can overload the database
      on a big table.
@@ -36,9 +36,12 @@ query. It is not a log of every check run.
    - **Grain:** find the key, check it is unique. If not, find what is.
    - **Low-cardinality text (attributes):** count by value, sorted by value (spots
      near-duplicates, casing, typos) and by count desc (spots rare values).
+     Placeholders like `N/A` or `000000000000`.
    - **Dates:** count by year, then month or day where it helps; min/max.
      Gaps, spikes, future dates, defaults like `1900-01-01`.
    - **Numbers:** min/max, count by bin. Zeros, negatives, sentinels like `9999`.
+   - **Relationships:** test each known one with a join, on a sample for a big
+     table: orphans and cardinality.
    - When something is off, dig until you can say what it is, or until only the
      human can say.
 3. **Write the record** in the shape below.
@@ -98,6 +101,8 @@ for text, Range for numbers and dates. Note only when there is something to know
 - **Evidence:** show the part of a distribution that proves the point. Show all
   of it only when it is short and every row matters.
 - Every issue has its query, runnable as-is against the raw table.
+- **Partial profile:** if checks could not finish, say so under the title and
+  list what is left. Those issues stay `open` with their queries.
 - A check that found nothing is one line, not a section ("casts: clean for all
   numeric and date columns").
 - **Full checks, on request:** the human may ask to review every distribution,
@@ -113,5 +118,6 @@ for text, Range for numbers and dates. Note only when there is something to know
 | Recommendations in a separate list | Put each one in its issue's Action. |
 | "Likely discontinued" written as fact | Write "guess" and ask the human. |
 | Only min/max for a date | Count by year too. Min/max hide gaps and spikes. |
+| Min/max on a number or date loaded as text | Cast first. As text, `9` sorts after `10`. |
 | Join count to find relationships | Ask the human, read docs or constraints. |
 | Queries collected at the end, or lost | One per issue, folded under it. |
