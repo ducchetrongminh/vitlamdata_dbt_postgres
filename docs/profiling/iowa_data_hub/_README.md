@@ -28,7 +28,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2025` | 3,007,599 (516,986 of them repeated by the export) | one row per invoice line; `invoice_id` unique until 2025-08-29 (2025 #4) | [liquor_sales_2025.md](liquor_sales_2025.md) |
 | `liquor_sales_2024` | 2,590,975 | one row per invoice line; `invoice_id` unique | [liquor_sales_2024.md](liquor_sales_2024.md) |
 | `liquor_sales_2023` | 2,639,557 | one row per invoice line; `invoice_id` unique | [liquor_sales_2023.md](liquor_sales_2023.md) |
-| `liquor_sales_2012` … `liquor_sales_2022` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2022` | 2,958,969 (394,404 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2022.md](liquor_sales_2022.md) |
+| `liquor_sales_2012` … `liquor_sales_2021` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -43,6 +44,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2022, all rows | 2,958,969 | 12 | 4,786 | 2 |
   | 2023, all rows | 2,639,557 | 0 | 5,231 | 0 |
   | 2024, all rows | 2,590,975 | 0 | 5,211 | 0 |
   | 2025, all rows | 3,007,599 | 0 | 5,048 | 0 |
@@ -108,7 +110,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
    If not, is a line key built in staging from the row's content acceptable, given that an
    invoice can repeat an identical line?
 9. The 2025 export repeats a slice of lines in an extra CSV part: 516,986 extra rows, ordered
-   2025-07-29 – 2025-10-14 (2025 #1). The slice moved between downloads. Without the repeats
+   2025-07-29 – 2025-10-14 (2025 #1). The slice moved between downloads. The 2022 export does
+   the same for 2022-11-11 – 2022-12-30 (394,404 extra rows). Without the repeats
    the table matches the publisher's count exactly. Should the loader skip a part whose rows
    all appear in an earlier part? Should we report the export bug to the publisher?
 10. Cost, retail, dollars, liters and gallons are rounded to whole numbers on all lines from
@@ -129,3 +132,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 16. In Jan–Mar 2024, 26 new items carry a group-level category code ending `000` (360 lines all through 2023) (`1082000
     IMPORTED CORDIALS & LIQUEURS`), with the same name as a regular code (`1082100`) (2024 #1).
     Should staging map each group code to the regular code with the same name?
+17. Around 2022-07-18 several codes change at once (2022 #1). Category `1071100` becomes
+    `1071000`, `1901200` becomes `1901000`, and most `1082000` items move to `1082100`. Returns
+    (`RINV-`) and 6-digit store numbers first appear. Was there a system change then? Were
+    returns before it left out of the data?
