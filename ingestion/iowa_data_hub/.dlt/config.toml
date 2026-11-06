@@ -25,19 +25,20 @@ liquor_products_dataset = 1029
 # so load the yearly ones. Iowa publishes a new id each January: add it here. The
 # last year is reloaded every run; earlier years load once (pipeline.py).
 # 2026 is partial until Iowa's last monthly update for the year.
+# TEMP (PR #41 test): only 2025 and 2026 load. Uncomment the rest after the test.
 [sources.iowa_data_hub.liquor_sales_datasets]
-2012 = 1249
-2013 = 1250
-2014 = 1251
-2015 = 1252
-2016 = 1253
-2017 = 1254
-2018 = 1255
-2019 = 1256
-2020 = 1257
-2021 = 1258
-2022 = 1259
-2023 = 1260
-2024 = 1261
+# 2012 = 1249
+# 2013 = 1250
+# 2014 = 1251
+# 2015 = 1252
+# 2016 = 1253
+# 2017 = 1254
+# 2018 = 1255
+# 2019 = 1256
+# 2020 = 1257
+# 2021 = 1258
+# 2022 = 1259
+# 2023 = 1260
+# 2024 = 1261
 2025 = 1262
 2026 = 1263
