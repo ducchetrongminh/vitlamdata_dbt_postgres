@@ -33,7 +33,8 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 | `liquor_sales_2020` | 3,147,745 (533,380 of them repeated by the export) | one row per invoice line; `invoice_id` unique on distinct rows | [liquor_sales_2020.md](liquor_sales_2020.md) |
 | `liquor_sales_2019` | 2,380,345 | one row per invoice line; `invoice_id` unique | [liquor_sales_2019.md](liquor_sales_2019.md) |
 | `liquor_sales_2018` | 2,355,558 | one row per invoice line; `invoice_id` unique | [liquor_sales_2018.md](liquor_sales_2018.md) |
-| `liquor_sales_2012` … `liquor_sales_2017` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
+| `liquor_sales_2017` | 2,291,276 | one row per invoice line; `invoice_id` unique | [liquor_sales_2017.md](liquor_sales_2017.md) |
+| `liquor_sales_2012` … `liquor_sales_2016` | 2.0M–3.2M each (catalog estimate) | not profiled | — |
 
 ## Relationships
 
@@ -48,6 +49,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   | 2012 | 20,030 | 1,910 (9.5%) | 1,476 | 446 |
   | 2019 | 22,867 | 425 (1.9%) | 2,053 | 230 |
   | 2026 | 19,452 | 0 | 2,615 | 0 |
+  | 2017, all rows | 2,291,276 | 103,219 | 3,901 | 1,523 |
   | 2018, all rows | 2,355,558 | 86,439 | 3,954 | 1,331 |
   | 2019, all rows | 2,380,345 | 47,897 | 4,008 | 975 |
   | 2020, all rows | 3,147,745 | 10,172 | 4,176 | 400 |
@@ -146,5 +148,5 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
     `1071000`, `1901200` becomes `1901000`, and most `1082000` items move to `1082100`. Returns
     (`RINV-`) and 6-digit store numbers first appear. Was there a system change then? Were
     returns before it left out of the data?
-18. From Jan to Jul 2018, 500 lines have bottles but `sales_dollars` = 0 (2018 #2). Are
+18. In 2017 (833 lines) and Jan–Jul 2018 (500 lines), lines have bottles but `sales_dollars` = 0 (2018 #2). Are
     these free goods or samples? Should they count in bottles sold?
