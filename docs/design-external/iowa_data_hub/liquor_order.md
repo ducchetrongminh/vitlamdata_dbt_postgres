@@ -29,13 +29,14 @@ Why: the line is the atomic event, the finest grain the data has. Every coarser 
 |---|---|---|
 | Date | the line has one order date (`ordered_on`) | Date (bus matrix column; first real Date dimension) |
 | Store | the line has one ordering store; location (city, zip, county) is a store attribute ([2026 #5](../../profiling/iowa_data_hub/liquor_sales_2026.md#5-store-attributes-change-over-time-some-locations-missing)) | — |
-| Product | the line has one item, never missing | — |
+| Product | the line has one item, never missing. Category is a Product attribute, type 1: the item's latest category ([README Q2](../../profiling/iowa_data_hub/_README.md#decisions), [2026 #4](../../profiling/iowa_data_hub/liquor_sales_2026.md#4-an-items-category-changes-over-time-26-lines-have-none)); items sold only on old codes take the mapped code and keep the old name as legacy category name, type 3 (README Q21) | — |
 | Vendor | the line has one vendor, the item's vendor at the time of the order; 66 items changed vendor in 2026 | — |
-| Category | the line has one category, the item's category at the time of the order ([2026 #4](../../profiling/iowa_data_hub/liquor_sales_2026.md#4-an-items-category-changes-over-time-26-lines-have-none)); on Product it would be multivalued ([products #1](../../profiling/iowa_data_hub/liquor_products.md#1-item_no-is-not-unique)) | — |
 | Invoice (degenerate, on the fact) | the line belongs to one invoice, with one type: order (`INV-`) or return (`RINV-`) ([2026 #7](../../profiling/iowa_data_hub/liquor_sales_2026.md#7-returns-are-rinv--lines-with-negative-quantities)) | — |
 
-Why Vendor and Category stand alone, not inside Product: both change per item over time,
-the line records the value that applied at the order, and analysts slice by each on its own.
+Why Vendor stands alone, not inside Product: an item's vendor changes over time, and the
+line records the vendor that applied at the order. Why Category sits inside Product: profiling
+decided category is type 1 (README "Product attributes are type 1", Q2, Q16, Q17, Q19). Old
+lines take the item's latest category, so a line's category always equals its product's.
 
 ## 4. Facts
 | Fact | Additivity | Note |
@@ -58,7 +59,6 @@ flowchart LR
     store[Store] --- f
     f --- product[Product]
     f --- vendor[Vendor]
-    f --- category[Category]
 ```
 
 ## Open questions
