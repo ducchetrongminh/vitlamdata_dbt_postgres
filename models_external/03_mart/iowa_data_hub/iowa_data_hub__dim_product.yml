@@ -1,0 +1,54 @@
+models:
+  - name: iowa_data_hub__dim_product
+    description: >
+      Iowa liquor products, one row per item in the current catalog, plus the unknown product
+      ('UNKNOWN'). Type 1: today's catalog values. Category is a product attribute (design:
+      docs/design-external/iowa_data_hub/liquor_order.md). Built from the catalog only for now:
+      items sold in the past but delisted are missing until the sales lines are staged.
+    config:
+      alias: dim_product
+    columns:
+      - name: product_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: product_code
+        data_type: text
+        description: item_no, the item's number. Digits, kept as text.
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: product_name
+        data_type: text
+        description: The catalog description. Keeps the status codes it carries (DISCO, HA, USE CODE, ...).
+      - name: category_name
+        data_type: text
+        description: >
+          The item's category, mixed case as in the catalog. A real category over the tags
+          'Temporary & Specialty Packages' and 'Iowa Spirits Manufacturers'.
+      - name: pack
+        data_type: integer
+        description: Bottles per case.
+      - name: inner_pack
+        data_type: integer
+        description: As loaded; meaning unknown.
+      - name: bottle_volume_ml
+        data_type: integer
+        description: Null for non-retail items (ingredients, the magazine).
+      - name: proof
+        data_type: numeric
+      - name: age_years
+        data_type: numeric
+        description: Age in years. Null when no age is stated.
+      - name: upc
+        data_type: text
+        description: Not unique to a product; do not join on it.
+      - name: listed_date
+        data_type: date
+        description: When the item was listed. Can be in the future (listed ahead of release).
+      - name: state_bottle_cost_unit_price
+        data_type: numeric
+        description: What the state pays per bottle, current list. USD.
+      - name: state_bottle_retail_unit_price
+        data_type: numeric
+        description: What a store pays the state per bottle, current list. USD.

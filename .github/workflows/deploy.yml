@@ -14,6 +14,7 @@ on:
     branches: [main]
     paths:
       - "models/**"
+      - "models_external/**"
       - "macros/**"
       - "tests/**"
       - "seeds/**"

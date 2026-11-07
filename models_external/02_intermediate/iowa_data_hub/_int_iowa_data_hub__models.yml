@@ -1,0 +1,12 @@
+models:
+  - name: iowa_data_hub__int_product__category_picked
+    description: >
+      The catalog at one row per product: each item keeps one category, a real one over the
+      tag categories (liquor_products #1, README Q2). Plus the unknown product ('UNKNOWN').
+    config:
+      alias: int_product__category_picked
+    columns:
+      - name: product_code
+        data_tests:
+          - unique
+          - not_null

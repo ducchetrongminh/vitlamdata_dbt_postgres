@@ -40,7 +40,7 @@ prod but not write it.
 5. **Lint.**
 
    ```bash
-   sqlfluff lint models/
+   sqlfluff lint models/ models_external/
    ```
 
 A mart fails its own build (`macros/assert_no_pii_columns.sql`) when a column:
@@ -103,7 +103,7 @@ step logs (`log_level = "INFO"` in each `.dlt/config.toml`).
 - **Re-run a failed nightly:** Actions → nightly → Run workflow. A load is safe
   to repeat: merge tables update in place, replace tables are reloaded.
 - **Build now, without loading:** Actions → dbt-build → Run workflow.
-- **Deploy on merge:** a merge to `main` that touches `models/`, `macros/`,
+- **Deploy on merge:** a merge to `main` that touches `models/`, `models_external/`, `macros/`,
   `tests/`, `seeds/`, `snapshots/` or the dbt config files runs `deploy.yml`. It
   builds in prod only the changed models and their children, then uploads the
   manifest and the docs. It waits while nightly holds prod. If it fails, fix in a
