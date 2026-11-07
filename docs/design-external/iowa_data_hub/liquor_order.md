@@ -54,7 +54,7 @@ they belong to Product, not the fact.
 ## Bubble chart
 ```mermaid
 flowchart LR
-    date[Date] --- f["<b>Liquor order</b><br/>Grain: 1 row per invoice line<br/>(returns as negative lines)"]
+    date[Date] --- f["<b>fact_liquor_order_line</b><br/>Grain: 1 row per invoice line<br/>(returns as negative lines)"]
     store[Store] --- f
     f --- product[Product]
     f --- vendor[Vendor]
