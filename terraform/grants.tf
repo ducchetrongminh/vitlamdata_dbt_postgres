@@ -35,6 +35,7 @@ locals {
   table_readers = {
     loader      = ["transformer", "developer"]
     transformer = ["developer"]
+    ci          = ["developer"] # PR builds, readable for review
   }
 
   default_select = merge([
@@ -96,6 +97,17 @@ resource "postgresql_default_privileges" "select" {
   role        = local.role_names[each.value.role]
   object_type = "table"
   privileges  = ["SELECT"]
+}
+
+# ALTER DEFAULT PRIVILEGES FOR ROLE ci GRANT USAGE ON SCHEMAS TO developer.
+# CI creates its ci_pr_<n>_* schemas at run time, so a per-schema grant cannot
+# reach them; this covers each one as it is created.
+resource "postgresql_default_privileges" "ci_schema_usage" {
+  database    = postgresql_database.dw.name
+  owner       = local.role_names["ci"]
+  role        = postgresql_role.developer.name
+  object_type = "schema"
+  privileges  = ["USAGE"]
 }
 
 # private.pii_key is created by pii_key.sql as postgres, after apply; this gives

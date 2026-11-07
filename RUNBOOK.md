@@ -368,7 +368,8 @@ psql
 ```
 
 `psql` asks for your dev password. As a member of `developer` you can read the
-prod schemas and create your own, but not write prod.
+prod schemas and each PR's `ci_pr_<n>_*` schemas, and create your own, but not
+write prod or CI.
 
 ### Check privileges
 
