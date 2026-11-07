@@ -66,6 +66,19 @@ do $$ begin
 end $$;
 reset role;
 
+-- developer: reads the PR build ci created above (default privileges), cannot
+-- write it.
+set role developer;
+select from ci_pr_0_check.t;
+do $$ begin
+    begin
+        insert into ci_pr_0_check.t values (2);
+        raise exception 'FAIL: developer can write ci_pr_0_check';
+    exception when insufficient_privilege then null;
+    end;
+end $$;
+reset role;
+
 -- reporter_public: can connect, sees no tables.
 do $$ begin
     if not has_database_privilege('reporter_public', current_database(), 'CONNECT') then

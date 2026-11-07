@@ -111,7 +111,7 @@ and CI side by side.
 | `snapshots` | `transformer` | dbt snapshots of raw tables, 1:1 like `raw_*` (PII unhashed); the only backed-up schema |
 | `private` | superuser | `pii_key` table (one row), readable by `transformer` and `developer` |
 | `dbt_<user>_*` | that developer | dev builds |
-| `ci_pr_<n>_*` | `ci` | PR builds, kept until the PR closes |
+| `ci_pr_<n>_*` | `ci` | PR builds, kept until the PR closes; readable by `developer` for review |
 
 ## 5. dbt project
 
@@ -208,14 +208,15 @@ revoked on the database and on the `public` schema.
 |---|---|---|
 | `loader` | yes | owns `raw_*` and `raw_*_staging` |
 | `transformer` | yes | owns `staging`, `intermediate`, `mart_*`, `snapshots`; `SELECT` on `raw_*` and `private.pii_key` |
-| `developer` | no (group) | `CREATE` on the database; `SELECT` on `raw_*`, `staging`, `intermediate`, `mart_*`, `snapshots` and `private.pii_key`; no write on prod schemas |
+| `developer` | no (group) | `CREATE` on the database; `SELECT` on `raw_*`, `staging`, `intermediate`, `mart_*`, `snapshots`, `ci_pr_<n>_*` and `private.pii_key`; no write on prod or CI schemas |
 | `ci` | yes | member of `developer` |
 | personal dev logins | yes | members of `developer` |
 | `reporter_public` | yes | `CONNECT`; `USAGE` + `SELECT` on the public marts only. **The list of marts will be decided later.** Metabase connects as this role |
 
 Grants on tables that dbt and dlt create later come from `ALTER DEFAULT PRIVILEGES FOR
-ROLE transformer` (and `FOR ROLE loader`). dbt rebuilds a table as a new object on every
-run, and default privileges cover each new object. There is no dbt `+grants` config.
+ROLE transformer` (and `FOR ROLE loader`, `FOR ROLE ci`). CI schemas get `USAGE` the
+same way, from default privileges on schemas `FOR ROLE ci`. dbt rebuilds a table as a
+new object on every run, and default privileges cover each new object. There is no dbt `+grants` config.
 Grants live only in Terraform.
 
 Role names are instance-global on `postgres-dw`. They do not clash with the infras roles
