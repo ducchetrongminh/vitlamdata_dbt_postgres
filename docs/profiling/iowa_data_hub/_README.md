@@ -234,8 +234,8 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
     - The old codes do not map one to one. Old `1031200` items spread over 4 new codes (77% to
       the top one), old `1022100` over 4 (52%), and old `1011200` over 5 (77%). 56 old codes split
       this way.
-    - Decision: no code-to-code mapping. The item takes its latest category (type 1), so old
-      lines get the new category through the item.
+    - Decision: the item takes its latest category (type 1), so most old lines get the new
+      category through the item. Only items never sold again use the code map of Q21.
     - Some codes keep their number but change meaning: `1011300` TENNESSEE WHISKIES became
       SINGLE BARREL BOURBON WHISKIES (Gentleman Jack moved to `1011400`). `1022100` TEQUILA
       became MIXTO TEQUILA (1800 Añejo moved to `1022200` 100% AGAVE TEQUILA). So an old code
@@ -243,9 +243,26 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
     - Coverage of the 9,881,662 lines ordered before 2016-08-29 (6,295 items):
       - 3,350 items, 9,375,392 lines (94.9%), sell again later, so they get a new category.
       - 23 items, 4,140 lines, are only in the catalog. They take its category.
-      - 2,922 items, 502,130 lines (5.1%), have no new category anywhere (Q21).
+      - 2,922 items, 502,130 lines (5.1%), have no new category anywhere. They use the code
+        map (Q21).
 20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
     flag on item 3984's 2013 lines (2013 #2).
+21. **Map the old codes for items never sold again?** Yes (human): a seed maps each old code
+    to a current code, and staging keeps the old name as the legacy category name (type 3).
+    The seed is `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`, 92 old codes:
+    - 81 are mapped by items: the current code that most lines of the old code's items carry
+      today. Lines, not items, decide. From Jan 2016 some lines already carry a new code
+      with the old code's name, such as Ardbeg 10 as `1012300 IRISH WHISKIES`. By items, old
+      `1012300` would map to Single Malt Scotch (35 items, 2,356 lines). By lines it maps to
+      Irish Whiskies (32 items, 80,599 lines).
+    - 8 are mapped by name (`mapped_by = manual`). For 5 of them, no item sells again
+      (`LOW PROOF VODKA` → `AMERICAN VODKAS`). For 3, the item mapping is wrong: `1701100`
+      DECANTERS & SPECIALTY PACKAGES → `1701100` TEMPORARY & SPECIALTY PACKAGES, and the
+      `101220` Craigellachie lines (2014 #1) → SINGLE MALT SCOTCH.
+    - 3 stay unmapped and take the Unknown category: `1501100` HIGH PROOF BEER, and `1081100`
+      and `1089290` with no name, 39 lines in all.
+    - Review the 6 rows with `share_of_moved_lines` < 0.6, where the old code split. Example:
+      `1022100` TEQUILA → `1022100` MIXTO TEQUILA at 0.56; the rest went to 100% AGAVE TEQUILA.
 
 ## Questions for the human
 
@@ -259,12 +276,6 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
     `52722` is never used for this store, in any year, so "take the latest" keeps `57222`.
     `57222` is both its first and latest zip. Can staging replace `57222` with `52722` for store
     2687, or should the zip stay as loaded? (2026 #5)
-
-21. 2,922 items sold only before 2016-08-29 (502,130 lines, 5.1% of those years) have no
-    category in the new taxonomy (Q19). Their old codes cannot join the new ones by number. The
-    default is to keep the old category name and key it on (code, `old`), outside the new
-    taxonomy. Alternatively, staging could map each old code to the new code most of its items
-    moved to (e.g. old `1022100` TEQUILA → `1022200` 100% AGAVE TEQUILA, 52%). Which do you want?
 
 ## Unknown
 
