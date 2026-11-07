@@ -1,0 +1,38 @@
+models:
+  - name: stg_iowa_data_hub__liquor_product
+    description: >
+      The product catalog, one row per item per category, as loaded (liquor_products #1).
+      Only the catalog's latest snapshot: items sold in the past but delisted are not here.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['product_code', 'category_name']
+    columns:
+      - name: product_code
+        description: item_no, the item's number. Digits, kept as text.
+        data_tests:
+          - not_null
+      - name: category_name
+        description: >
+          Catalog category name, mixed case. Includes the tag categories 'Temporary &
+          Specialty Packages' and 'Iowa Spirits Manufacturers'.
+        data_tests:
+          - not_null
+      - name: product_name
+        description: im_desc, spaces squeezed. Keeps the status codes it carries (DISCO, HA, USE CODE, ...).
+      - name: pack
+        description: Bottles per case.
+      - name: inner_pack
+        description: As loaded; meaning unknown (README Q4).
+      - name: proof
+        description: Null where the catalog has 0.
+      - name: age_years
+        description: Age in years (README Q3). Null when no age is stated.
+      - name: upc
+        description: Not a key, shared across unrelated items (#9). 'Unknown' for the all-zero placeholder.
+      - name: listed_date
+        description: list_on. Can be after the snapshot date (#3).
+      - name: state_bottle_cost_unit_price
+        description: What the state pays per bottle, current list. USD.
+      - name: state_bottle_retail_unit_price
+        description: What a store pays the state per bottle, current list. USD.

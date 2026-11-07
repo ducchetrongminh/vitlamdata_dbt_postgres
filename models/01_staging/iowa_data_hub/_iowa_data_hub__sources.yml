@@ -1,0 +1,21 @@
+sources:
+  - name: iowa_data_hub
+    description: >
+      Iowa liquor product catalog and sales from the Iowa Data Hub (data.iowa.gov, CC BY 4.0,
+      Iowa Alcoholic Beverages Division), loaded by ingestion/iowa_data_hub/pipeline.py. Every
+      column lands as text. Profiling record: docs/profiling/iowa_data_hub/.
+    schema: raw_iowa_data_hub
+    tables:
+      - name: _dlt_loads
+        description: dlt load log, one row per load. Used only for freshness.
+        config:
+          loaded_at_field: inserted_at
+          freshness:
+            warn_after: {count: 26, period: hour}
+            error_after: {count: 50, period: hour}
+
+      - name: liquor_products
+        description: >
+          The product catalog, the latest monthly snapshot (replaced on every load). One row
+          per item per category (item_no, category_name), not per item: an item can also sit
+          under a tag category (docs/profiling/iowa_data_hub/liquor_products.md #1).
