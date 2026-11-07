@@ -42,3 +42,5 @@ models:
         +schema: mart_learning
       marketing:
         +schema: mart_marketing
+      iowa_data_hub:
+        +schema: mart_iowa_data_hub
