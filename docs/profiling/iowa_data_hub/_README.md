@@ -160,7 +160,24 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
    - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
      unique once whole-row repeats are dropped (Q9).
 9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in staging.
-   This also drops the few real repeated lines (7 in 2025, 14 in 2026). That is accepted.
+   This also drops the few repeated lines that are in the publisher's own table: 7 in 2025, 14 in 2026.
+   - **Why they look real.** The table minus the export's extra part matches the publisher's row
+     count exactly in 2025 and 2026, so the publisher holds them too. In 2025's repeated slice,
+     the 5 such rows appear 4 times, not 2: twice in the publisher's table, then doubled by the
+     export.
+   - **When they occur.** All 21 are ordered from 2025-09-01, when `invoice_id` lost its line
+     number (2026 #1). Before that, the only identical lines are the export's copies: none in
+     2012–2019 or 2023–2024, and in 2025 only within the repeated slice. Two
+     lines of the same item and quantity on one invoice still differ by line number: 184 such
+     pairs in 2024.
+   - **What they look like.** They are single lines inside large invoices, not whole invoices
+     doubled. INV-957509 has 83 lines, 5 of them doubled. INV-930790 is two `BUY THE BARREL`
+     lines of 252 bottles each, which looks like two barrels.
+   - **No row-level test.** Once the line number is gone, a real second line and a copy are
+     identical in every column. Only the load can tell them apart: the export's extra part
+     repeats a whole CSV part. If the loader kept the part file name, staging could drop the
+     duplicated part and keep the real repeats.
+   - The loss is 21 lines of about 4.5 million.
 10. **Rounded money, Nov 2025 – Jan 2026?** Accept. We take what is available.
 11. **Why does `sales_dollars` ≠ bottles × retail?** Looked further, on 2026 Feb–Oct:
     - 20,649 of the 22,446 lines (92%) are billed at the item's retail of the previous month.
@@ -239,7 +256,9 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
     - It is `52722` with the 2nd and 3rd digits swapped.
     - In 2026, no other store has a zip outside Iowa.
 
-    Can staging replace `57222` with `52722` for store 2687? (2026 #5)
+    `52722` is never used for this store, in any year, so "take the latest" keeps `57222`.
+    `57222` is both its first and latest zip. Can staging replace `57222` with `52722` for store
+    2687, or should the zip stay as loaded? (2026 #5)
 
 21. 2,922 items sold only before 2016-08-29 (502,130 lines, 5.1% of those years) have no
     category in the new taxonomy (Q19). Their old codes cannot join the new ones by number. The
