@@ -108,6 +108,7 @@ and CI side by side.
 | `staging` | `transformer` | dbt views: rename, cast, hash PII |
 | `intermediate` | `transformer` | only intermediate models overridden to view/table |
 | `mart_<domain>` (e.g. `mart_sales`, `mart_metabase`) | `transformer` | `fact_*` / `dim_*` tables |
+| `mart_ext_<source>` (e.g. `mart_ext_iowa_data_hub`) | `transformer` | marts of an external dataset (CLAUDE.md). `ext_` follows `mart_`, so the `mart_*` grants and PII checks still match |
 | `snapshots` | `transformer` | dbt snapshots of raw tables, 1:1 like `raw_*` (PII unhashed); the only backed-up schema |
 | `private` | superuser | `pii_key` table (one row), readable by `transformer` and `developer` |
 | `dbt_<user>_*` | that developer | dev builds |
