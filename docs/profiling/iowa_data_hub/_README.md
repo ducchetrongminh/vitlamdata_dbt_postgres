@@ -190,6 +190,10 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
       the amount billed, and `state_bottle_retail` is the current list price.
     - Decision: use `sales_dollars` as the amount, accepted. Feb 2026 lines do not match January
       because January is rounded (Q10).
+12. **Replace zip `57222` with `52722` for store 2687?** Yes (human). Store 2687 `HY-VEE FAST & FRESH
+    EXPRESS- BETTENDORF` has `57222` on all 2,442 of its lines, 2019–2026, and never `52722`,
+    so taking the latest value would keep the typo. The other 17 Bettendorf stores use
+    `52722`. Staging replaces it for this store.
 14. **Which name is right for stores 010830 and 010860?** The latest:
     - 010830 is `VENTURA TOWN MART / VENTURA`. The 8 lines named `GARNER TOWN MART` on
       2026-09-17 belong to the name of store 010831, which has its own address in Garner.
@@ -247,35 +251,29 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
         map (Q21).
 20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
     flag on item 3984's 2013 lines (2013 #2).
-21. **Map the old codes for items never sold again?** Yes (human): a seed maps each old code
-    to a current code, and staging keeps the old name as the legacy category name (type 3).
-    The seed is `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`, 92 old codes:
-    - 81 are mapped by items: the current code that most lines of the old code's items carry
-      today. Lines, not items, decide. From Jan 2016 some lines already carry a new code
+21. **Map the old codes for items never sold again?** Yes, for old codes replaced by a different
+    code (human). A seed maps them, and staging keeps the old name as the legacy category name
+    (type 3). An old code that kept its number needs no map: the category dimension is type 1
+    by code and takes the latest name (`1031100` 100 PROOF VODKA → AMERICAN VODKAS).
+    - The seed is `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`. It holds 59 of
+      the 92 old codes. 30 kept their number, and 3 have no later code.
+    - 52 rows are mapped by items: the current code that most lines of the old code's items
+      carry today. Lines, not items, decide. From Jan 2016 some lines already carry a new code
       with the old code's name, such as Ardbeg 10 as `1012300 IRISH WHISKIES`. By items, old
       `1012300` would map to Single Malt Scotch (35 items, 2,356 lines). By lines it maps to
-      Irish Whiskies (32 items, 80,599 lines).
-    - 8 are mapped by name (`mapped_by = manual`). For 5 of them, no item sells again
-      (`LOW PROOF VODKA` → `AMERICAN VODKAS`). For 3, the item mapping is wrong: `1701100`
-      DECANTERS & SPECIALTY PACKAGES → `1701100` TEMPORARY & SPECIALTY PACKAGES, and the
-      `101220` Craigellachie lines (2014 #1) → SINGLE MALT SCOTCH.
-    - 3 stay unmapped and take the Unknown category: `1501100` HIGH PROOF BEER, and `1081100`
-      and `1089290` with no name, 39 lines in all.
-    - Review the 6 rows with `share_of_moved_lines` < 0.6, where the old code split. Example:
-      `1022100` TEQUILA → `1022100` MIXTO TEQUILA at 0.56; the rest went to 100% AGAVE TEQUILA.
+      `1012400` Irish Whiskies (32 items, 80,599 lines).
+    - 7 rows are mapped by name (`mapped_by = manual`). For 5, no item sells again
+      (`1031110` LOW PROOF VODKA → `1031100` AMERICAN VODKAS). For 2, the item mapping is wrong:
+      the `101220` Craigellachie lines (2014 #1) → `1012300` SINGLE MALT SCOTCH.
+    - Review the 3 rows with `share_of_moved_lines` < 0.6, where the old code split.
+    - Caveat: some codes kept their number while splitting. Old `1022100` TEQUILA becomes
+      MIXTO TEQUILA by type 1, yet only 56% of its moved lines stayed there; the rest went to
+      100% AGAVE TEQUILA. Old `1011400` BOTTLED IN BOND BOURBON becomes TENNESSEE WHISKIES (62%).
+      This affects only old items never sold again.
 
 ## Questions for the human
 
-12. Store 2687 `HY-VEE FAST & FRESH EXPRESS- BETTENDORF`, 3470 Middle Road, Bettendorf, county
-    Scott, has zip `57222` on every line in every year it appears (2019–2026, 2,442 lines).
-    - The other 17 Bettendorf stores use `52722`.
-    - `57222` is not an Iowa zip, since Iowa zips start `50`–`52`. It is in South Dakota (guess).
-    - It is `52722` with the 2nd and 3rd digits swapped.
-    - In 2026, no other store has a zip outside Iowa.
-
-    `52722` is never used for this store, in any year, so "take the latest" keeps `57222`.
-    `57222` is both its first and latest zip. Can staging replace `57222` with `52722` for store
-    2687, or should the zip stay as loaded? (2026 #5)
+None open.
 
 ## Unknown
 

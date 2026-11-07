@@ -1,15 +1,15 @@
 seeds:
   - name: iowa_data_hub__legacy_category_map
     description: >
-      Maps each category code of the old taxonomy, used on sales lines ordered before
-      2016-08-29, to a current category code (docs/profiling/iowa_data_hub/_README.md Q19,
-      Q21). Built from the items sold under each old code that sell again later: the target
-      is the current code that most of those lines' items carry today. Staging keeps the
-      line's old name as the legacy category name (type 3) and takes the current name from
-      this target. The map is used only for items with no later category. Items that sell
-      again take their own latest category (type 1). From Jan 2016 some lines already carry
-      a new code with the old code's name, so a few old codes mix two meanings. Weighting by
-      lines keeps the main one.
+      Maps a category code of the old taxonomy, used on sales lines ordered before
+      2016-08-29, to the different current code that replaced it
+      (docs/profiling/iowa_data_hub/_README.md Q19, Q21). An old code absent here kept its
+      number: the category dimension is type 1 by code and takes the latest name. Built
+      from the items sold under each old code that sell again later: the target is the
+      current code that most of those lines' items carry today, weighted by lines. Staging
+      keeps the line's old name as the legacy category name (type 3). The map is used only
+      for items with no later category; items that sell again take their own latest
+      category (type 1).
     config:
       column_types:
         legacy_category_code: text
@@ -29,15 +29,18 @@ seeds:
       - name: legacy_category_name
         description: The code's most common name on old lines. Empty where the old lines have no name.
       - name: category_code
-        description: Current category code. Empty where no item maps and no name matches; staging uses the Unknown category.
+        description: Current category code that replaced the old one. Never equal to legacy_category_code.
+        data_tests:
+          - not_null
       - name: category_name
         description: Latest sales name of category_code, for review. Staging takes the name from the current data.
       - name: mapped_by
         description: >
           'items' when the target comes from items sold on both sides; 'manual' when the
           old code's items were never sold again or the item mapping was wrong, so the target
-          is matched by name; empty when unmapped.
+          is matched by name.
         data_tests:
+          - not_null
           - accepted_values:
               arguments:
                 values: ['items', 'manual']

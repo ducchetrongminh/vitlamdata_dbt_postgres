@@ -67,7 +67,7 @@ record date. The descriptions from `store_name` to `sales_bottles` are shifted b
 | 2 | cost, retail, dollars, liters, gallons | Rounded to whole numbers on lines ordered in Jan 2026 | accept: keep the rounded values; liters and gallons can be recomputed in staging (README Q10) | decided |
 | 3 | `sales_dollars` | ≠ bottles × retail on 1.2% of lines outside #2 | accept: use `sales_dollars` as the amount. Most gaps are last month's price (README Q11) | decided |
 | 4 | `category_code`, `category_name` | An item's category changes over time; 26 NULL | clean in staging: type 1, the item's latest category other than `TEMPORARY & SPECIALTY PACKAGES`; NULL → Unknown (README Q2, Q13, Q14) | decided |
-| 5 | store columns | Name and address change over time; 2 stores carry two names at once; location NULL on 6 stores' lines; one zip typo | clean in staging: type 1, the latest name; fill NULL location from the same store's other lines. Zip `57222` still open (README Q12) (README Q14) | open |
+| 5 | store columns | Name and address change over time; 2 stores carry two names at once; location NULL on 6 stores' lines; one zip typo | clean in staging: type 1, the latest name; fill NULL location from the same store's other lines. zip `57222` → `52722` for store 2687 (README Q12, Q14) | decided |
 | 6 | `im_desc`, `pack` | Item description and pack change over time, including status codes and reuse for a new edition | accept: the line keeps the values as sold. Decide history in the product dim | open |
 | 7 | `invoice_id`, measures | Returns are `RINV-` lines with negative bottles and dollars; 1 `RINV-` line positive, 2 `INV-` lines negative | accept | open |
 | 8 | `store_no` | Two shapes: 4 digits and 6 digits starting `010` | accept: keep as text | open |
