@@ -1,0 +1,52 @@
+seeds:
+  - name: iowa_data_hub__legacy_category_map
+    description: >
+      Maps a category code of the old taxonomy, used on sales lines ordered before
+      2016-08-29, to the different current code that replaced it
+      (docs/profiling/iowa_data_hub/_README.md Q19, Q21). An old code absent here kept its
+      number: the category dimension is type 1 by code and takes the latest name. Built
+      from the items sold under each old code that sell again later: the target is the
+      current code that most of those lines' items carry today, weighted by lines. Staging
+      keeps the line's old name as the legacy category name (type 3). The map is used only
+      for items with no later category; items that sell again take their own latest
+      category (type 1).
+    config:
+      column_types:
+        legacy_category_code: text
+        legacy_category_name: text
+        category_code: text
+        category_name: text
+        mapped_by: text
+        legacy_lines: integer
+        moved_lines: integer
+        share_of_moved_lines: numeric
+    columns:
+      - name: legacy_category_code
+        description: Category code on a sales line ordered before 2016-08-29.
+        data_tests:
+          - unique
+          - not_null
+      - name: legacy_category_name
+        description: The code's most common name on old lines. Empty where the old lines have no name.
+      - name: category_code
+        description: Current category code that replaced the old one. Never equal to legacy_category_code.
+        data_tests:
+          - not_null
+      - name: category_name
+        description: Latest sales name of category_code, for review. Staging takes the name from the current data.
+      - name: mapped_by
+        description: >
+          'items' when the target comes from items sold on both sides; 'manual' when the
+          old code's items were never sold again or the item mapping was wrong, so the target
+          is matched by name.
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['items', 'manual']
+      - name: legacy_lines
+        description: Sales lines ordered before 2016-08-29 under the old code, repeats included.
+      - name: moved_lines
+        description: Of legacy_lines, the lines whose item has a category after 2016-08-29. Empty for manual rows.
+      - name: share_of_moved_lines
+        description: Share of moved_lines whose item went to category_code. Low values mean the old code split. Empty for manual rows.
