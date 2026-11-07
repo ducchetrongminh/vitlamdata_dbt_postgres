@@ -48,8 +48,8 @@ Only the columns that differ from 2026. Every other column is as in 2026.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | all | The export repeats every line ordered 2025-07-29 – 2025-10-14: 516,986 extra rows | ask (README Q9). Fix in the loader: skip a CSV part that repeats another | open |
-| 2 | `bottle_volume_ml` | 18 multi-pack items carry the pack's total ml until 2025-08-29, a bottle's ml after | ask (README Q15) | open |
+| 1 | all | The export repeats every line ordered 2025-07-29 – 2025-10-14: 516,986 extra rows | clean in staging: drop whole-row repeats (README Q9) | decided |
+| 2 | `bottle_volume_ml` | 18 multi-pack items carry the pack's total ml until 2025-08-29, a bottle's ml after | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
 | 3 | `state_bottle_cost`, `state_bottle_retail` | NULL before 2025-07-01, as the publisher states | accept | open |
 | 4 | `invoice_id` | Invoice + line number, unique, until 2025-08-29. From 2025-09-01 as 2026 #1 | accept: `invoice_id` is the line key before 2025-09-01 | open |
 | 5 | `category_name` | 4 names renamed from plural to singular on 2025-07-01, same code | clean in staging: key on `category_code`, take the latest name | open |

@@ -34,8 +34,8 @@ Only the columns that differ from 2019.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `bottle_volume_ml` | 42 minis switch from a bottle's ml to the pack's total on 2018-10-01; 2019 #1 switches them back | ask (README Q15) | open |
-| 2 | `sales_dollars`, `sales_bottles` | 500 lines with bottles but $0, Jan–Jul; 1 line with $359.64 but 0 bottles | ask (README Q18) | open |
+| 1 | `bottle_volume_ml` | 42 minis switch from a bottle's ml to the pack's total on 2018-10-01; 2019 #1 switches them back | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
+| 2 | `sales_dollars`, `sales_bottles` | 500 lines with bottles but $0, Jan–Jul; 1 line with $359.64 but 0 bottles | accept: keep as is (README Q18) | decided |
 | 3 | store columns | Store 9936 `DASH EVENTS LLC` is in Colorado Springs, county `EL PASO`, no FIPS: 2 lines | accept: keep, flag as out of state | open |
 | 2019 #1 | `bottle_volume_ml` | Pack total for the 2025 #2 items all year, e.g. 48102 at 1,200 | as 2019 #1 | open |
 | 2021 #1 | `vendor_number` | NULL on 2 lines: `INV-13688900001` item 973449, `INV-12438800004` item 910621 | as 2021 #1 | open |

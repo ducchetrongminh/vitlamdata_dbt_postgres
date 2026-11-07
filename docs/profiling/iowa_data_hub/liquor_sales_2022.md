@@ -36,7 +36,7 @@ Only the columns that differ from 2023.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `category_code`, `invoice_id`, `store_no` | A system change on 2022-07-18 (guess): category codes recoded, returns and 6-digit store numbers start | clean in staging: map the old codes to the new ones (README Q17) | open |
+| 1 | `category_code`, `invoice_id`, `store_no` | A system change on 2022-07-18 (guess): category codes recoded, returns and 6-digit store numbers start | clean in staging: type 1, the item's latest category. Invoice numbers 450000–454720 reused (README Q8) (README Q17) | decided |
 | 2 | `item_no` | 2 items, 12 lines, not in `liquor_products` | accept: build those products from the sales lines | open |
 | 2025 #1 | all | The export repeats every line from midway through 2022-11-11 to 2022-12-30: 145,222 extra rows in Nov, 249,182 in Dec | as 2025 #1 | open |
 | 2024 #1 | `category_code` | Group codes are common before #1: 1082000 carries 27,218 lines | see #1 | open |

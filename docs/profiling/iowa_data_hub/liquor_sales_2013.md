@@ -35,7 +35,7 @@ Only the columns that differ from 2014.
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
 | 1 | `invoice_id` | 352 lines of 4 stores as `S999999-99999999`; 172 lines of 1 store on 2013-07-08 as `S` + 15 digits | accept: unique; do not parse the line number from it | open |
-| 2 | `sales_dollars` | 3984 `ABSOLUT W/4-50MLS` sells at $206.07 and $206.82 a unit on all 287 lines, Oct–Dec: $820,193 in all | ask (README Q20) | open |
+| 2 | `sales_dollars` | 3984 `ABSOLUT W/4-50MLS` sells at $206.07 and $206.82 a unit on all 287 lines, Oct–Dec: $820,193 in all | accept: keep the amount, flag the item's 2013 lines (README Q20) | decided |
 | 3 | `bottle_volume_ml` | 7,580 ml on 1 line of 917836 `EARLY TIMES BOURBON 354`, priced like a 750 ml bottle | clean in staging: guess 750; ask | open |
 | 2014 #1 | `category_code` | `101220` on 4 lines of `CRAIGELLACHIE` | as 2014 #1 | open |
 | 2015 #3 | `bottle_volume_ml` | 0 on 1 line of 905230 `RONDIAZ DSS LEMON RUM` | as 2015 #3 | open |

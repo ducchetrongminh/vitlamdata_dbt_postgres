@@ -44,7 +44,7 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
 
 - `liquor_sales_<year>.item_no` → `liquor_products.item_no`, many to one. Taken from the shared column and
   the publisher's statement that `item_no` identifies a product. No database constraint
-  exists: the raw schema has no constraints. Confirm this with
+  exists: the raw schema has no constraints. Confirmed by
   the human (question 1). Tested on all rows of every year (repeated lines of 2025 #1
   included):
 
@@ -103,64 +103,161 @@ the Iowa Alcoholic Beverages Division (ABD) under CC BY 4.0.
   retail as of the sale. They change over time (2026 #6). In Oct 2026 all of them match the
   current `liquor_products` row on every line. Older lines may differ.
 
+## Decisions
+
+Answers from the human, 2026-11-07. Each question keeps its number, so issue tables that cite
+"README Qn" still point here. Questions still open are under
+[Questions for the human](#questions-for-the-human), and those nobody can answer are under [Unknown](#unknown).
+
+**Product attributes are type 1.** An item's category, name, volume and pack
+change over time, mostly through fixes to wrong input (Q14–Q17, Q19). The product dimension
+takes each item's latest value, with exceptions noted below. Lines keep their own values in staging.
+
+1. **Is `item_no` → `liquor_products.item_no` the join?** Yes. Items missing from the catalog are
+   built from the sales lines (Relationships).
+2. **Which category is an item's real one?** Unknown. A product can change category over time.
+   Decision: the catalog keeps its grain (`item_no`, `category_name`). The product dimension takes
+   the item's latest category from the sales lines, skipping
+   `TEMPORARY & SPECIALTY PACKAGES` when the item has another (Q14). Items never sold take their
+   catalog category other than `Temporary & Specialty Packages`, if there is one.
+3. **What unit is `age`?** Found: years, except for a few products entered in months.
+   - The description states the age on 639 catalog rows, and `age` equals it on all of them but
+     one: 900793 `WhistlePig 18yr` has 128.
+   - Almost every value from 36 up without a stated age is a month count of a whiskey or añejo
+     tequila:
+     - Hard Truth: 36, 48, 60, 72.
+     - Old Forester: 48.
+     - Jack Daniel's Single Barrel: 48.
+     - Woodford Reserve: 72.
+     - Añejo and extra añejo tequilas: 36–81.
+     - Fox and Oden: 121.
+     - `Juan in a Million 116 month`: 116.
+   - Exceptions: 915385 `Midleton Silent Distillery Chapter 5` at 49 is likely years (guess).
+     907221 `Members Mark Highland Single Malt Scotch` at 36 is unclear.
+   - Decision: in staging, take the age from the description when it states one. Otherwise,
+     divide by 12 when `age` ≥ 36, except item 915385. Map 0 to NULL (no age stated). See products
+     issue #5.
+8. **Is there an invoice_id rule?** Yes, every value fits one. Full scan of all years:
+
+   | Shape | Ordered on | Lines | Meaning |
+   |---|---|---|---|
+   | `S` + 11 digits | 2012-01-03 – 2016-08-26 | 9,880,762 | invoice (6) + line (5) |
+   | `INV-` + 11 digits | 2016-08-29 – 2025-08-29 | 24,133,209 | invoice (6) + line (5) |
+   | `RINV-` + 11 digits | 2022-07-20 – 2025-08-29 | 9,970 | return: invoice (6) + line (5) |
+   | `INV-` + 6 digits | 2025-09-01 – 2026-09-14 | 2,840,113 | invoice only |
+   | `INV-` + 7 digits | 2026-09-14 – | 340,922 | invoice only; the counter passed 990154 and gained a leading 0 |
+   | `RINV-` + 6 digits | 2025-09-02 – | 2,612 | return, invoice only |
+   | 6 one-off shapes in 2012, 2013 and 2015 | | 1,170 | still end in a 5-digit line number (2012 #2, 2013 #1, 2015 #1) |
+
+   Rules for staging:
+   - `is_return` = the id starts with `R`.
+   - Up to 2025-08-29, the line number is the last 5 digits and the invoice is everything before
+     them. From 2025-09-01 the id has no line number.
+   - The invoice number alone is not unique. The S era (up to 341595) and the INV era (from 1)
+     overlap. After the 2022-07-18 system change (2022 #1), invoices 450000 – 454720 were issued a
+     second time to other stores. Their Feb 2022 lines are numbered after the July lines, so
+     full ids stay unique. The invoice key is (invoice text, `store_no`, `ordered_on`).
+   - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
+     unique once whole-row repeats are dropped (Q9).
+9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in staging.
+   This also drops the few real repeated lines (7 in 2025, 14 in 2026). That is accepted.
+10. **Rounded money, Nov 2025 – Jan 2026?** Accept. We take what is available.
+11. **Why does `sales_dollars` ≠ bottles × retail?** Looked further, on 2026 Feb–Oct:
+    - 20,649 of the 22,446 lines (92%) are billed at the item's retail of the previous month.
+      All of them are items whose retail changed that month.
+    - Those lines are spread over the whole month. About 1 in 9 lines of such an item still gets
+      the old price. On days 28–31 nearly all do.
+    - Most are on invoices where other lines are billed normally: 10,285 invoices have only one
+      such line. Blue Ox (20% of its lines), USDP and Ole Smoky lead.
+    - Guess: some orders keep the price in force when they were placed. So `sales_dollars` is
+      the amount billed, and `state_bottle_retail` is the current list price.
+    - Decision: use `sales_dollars` as the amount, accepted. Feb 2026 lines do not match January
+      because January is rounded (Q10).
+14. **Which name is right for stores 010830 and 010860?** The latest:
+    - 010830 is `VENTURA TOWN MART / VENTURA`. The 8 lines named `GARNER TOWN MART` on
+      2026-09-17 belong to the name of store 010831, which has its own address in Garner.
+    - 010860 is `PUMP & PANTRY 70 / JOHNSTON`, opened 2026-08-02. The 36 lines named `HY-VEE GAS /
+      JOHNSTON` on 2026-08-03 – 08-12 use the name of store 2723 at 5902 Merle Hay Rd.
+    - Both look like a name input wrongly, then fixed. Decision: the store dimension takes the
+      latest name (type 1). `TEMPORARY & SPECIALTY PACKAGES` is likely a placeholder category in
+      the same way (Q2).
+15. **Do names change with the volume flips?** No. Only the volume changes, so it is an input fix,
+    not a new product:
+
+    | Flip | Items | Name changed | Pack changed |
+    |---|---|---|---|
+    | 2018-10-01, bottle → pack (2018 #1) | 43 | 10, cosmetic (`WESTERN SON LIME VODKA MINI` → `WESTERN SON LIME MINI`) | 0 |
+    | 2019-08-01, pack → bottle (2019 #1) | 107 | 7, cosmetic (`CAPTAIN MORGAN SPICED RUM MINI` ↔ `… ORIGINAL SPICED MINI`) | 3 (Deep Eddy 10,12 → 10) |
+    | 2025-09-01, pack → bottle (2025 #2) | 17 | 0 | 0 |
+
+    Every renamed item is still a `MINI`, that is, one bottle. Decision: the product dimension takes
+    the latest `bottle_volume_ml` (one bottle). Staging recomputes liters from it as bottles × ml
+    / 1000. It does not use `sales_liters` for these items.
+16. **Do the 26 group-code items later get a regular code?** Yes, when they sell again. On all
+    lines 2023–2026:
+
+    | Group code | Items | Lines | Later on a regular code | Last group-code line |
+    |---|---|---|---|---|
+    | `1032000` IMPORTED VODKAS | 4 | 72 | 3 (`1032100`) | 2024-03-25 |
+    | `1081000` AMERICAN CORDIALS & LIQUEURS | 27 | 61 | 8 (`1081300`, `1081400`) | 2024-01-18 |
+    | `1082000` IMPORTED CORDIALS & LIQUEURS | 41 | 234 | 25 (`1082100`) | 2024-03-27 |
+    | `1092000` IMPORTED DISTILLED SPIRITS SPECIALTY | 17 | 68 | 8 (`1092100`) | 2024-03-27 |
+
+    - The group code always comes first, and no item goes back to it.
+    - The 45 items never sold again are all in the catalog under the regular category
+      (`American Cordials & Liqueur` 19, `Imported Cordials & Liqueur` 16, …).
+    - Decision: type 1, as Q2. Map each group code to the regular code with the same name for
+      lines whose item has no later category.
+17. **Was 2022-07-18 a system change?** Likely (human). Decision: category recodes are type 1, as
+    Q16. Whether returns before it were left out stays unknown.
+18. **What are the $0 lines?** Unknown. Decision: keep them as they are.
+19. **Is there a mapping from old to new category codes?** Checked: no.
+    - 2,494 items sell on both sides of 2016-08-29 (2016 and Jan–Feb 2017). 2,272 of them (91%)
+      keep the same `im_desc`, so they are the same product with a new category.
+    - The old codes do not map one to one. Old `1031200` items spread over 4 new codes (77% to
+      the top one), old `1022100` over 4 (52%), and old `1011200` over 5 (77%). 56 old codes split
+      this way.
+    - Decision: no code-to-code mapping. The item takes its latest category (type 1), so old
+      lines get the new category through the item.
+    - Some codes keep their number but change meaning: `1011300` TENNESSEE WHISKIES became
+      SINGLE BARREL BOURBON WHISKIES (Gentleman Jack moved to `1011400`). `1022100` TEQUILA
+      became MIXTO TEQUILA (1800 Añejo moved to `1022200` 100% AGAVE TEQUILA). So an old code
+      must never join to the new taxonomy by number.
+    - Coverage of the 9,881,662 lines ordered before 2016-08-29 (6,295 items):
+      - 3,350 items, 9,375,392 lines (94.9%), sell again later, so they get a new category.
+      - 23 items, 4,140 lines, are only in the catalog. They take its category.
+      - 2,922 items, 502,130 lines (5.1%), have no new category anywhere (Q21).
+20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
+    flag on item 3984's 2013 lines (2013 #2).
+
 ## Questions for the human
 
-1. Is `liquor_sales.item_no` → `liquor_products.item_no` the intended join? Do sales use the same item
-   numbers as the current catalog, including for delisted items?
-2. Why do 2,354 items appear under more than one category (products issue #1)? Guess:
-   `Temporary & Specialty Packages` and `Iowa Spirits Manufacturers` are extra groupings
-   added on top of a product's main category. Which category is the item's real one?
-3. `age` is text in the publisher's own SQL, unlike the other numeric fields. What unit
-   does it use, and what does `0` mean?
-4. Is `inner_pack` the number of bottles inside one sellable unit, as with
-   "Johnnie Walker Black w/2-50mls" having `inner_pack = 3`?
-5. What is `scc`? It has only 8 distinct values over 10,481 rows, so it cannot be a
-   per-product shipping-container code (products issue #4).
-6. What do the codes in `im_desc` mean (`DISCO`, `HA`, `BP`, `USE CODE n`, `NO VOR`, `DNO`,
-   `Ingredient`)? Should the 13 "Ingredient" items and `999998 Iowa Spirits Magazine` stay
-   in the product dimension? (products issues #6, #10)
-7. Price and pack errors: is Old Elk 920301 bottle cost `1250` a typo for `40`? Which value
-   is wrong on the 36 rows where case cost ≠ bottle cost × pack? (products issues #7, #8)
-8. Sales `invoice_id` has held only the invoice number since 2025-09-01, without the line
-   number, and no column set is unique (2026 #1). Can the publisher restore a line number?
-   If not, is a line key built in staging from the row's content acceptable, given that an
-   invoice can repeat an identical line?
-9. The 2025 export repeats a slice of lines in an extra CSV part: 516,986 extra rows, ordered
-   2025-07-29 – 2025-10-14 (2025 #1). The slice moved between downloads. The 2022, 2021 and
-   2020 exports do the same at year end (394,404, 475,994 and 533,380 extra rows). Without the repeats
-   the table matches the publisher's count exactly. Should the loader skip a part whose rows
-   all appear in an earlier part? Should we report the export bug to the publisher?
-10. Cost, retail, dollars, liters and gallons are rounded to whole numbers on all lines from
-    2025-11-01 to 2026-01-31 (2026 #2, 2025 table). Is the publisher aware? Do we accept rounded money for
-    those three months, or take prices from elsewhere?
-11. `sales_dollars` ≠ bottles × `state_bottle_retail` on 1–3% of lines (2026 #3). Which one is
-    the amount the store paid? Are these discounts?
-12. Store 2687 has zip `57222` (South Dakota). Is `52722` (Bettendorf) correct? (2026 #5)
-13. Item 921635 `TEMPLETON USA 250 STRAIGHT BOURBON WHISKEY` has no category on 26 lines in
-    2026 (2026 #4). Which category is it?
-14. Stores 010830 and 010860 each carry two names on the same days, in different towns
-    (`VENTURA TOWN MART` and `GARNER TOWN MART`; `PUMP & PANTRY 70` and `HY-VEE GAS`). Were
-    those lines keyed to the wrong store number? (2026 #5)
-15. On 2018-10-01, 42 minis switch `bottle_volume_ml` from one bottle to the pack's total
-    (2018 #1). On 2019-08-01, 106 items switch `bottle_volume_ml` from the pack's total to one bottle (2019 #1).
-    Before 2025-09-01, 18 more multi-pack items carry the pack's total ml in `bottle_volume_ml`
-    (Twisted Shotz party pack 1,800 ml), and one bottle's ml after (25 ml) (2025 #2). Is the
-    newer value right? Then liters before Sep 2025 are overstated for these items. Two
-    Twisted Tea items drop 750 → 25 ml and 50 → 25 ml: is 25 correct for them?
-16. In Jan–Mar 2024, 26 new items carry a group-level category code ending `000` (360 lines all through 2023) (`1082000
-    IMPORTED CORDIALS & LIQUEURS`), with the same name as a regular code (`1082100`) (2024 #1).
-    Should staging map each group code to the regular code with the same name?
-17. Around 2022-07-18 several codes change at once (2022 #1). Category `1071100` becomes
-    `1071000`, `1901200` becomes `1901000`, and most `1082000` items move to `1082100`. Returns
-    (`RINV-`) and 6-digit store numbers first appear. Was there a system change then? Were
-    returns before it left out of the data?
-18. In 2017 (833 lines) and Jan–Jul 2018 (500 lines), lines have bottles but `sales_dollars` = 0 (2018 #2). Are
-    these free goods or samples? Should they count in bottles sold? In Feb 2012, 3,072 Luxco
-    lines (Paramount brands) have $0 (2012 table): did they lose their price?
-19. Until 2016-08-26 sales use an older category taxonomy (2016 #1), and some codes mean
-    another category after (`1011300` TENNESSEE WHISKIES, then SINGLE BARREL BOURBON
-    WHISKIES). Is there a mapping from the old codes to the new? Without one, staging must
-    key category on (code, period).
-20. Item 3984 `ABSOLUT W/4-50MLS` is billed at $206 a unit on all 287 lines in Oct–Dec 2013,
-    $820,193 in all, while Absolut 750 ml sells at $16.65 (2013 #2). Is the price ten times
-    too high? Should staging correct it, or leave it and flag it?
+12. Store 2687 `HY-VEE FAST & FRESH EXPRESS- BETTENDORF`, 3470 Middle Road, Bettendorf, county
+    Scott, has zip `57222` on every line in every year it appears (2019–2026, 2,442 lines).
+    - The other 17 Bettendorf stores use `52722`.
+    - `57222` is not an Iowa zip, since Iowa zips start `50`–`52`. It is in South Dakota (guess).
+    - It is `52722` with the 2nd and 3rd digits swapped.
+    - In 2026, no other store has a zip outside Iowa.
+
+    Can staging replace `57222` with `52722` for store 2687? (2026 #5)
+
+21. 2,922 items sold only before 2016-08-29 (502,130 lines, 5.1% of those years) have no
+    category in the new taxonomy (Q19). Their old codes cannot join the new ones by number. The
+    default is to keep the old category name and key it on (code, `old`), outside the new
+    taxonomy. Alternatively, staging could map each old code to the new code most of its items
+    moved to (e.g. old `1022100` TEQUILA → `1022200` 100% AGAVE TEQUILA, 52%). Which do you want?
+
+## Unknown
+
+Nobody can answer these now. The default stands until someone can.
+
+4. Is `inner_pack` the bottles inside one sellable unit? Default: keep it as loaded, with no meaning assumed.
+5. What is `scc`? Default: do not use it (products issue #4).
+6. What do the `im_desc` codes mean (`DISCO`, `HA`, `BP`, `USE CODE n`, `NO VOR`, `DNO`,
+   `Ingredient`)? Default: keep `im_desc` as loaded. Keep the 13 Ingredient items and the magazine
+   in the product dimension.
+7. Is Old Elk 920301 bottle cost `1250` a typo for `40`, and which value is wrong where case
+   cost ≠ bottle cost × pack? Default: keep the values as loaded (products issues #7, #8).
+13. Which category is 921635 `TEMPLETON USA 250 STRAIGHT BOURBON WHISKEY` (no category on 26
+    lines in 2026)? Default: the Unknown category member (2026 #4).
+17. Were returns before 2022-07-18 left out of the data? Default: assume no returns before then.

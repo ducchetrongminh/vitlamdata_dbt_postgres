@@ -52,16 +52,16 @@ is one item in one category (`item_no`, `category_name`), **not one item**: see 
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `item_no` | Not unique: 2,354 items are listed under 2–3 categories | ask (README Q2). Then staging either keeps grain (`item_no`, `category_name`) or picks one category per item | open |
+| 1 | `item_no` | Not unique: 2,354 items are listed under 2–3 categories | accept: keep grain (`item_no`, `category_name`); the product dim takes the latest sales category (README Q2) | decided |
 | 2 | `category_name` | Near-duplicate values (singular vs plural), 11 rows | clean in staging: map `American Cordials & Liqueurs` → `American Cordials & Liqueur`, `Imported Cordials & Liqueurs` → `Imported Cordials & Liqueur`, `Imported Vodka` → `Imported Vodkas` | open |
 | 3 | `list_on` | 110 dates after the snapshot date | ask: listed ahead of release? If so, accept | open |
-| 4 | `scc` | 8 distinct values over 10,481 rows: not a per-item code | ask (README Q5) | open |
-| 5 | `age` | Mixes years and months | ask (README Q3) | open |
+| 4 | `scc` | 8 distinct values over 10,481 rows: not a per-item code | accept: do not use `scc` (README Q5, unknown) | unknown |
+| 5 | `age` | Mixes years and months | clean in staging: years; take the age stated in `im_desc`, else ≥ 36 is months (÷ 12) except 915385; 0 → NULL (README Q3) | decided |
 | 6 | `bottle_volume_ml`, `proof` | 0 on 13 "Ingredient" items, a magazine, and one whisky | clean in staging: 0 → NULL; ask whether non-retail items stay in the product dim | open |
 | 7 | `state_bottle_cost` | One bottle cost is a typo; 17 rows are off the 1.5× markup | ask | open |
 | 8 | `state_case_cost` | 36 rows differ from bottle cost × pack by more than rounding | ask | open |
 | 9 | `upc` | 2 all-zero placeholders; 1,779 UPCs shared by 4,169 unrelated items | clean in staging: all-zero → NULL; do not use `upc` as a key | open |
-| 10 | `im_desc` | Status codes inside the description (`DISCO`, `HA`, `USE CODE`, …) | ask (README Q6) | open |
+| 10 | `im_desc` | Status codes inside the description (`DISCO`, `HA`, `USE CODE`, …) | accept: keep `im_desc` and all items as loaded (README Q6, unknown) | unknown |
 | 11 | `im_desc`, `vendor_name` | Double spaces, edge spaces, mis-encoded characters | clean in staging: trim and squeeze spaces; ask whether to repair the 8 broken rows | open |
 
 ### 1. `item_no` is not unique

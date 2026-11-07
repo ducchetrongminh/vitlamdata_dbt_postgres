@@ -35,7 +35,7 @@ Only the columns that differ from 2020.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `bottle_volume_ml` | 106 items switch from the pack's total ml to a bottle's ml on 2019-08-01 | ask (README Q15). Same fix as 2025 #2 | open |
+| 1 | `bottle_volume_ml` | 106 items switch from the pack's total ml to a bottle's ml on 2019-08-01 | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
 | 2025 #2 | `bottle_volume_ml` | The 2025 #2 items carry the pack total all year, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2021 #1 | `vendor_number` | NULL on 1 line: `INV-23231800001`, item 984151 `99 ORANGES` | as 2021 #1 | open |
 | 2022 #1 | category, returns, stores | Old system all year: no returns, 4-digit stores only | as 2022 #1 | open |
