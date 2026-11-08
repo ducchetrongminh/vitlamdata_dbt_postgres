@@ -2,10 +2,13 @@
 -- each store takes its latest name (README Q14) and its latest known location
 -- (docs/profiling/iowa_data_hub/liquor_sales_2026.md #5).
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
--- (ephemeral by default): it groups ~38M lines. Past years load once and never change
--- (README); only the latest year reloads. So a normal run reads only the years from the
--- latest one already stored (order_year >= last_order_year; the staging view then skips
--- the other year tables) and merges those stores in. --full-refresh reads every year.
+-- (ephemeral by default): it groups ~38M lines, and reading every year in one query used
+-- too much disk on the database VM. So each run reads one year (the staging view skips the
+-- other year tables) and merges its stores in:
+-- - a first build, or --full-refresh, reads the first year only;
+-- - each later run reads the year after the latest stored one, so it catches up in one run
+--   per year (15 runs for 2012-2026);
+-- - once caught up, each run rereads the last year, the only one that reloads (README).
 -- Reads staging, not int_order_line__deduplicated: repeats cannot change a store's latest
 -- name or location, and dropping them over every year ran the database out of temp disk.
 {{ config(
@@ -20,9 +23,15 @@ with
 order_line as (
     select * from {{ ref('stg_iowa_data_hub__liquor_order_line') }}
     {% if is_incremental() %}
-    -- from the latest stored year, not only the newest: when a year starts, the year
-    -- before still gets its last reloads
-    where order_year >= (select max(last_order_year) from {{ this }})
+    -- shortcut: when a new year is added, the run reads only that year, so the year before
+    -- misses any reload after the last run; rerun it with --full-refresh and catch up if
+    -- that matters.
+    where order_year = least(
+        (select max(last_order_year) from {{ this }}) + 1,
+        {{ var('iowa_data_hub_last_order_year') }}
+    )
+    {% else %}
+    where order_year = {{ var('iowa_data_hub_first_order_year') }}
     {% endif %}
 ),
 

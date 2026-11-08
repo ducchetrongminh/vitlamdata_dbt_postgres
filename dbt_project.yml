@@ -44,3 +44,9 @@ models:
         +schema: mart_marketing
       iowa_data_hub:
         +schema: mart_ext_iowa_data_hub
+
+vars:
+  # Iowa liquor sales: the year tables liquor_sales_<year> in scope. Add a new year by
+  # raising the last one (and its source in _iowa_data_hub__sources.yml).
+  iowa_data_hub_first_order_year: 2012
+  iowa_data_hub_last_order_year: 2026

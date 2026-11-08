@@ -27,7 +27,8 @@ models:
     description: >
       One row per store that ordered, from the sales lines: its latest name and latest known
       location (README Q14, liquor_sales_2026 #5). Plus the unknown store ('UNKNOWN').
-      Incremental: a normal run rereads only the lines from last_order_year on.
+      Incremental, one year per run: a first build reads the first year, each run the
+      next, until the last year, which every run then rereads.
     config:
       alias: int_store__latest_picked
     columns:
@@ -37,5 +38,5 @@ models:
           - not_null
       - name: last_order_year
         description: >
-          The latest year the store ordered in. The incremental filter: a normal run reads
-          the order lines from the max of this column on. Null on the unknown store.
+          The latest year the store ordered in. Its max is the latest year read: the next
+          run reads the year after it. Null on the unknown store.
