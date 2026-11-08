@@ -22,17 +22,21 @@
 
 with
 
-source as (
+-- Why we don't follow docs/dbt-layers-conventions.md#22-compulsory-cleanup-transformations
+-- (a source CTE, then a filtered CTE): one distinct over every year at once sorted ~38M
+-- lines and ran the database out of temp disk ("No space left on device"). A repeat is
+-- always inside one year table, since each table is a slice by ordered_on, so each year is
+-- deduplicated on its own: 15 sorts of 2-3M lines. Same result as one distinct over all.
+-- Not built yet: it lowers peak temp disk only if Postgres frees each year's sort files
+-- before the whole query ends.
+filtered as (
     {%- for year in years if not is_incremental() or year == latest_year %}
-    select *, {{ year }} as order_year from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
+    select distinct *, {{ year }} as order_year     -- Q9: drop whole-row repeats
+    from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
     {%- if not loop.last %}
     union all
     {%- endif %}
     {%- endfor %}
-),
-
-filtered as (
-    select distinct * from source       -- Q9: drop whole-row repeats
 ),
 
 renamed as (
