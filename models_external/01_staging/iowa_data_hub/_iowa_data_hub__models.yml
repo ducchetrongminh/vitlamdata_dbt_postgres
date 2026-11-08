@@ -57,8 +57,9 @@ models:
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
       - name: vendor_code
         description: >
-          vendor_number, left-padded to 3 digits: before 2016-08-29 it has no leading zero
-          (liquor_sales_2016 #1). 'UNKNOWN' on the few lines without one (liquor_sales_2021 #1).
+          vendor_number, as loaded: before 2016-08-29 vendors under 100 have no leading zero,
+          e.g. 10, later 010 (liquor_sales_2016 #1). 'UNKNOWN' on the few lines without one
+          (liquor_sales_2021 #1).
       - name: ordered_on
       - name: order_year
         description: >

@@ -77,7 +77,7 @@ cleaned as (
         -- Keys
         order_line_id,
         store_code,
-        lpad(vendor_code, 3, '0') as vendor_code,         -- 2016 #1: 2 digits before 2016-08-29
+        vendor_code,
         -- Dates
         ordered_on,
         order_year,

@@ -1,7 +1,8 @@
--- One row per vendor, built from the sales lines: the vendor applied at the order, which can
+-- One row per vendor code, built from the sales lines: the vendor applied at the order, which can
 -- differ from the catalog's. Vendor is type 1: each vendor takes its latest line's name
--- (docs/profiling/iowa_data_hub/liquor_sales_2025.md #6), so names from the system before
--- 2016-08-29 give way to the later ones (liquor_sales_2016.md #1). Cleans the name after
+-- (docs/profiling/iowa_data_hub/liquor_sales_2025.md #6). A code of the system before
+-- 2016-08-29 (10) keeps its own row and name; iowa_data_hub__int_vendor__current_named gives
+-- it the name of its later code (010). Cleans the name after
 -- picking, on one row per vendor: staging passes it as loaded.
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
 -- (ephemeral by default): same reason and load rules as iowa_data_hub__int_store__latest_picked,

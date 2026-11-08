@@ -37,7 +37,7 @@ Only the columns that differ from 2017.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `invoice_id`, category, vendor | A system change on 2016-08-29: invoice format, category taxonomy, vendor number format and vendor names all change | clean in staging: type 1, the item takes its latest category, else the legacy category map; keep the old name as legacy category (README Q19, Q21); left-pad vendor numbers to 3 digits; take vendor names from the later system | open |
+| 1 | `invoice_id`, category, vendor | A system change on 2016-08-29: invoice format, category taxonomy, vendor number format and vendor names all change | clean in staging: type 1, the item takes its latest category, else the legacy category map; keep the old name as legacy category (README Q19, Q21); keep both vendor codes (10 and 010); the old code takes the later code's name as current vendor name, type 3 | open |
 | 2 | `vendor_name` | `R�MY COINTREAU USA`: the `É` is a replacement character on 5,749 lines | clean in staging: replace with `É` | open |
 | 3 | `store_zip_code` | `712-2` on 1,336 lines of store 4307 (Dunlap) | clean in staging: take the zip from the store's other years | open |
 | 4 | `county_fips_code`, `county_name` | NULL on 68,371 lines that have an address, all before 2016-08-29 | clean in staging: take the county from the store's other lines | open |

@@ -43,7 +43,8 @@ models:
 
   - name: iowa_data_hub__int_vendor__latest_picked
     description: >
-      One row per vendor seen on a sales line: its latest line's name (liquor_sales_2025 #6).
+      One row per vendor code seen on a sales line, 10 and 010 apart (liquor_sales_2016 #1):
+      its latest line's name (liquor_sales_2025 #6).
       Plus the unknown vendor ('UNKNOWN'). Incremental, one year per run, as
       iowa_data_hub__int_store__latest_picked.
     config:
@@ -57,3 +58,16 @@ models:
         description: >
           The latest year the vendor sold in. Its max is the latest year read: the next run
           reads the year after it. Null on the unknown vendor.
+
+  - name: iowa_data_hub__int_vendor__current_named
+    description: >
+      iowa_data_hub__int_vendor__latest_picked with each code's own name as
+      historic_vendor_name, plus current_vendor_name: a code of the old system (10) takes the
+      name of its later code (010) (liquor_sales_2016 #1). Plus the unknown vendor.
+    config:
+      alias: int_vendor__current_named
+    columns:
+      - name: vendor_code
+        data_tests:
+          - unique
+          - not_null
