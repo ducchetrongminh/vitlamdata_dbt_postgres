@@ -36,3 +36,29 @@ models:
         description: What the state pays per bottle, current list. USD.
       - name: state_bottle_retail_unit_price
         description: What a store pays the state per bottle, current list. USD.
+
+  - name: stg_iowa_data_hub__liquor_order_line
+    description: >
+      Sales lines of every year in scope (2025, 2026), one row per invoice line, whole-row
+      repeats dropped (README Q9). Holds only the columns a model uses so far: the store's.
+    columns:
+      - name: order_line_id
+        description: >
+          invoice_id up to 2025-08-29, when it still ends in the line number; after, an md5 of
+          the whole raw row (README Q8).
+        data_tests:
+          - unique
+          - not_null
+      - name: store_code
+        description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
+        data_tests:
+          - not_null
+      - name: ordered_on
+        data_tests:
+          - not_null
+      - name: store_name
+        description: The store's name on this line, spaces squeezed. Changes over time (#5).
+      - name: store_zip_code
+        description: 5 digits. Store 2687's typo 57222 is replaced by 52722 (README Q12).
+      - name: county_fips_code
+        description: Iowa state code 19 + county code.

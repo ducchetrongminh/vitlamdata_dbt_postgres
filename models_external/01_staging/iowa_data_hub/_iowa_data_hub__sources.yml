@@ -19,3 +19,12 @@ sources:
           The product catalog, the latest monthly snapshot (replaced on every load). One row
           per item per category (item_no, category_name), not per item: an item can also sit
           under a tag category (docs/profiling/iowa_data_hub/liquor_products.md #1).
+
+      - name: liquor_sales_2025
+        description: >
+          Sales lines ordered in 2025, loaded once. One row per invoice line. The export repeats
+          a slice of lines (docs/profiling/iowa_data_hub/liquor_sales_2025.md #1).
+      - name: liquor_sales_2026
+        description: >
+          Sales lines ordered in 2026, reloaded on every run. One row per invoice line, with no
+          unique key (docs/profiling/iowa_data_hub/liquor_sales_2026.md #1).
