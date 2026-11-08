@@ -1,6 +1,8 @@
 -- One row per store, built from the sales lines: there is no store table. Store is type 1:
--- each store takes its latest name (README Q14) and its latest known location
--- (docs/profiling/iowa_data_hub/liquor_sales_2026.md #5).
+-- each store takes its latest line's name (README Q14) and location. A line can lack the
+-- location (docs/profiling/iowa_data_hub/liquor_sales_2026.md #5), but only for a while,
+-- before it is entered, so the latest line is trusted: such a store shows 'Unknown' until
+-- it orders again.
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
 -- (ephemeral by default): it groups ~38M lines, and reading every year in one query used
 -- too much disk on the database VM. So each run reads one year (the staging view skips the
@@ -35,78 +37,22 @@ order_line as (
     {% endif %}
 ),
 
-store_version as (
-    select
+-- On the latest day, a line with the location wins over one without
+latest_picked as (
+    select distinct on (store_code)
+        -- Keys
         store_code,
+        -- Name, desc
         store_name,
+        -- Attributes
         store_city,
         store_zip_code,
         county_fips_code,
         county_name,
-        max(ordered_on) as last_ordered_on,
-        max(order_year) as last_order_year
-    from order_line
-    group by 1, 2, 3, 4, 5, 6
-),
-
-latest_name as (
-    select distinct on (store_code)
-        store_code,
-        store_name,
-        last_order_year
-    from store_version
-    order by store_code, last_ordered_on desc, store_name
-),
-
--- #5: some lines lack the location (null together); a store keeps it from its other lines
-latest_location as (
-    select distinct on (store_code)
-        store_code,
-        store_city,
-        store_zip_code,
-        county_fips_code,
-        county_name
-    from store_version
-    where county_fips_code <> 'Unknown'
-    order by store_code, last_ordered_on desc, store_zip_code
-),
-
--- On an incremental run, a store whose new lines all lack the location keeps the stored one
-stored_location as (
-    {% if is_incremental() %}
-    select store_code, store_city, store_zip_code, county_fips_code, county_name
-    from {{ this }}
-    where county_fips_code <> 'Unknown'
-    {% else %}
-    select
-        null::text as store_code,
-        null::text as store_city,
-        null::text as store_zip_code,
-        null::text as county_fips_code,
-        null::text as county_name
-    where false
-    {% endif %}
-),
-
-latest_picked as (
-    select
-        -- Keys
-        latest_name.store_code,
-        -- Name, desc
-        latest_name.store_name,
-        -- Attributes; store 010206 has no location on any line
-        coalesce(latest_location.store_city, stored_location.store_city, 'Unknown') as store_city,
-        coalesce(latest_location.store_zip_code, stored_location.store_zip_code, 'Unknown')
-            as store_zip_code,
-        coalesce(latest_location.county_fips_code, stored_location.county_fips_code, 'Unknown')
-            as county_fips_code,
-        coalesce(latest_location.county_name, stored_location.county_name, 'Unknown')
-            as county_name,
         -- Load tracking
-        latest_name.last_order_year
-    from latest_name
-    left join latest_location on latest_name.store_code = latest_location.store_code
-    left join stored_location on latest_name.store_code = stored_location.store_code
+        order_year as last_order_year
+    from order_line
+    order by store_code, ordered_on desc, county_fips_code = 'Unknown', store_name
 ),
 
 unknown_store as (

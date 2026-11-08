@@ -25,7 +25,7 @@ models:
 
   - name: iowa_data_hub__int_store__latest_picked
     description: >
-      One row per store that ordered, from the sales lines: its latest name and latest known
+      One row per store that ordered, from the sales lines: its latest line's name and
       location (README Q14, liquor_sales_2026 #5). Plus the unknown store ('UNKNOWN').
       Incremental, one year per run: a first build reads the first year, each run the
       next, until the last year, which every run then rereads.

@@ -2,8 +2,8 @@ models:
   - name: iowa_data_hub__dim_store
     description: >
       Licensed Iowa stores that order liquor from the state, one row per store seen on a sales
-      line, 2012-2026, plus the unknown store ('UNKNOWN'). Type 1: the latest name and the
-      latest known location (design: docs/design-external/iowa_data_hub/liquor_order.md).
+      line, 2012-2026, plus the unknown store ('UNKNOWN'). Type 1: the name and location on
+      the store's latest line (design: docs/design-external/iowa_data_hub/liquor_order.md).
       The street address is left out: the design keeps city, zip and county.
     config:
       alias: dim_store
@@ -23,10 +23,10 @@ models:
         description: The latest name on the store's lines. Older names often lack the city suffix.
       - name: store_city
         data_type: text
-        description: Latest known city. 'Unknown' for store 010206, which never has a location.
+        description: City on the latest line. 'Unknown' while a new store's location is not entered yet, and for store 010206, which never has one.
       - name: store_zip_code
         data_type: text
-        description: 5 digits. Latest known.
+        description: 5 digits, on the latest line.
       - name: county_fips_code
         data_type: text
         description: Iowa state code 19 + county code, 19001-19197.
