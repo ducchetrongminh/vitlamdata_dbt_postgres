@@ -159,7 +159,11 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
      full ids stay unique. The invoice key is (invoice text, `store_no`, `ordered_on`).
    - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
      unique once whole-row repeats are dropped (Q9).
-9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in staging.
+9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in the
+   intermediate layer (`iowa_data_hub__int_order_line__deduplicated`). Staging keeps them, since
+   collapsing rows changes the grain and needs a sort of every line. Over all years at once, that
+   sort ran the database out of temp disk. A model that repeats cannot change, like the store
+   dimension, reads staging and skips it.
    This also drops the few repeated lines that are in the publisher's own table: 7 in 2025, 14 in 2026.
    - **Why they look real.** The table minus the export's extra part matches the publisher's row
      count exactly in 2025 and 2026, so the publisher holds them too. In 2025's repeated slice,

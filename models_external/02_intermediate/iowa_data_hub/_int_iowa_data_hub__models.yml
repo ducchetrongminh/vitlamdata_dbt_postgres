@@ -1,4 +1,16 @@
 models:
+  - name: iowa_data_hub__int_order_line__deduplicated
+    description: >
+      Sales lines of every year, one row per invoice line: staging with the export's
+      whole-row repeats dropped (README Q9).
+    config:
+      alias: int_order_line__deduplicated
+    columns:
+      - name: order_line_id
+        data_tests:
+          - unique
+          - not_null
+
   - name: iowa_data_hub__int_product__category_picked
     description: >
       The catalog at one row per product: each item keeps one category, a real one over the

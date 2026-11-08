@@ -37,31 +37,21 @@ models:
       - name: state_bottle_retail_unit_price
         description: What a store pays the state per bottle, current list. USD.
 
-  - name: base_iowa_data_hub__liquor_order_line
-    description: >
-      Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
-      kept (README Q9). Read by stg_iowa_data_hub__liquor_order_line, which drops them, and
-      by the store model, which does not need them dropped. Holds only the columns a model
-      uses so far: the store's.
-    columns:
-      - name: order_line_id
-        description: >
-          Not unique here: a repeated line repeats its id. invoice_id up to 2025-08-29;
-          after, an md5 of the whole raw row (README Q8).
-        data_tests:
-          - not_null
-
   - name: stg_iowa_data_hub__liquor_order_line
     description: >
-      Sales lines of every year, 2012-2026, one row per invoice line, whole-row
-      repeats dropped (README Q9). Holds only the columns a model uses so far: the store's.
+      Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
+      kept (README Q9); iowa_data_hub__int_order_line__deduplicated drops them. Holds only
+      the columns a model uses so far: the store's.
     columns:
       - name: order_line_id
         description: >
           invoice_id up to 2025-08-29, when it still ends in the line number; after, an md5 of
-          the whole raw row (README Q8).
+          the whole raw row (README Q8). Not unique here: a repeated line repeats its id.
+          Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
+          (unique on the staging key): a repeat equals its original in every column, so no
+          column can be unique before they are dropped. The unique test is on
+          iowa_data_hub__int_order_line__deduplicated.
         data_tests:
-          - unique
           - not_null
       - name: store_code
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).

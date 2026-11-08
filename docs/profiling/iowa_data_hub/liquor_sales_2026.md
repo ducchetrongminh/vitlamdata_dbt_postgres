@@ -63,7 +63,7 @@ record date. The descriptions from `store_name` to `sales_bottles` are shifted b
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `invoice_id` | Invoice number only, not the line; no column set is unique | clean in staging: line key is a hash of all columns after whole-row repeats are dropped (README Q8) | decided |
+| 1 | `invoice_id` | Invoice number only, not the line; no column set is unique | clean in staging: line key is a hash of all columns; whole-row repeats are dropped in intermediate (README Q8) | decided |
 | 2 | cost, retail, dollars, liters, gallons | Rounded to whole numbers on lines ordered in Jan 2026 | accept: keep the rounded values; liters and gallons can be recomputed in staging (README Q10) | decided |
 | 3 | `sales_dollars` | ≠ bottles × retail on 1.2% of lines outside #2 | accept: use `sales_dollars` as the amount. Most gaps are last month's price (README Q11) | decided |
 | 4 | `category_code`, `category_name` | An item's category changes over time; 26 NULL | clean in staging: type 1, the item's latest category other than `TEMPORARY & SPECIALTY PACKAGES`; NULL → Unknown (README Q2, Q13, Q14) | decided |

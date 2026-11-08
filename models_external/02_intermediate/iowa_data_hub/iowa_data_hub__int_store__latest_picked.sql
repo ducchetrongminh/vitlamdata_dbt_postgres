@@ -4,12 +4,10 @@
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
 -- (ephemeral by default): it groups ~38M lines. Past years load once and never change
 -- (README); only the latest year reloads. So a normal run reads only the years from the
--- latest one already stored (order_year >= last_order_year; the base view then skips
+-- latest one already stored (order_year >= last_order_year; the staging view then skips
 -- the other year tables) and merges those stores in. --full-refresh reads every year.
--- Why we don't follow docs/dbt-layers-conventions.md#51-one-directional-layering (only a
--- staging model reads a base model): the store reads the order lines before the repeats
--- are dropped. Repeats cannot change a store's latest name or location, and dropping them
--- over every year ran the database out of temp disk.
+-- Reads staging, not int_order_line__deduplicated: repeats cannot change a store's latest
+-- name or location, and dropping them over every year ran the database out of temp disk.
 {{ config(
     materialized='incremental',
     incremental_strategy='merge',
@@ -20,7 +18,7 @@
 with
 
 order_line as (
-    select * from {{ ref('base_iowa_data_hub__liquor_order_line') }}
+    select * from {{ ref('stg_iowa_data_hub__liquor_order_line') }}
     {% if is_incremental() %}
     -- from the latest stored year, not only the newest: when a year starts, the year
     -- before still gets its last reloads
