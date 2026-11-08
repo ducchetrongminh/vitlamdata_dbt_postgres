@@ -42,30 +42,24 @@ models:
       Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
       kept (README Q9); iowa_data_hub__int_order_line__deduplicated drops them. Holds only
       the columns a model uses so far: the store's and the vendor's.
+      No tests. Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
+      (unique + not_null on the staging key): each test scans every year's lines, ~38M,
+      which is too heavy for the database VM. The keys are tested downstream, on
+      iowa_data_hub__int_order_line__deduplicated and the dims' intermediate models.
     columns:
       - name: order_line_id
         description: >
           invoice_id up to 2025-08-29, when it still ends in the line number; after, an md5 of
-          the whole raw row (README Q8). Not unique here: a repeated line repeats its id.
-          Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
-          (unique on the staging key): a repeat equals its original in every column, so no
-          column can be unique before they are dropped. The unique test is on
-          iowa_data_hub__int_order_line__deduplicated.
-        data_tests:
-          - not_null
+          the whole raw row (README Q8). Not unique here: a repeated line repeats its id,
+          equal to its original in every column, until
+          iowa_data_hub__int_order_line__deduplicated drops the repeats.
       - name: store_code
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
-        data_tests:
-          - not_null
       - name: vendor_code
         description: >
           vendor_number, left-padded to 3 digits: before 2016-08-29 it has no leading zero
           (liquor_sales_2016 #1). 'UNKNOWN' on the few lines without one (liquor_sales_2021 #1).
-        data_tests:
-          - not_null
       - name: ordered_on
-        data_tests:
-          - not_null
       - name: order_year
         description: >
           The year of the source table the line comes from (liquor_sales_<year>). A
