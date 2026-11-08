@@ -4,7 +4,7 @@ models:
       Companies whose liquor the state sells to stores, one row per vendor code seen on a
       sales line, 2012-2026, plus the unknown vendor ('UNKNOWN'). A vendor under 100 has two
       rows: its code before 2016-08-29 (10) and after (010) (liquor_sales_2016 #1). Type 3:
-      each row keeps its own code's latest name and carries the vendor's current name
+      vendor_name is the vendor's name today, historic_vendor_name the row's own code's name
       (docs/dimensional-modeling-standards.md#31-slowly-changing-dimensions-scd; design:
       docs/design-external/iowa_data_hub/liquor_order.md).
     config:
@@ -20,14 +20,16 @@ models:
         constraints:
           - type: not_null
           - type: unique
-      - name: historic_vendor_name
-        data_type: text
-        description: >
-          The latest name on this code's lines. For a code of the old system (10), the name it
-          had then.
-      - name: current_vendor_name
+      - name: vendor_name
         data_type: text
         description: >
           The vendor's name today: for a 2-digit code, the name of its 3-digit code (10 takes
           010's); otherwise historic_vendor_name. A number can pass to another company under a
           new name (e.g. 469 TY KU LLC, then DAVOS BRANDS LLC); only the latest is kept.
+          The type 3 column; the conventions call it current_vendor_name (see
+          iowa_data_hub__int_vendor__current_named for why it isn't).
+      - name: historic_vendor_name
+        data_type: text
+        description: >
+          The latest name on this code's lines. For a code of the old system (10), the name it
+          had then.

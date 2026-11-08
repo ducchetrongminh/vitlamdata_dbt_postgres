@@ -61,9 +61,9 @@ models:
 
   - name: iowa_data_hub__int_vendor__current_named
     description: >
-      iowa_data_hub__int_vendor__latest_picked with each code's own name as
-      historic_vendor_name, plus current_vendor_name: a code of the old system (10) takes the
-      name of its later code (010) (liquor_sales_2016 #1). Plus the unknown vendor.
+      iowa_data_hub__int_vendor__latest_picked with today's name as vendor_name: a code of
+      the old system (10) takes the name of its later code (010) (liquor_sales_2016 #1). Each
+      code's own name moves to historic_vendor_name. Plus the unknown vendor.
     config:
       alias: int_vendor__current_named
     columns:

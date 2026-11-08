@@ -10,8 +10,8 @@ final as (
         {{ dbt_utils.generate_surrogate_key(['vendor_code']) }} as vendor_key,
         vendor_code,
         -- Name, desc
-        historic_vendor_name,
-        current_vendor_name
+        vendor_name,
+        historic_vendor_name
     from vendor
 )
 
