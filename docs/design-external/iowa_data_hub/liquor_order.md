@@ -1,9 +1,13 @@
 # Liquor order
 
-Sources: [liquor_sales_2026](../../profiling/iowa_data_hub/liquor_sales_2026.md), [liquor_sales_2025](../../profiling/iowa_data_hub/liquor_sales_2025.md),
+Sources: [liquor_sales_2026](../../profiling/iowa_data_hub/liquor_sales_2026.md) (the reference
+profile), every other year `liquor_sales_2012` … `liquor_sales_2025` (one profile per year, in
+[the profiling record](../../profiling/iowa_data_hub/_README.md)),
 [products](../../profiling/iowa_data_hub/liquor_products.md)
 
-Scope: 2025–2026. Later years (`liquor_sales_2012` … `liquor_sales_2024`) must fit the same design.
+Scope: every year, 2012–2026 (about 38M lines). Why: a store, product or vendor seen only in
+older years still needs a dimension row, and the yearly tables are one publisher table split by
+year, so all years share one design.
 
 ## 1. Business process
 Licensed Iowa stores order liquor from the state. The state (ABD) is the wholesaler, so
