@@ -37,6 +37,20 @@ models:
       - name: state_bottle_retail_unit_price
         description: What a store pays the state per bottle, current list. USD.
 
+  - name: base_iowa_data_hub__liquor_order_line
+    description: >
+      Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
+      kept (README Q9). Read by stg_iowa_data_hub__liquor_order_line, which drops them, and
+      by the store model, which does not need them dropped. Holds only the columns a model
+      uses so far: the store's.
+    columns:
+      - name: order_line_id
+        description: >
+          Not unique here: a repeated line repeats its id. invoice_id up to 2025-08-29;
+          after, an md5 of the whole raw row (README Q8).
+        data_tests:
+          - not_null
+
   - name: stg_iowa_data_hub__liquor_order_line
     description: >
       Sales lines of every year, 2012-2026, one row per invoice line, whole-row
