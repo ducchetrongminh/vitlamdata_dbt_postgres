@@ -2,23 +2,7 @@
 -- for every year, and _README.md (Qn).
 -- One model for all year tables: the publisher splits one table (liquor_sales_combined) by
 -- year, so every year has the same columns and grain. Add each new year to the list.
--- Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
--- (staging is always a view, a table only when the view is too slow): deduplicating ~38M
--- lines takes minutes, so as a view every reader repeats it, and as a table every run does.
--- Workaround: past years load once and never change (README); only the latest year reloads.
--- So the model is incremental, and a normal run replaces only the latest year's lines
--- (delete+insert on order_year). --full-refresh rebuilds every year.
--- When a new year starts, add it to the range and run --full-refresh once: the year before
--- may have changed in its last reloads.
-{{ config(
-    materialized='incremental',
-    incremental_strategy='delete+insert',
-    unique_key='order_year',
-    on_schema_change='fail'
-) }}
-
-{%- set years = range(2012, 2027) | list %}
-{%- set latest_year = years | last %}
+{%- set years = range(2012, 2027) %}
 
 with
 
@@ -26,11 +10,11 @@ with
 -- (a source CTE, then a filtered CTE): one distinct over every year at once sorted ~38M
 -- lines and ran the database out of temp disk ("No space left on device"). A repeat is
 -- always inside one year table, since each table is a slice by ordered_on, so each year is
--- deduplicated on its own: 15 sorts of 2-3M lines. Same result as one distinct over all.
--- Not built yet: it lowers peak temp disk only if Postgres frees each year's sort files
--- before the whole query ends.
+-- deduplicated on its own. Same result as one distinct over all. order_year is a constant
+-- in each part, so a filter on it skips the other years' tables without reading them: the
+-- incremental store model reads only the latest year this way.
 filtered as (
-    {%- for year in years if not is_incremental() or year == latest_year %}
+    {%- for year in years %}
     select distinct *, {{ year }} as order_year     -- Q9: drop whole-row repeats
     from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
     {%- if not loop.last %}

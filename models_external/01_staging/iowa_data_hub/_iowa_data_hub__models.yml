@@ -58,8 +58,8 @@ models:
           - not_null
       - name: order_year
         description: >
-          The year of the source table the line comes from (liquor_sales_<year>). The
-          incremental key: a normal run replaces only the latest year.
+          The year of the source table the line comes from (liquor_sales_<year>). A
+          constant in each part of the union, so filtering on it reads only that year.
       - name: store_name
         description: The store's name on this line, spaces squeezed. Changes over time (#5).
       - name: store_zip_code
