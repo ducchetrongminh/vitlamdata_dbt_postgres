@@ -2,17 +2,29 @@
 -- for every year, and _README.md (Qn).
 -- One model for all year tables: the publisher splits one table (liquor_sales_combined) by
 -- year, so every year has the same columns and grain. Add each new year to the list.
--- Table, not view: deduplicating ~38M lines takes minutes, and every model reading a view
--- would repeat it (2025-2026 alone took ~6 min across the store dimension's tests).
-{{ config(materialized='table') }}
+-- Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
+-- (staging is always a view, a table only when the view is too slow): deduplicating ~38M
+-- lines takes minutes, so as a view every reader repeats it, and as a table every run does.
+-- Workaround: past years load once and never change (README); only the latest year reloads.
+-- So the model is incremental, and a normal run replaces only the latest year's lines
+-- (delete+insert on order_year). --full-refresh rebuilds every year.
+-- When a new year starts, add it to the range and run --full-refresh once: the year before
+-- may have changed in its last reloads.
+{{ config(
+    materialized='incremental',
+    incremental_strategy='delete+insert',
+    unique_key='order_year',
+    on_schema_change='fail'
+) }}
 
-{%- set years = range(2012, 2027) %}
+{%- set years = range(2012, 2027) | list %}
+{%- set latest_year = years | last %}
 
 with
 
 source as (
-    {%- for year in years %}
-    select * from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
+    {%- for year in years if not is_incremental() or year == latest_year %}
+    select *, {{ year }} as order_year from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
     {%- if not loop.last %}
     union all
     {%- endif %}
@@ -35,6 +47,7 @@ renamed as (
         store_no as store_code,
         -- Dates
         ordered_on,
+        order_year,
         -- Store attributes
         store_name,
         store_city,
@@ -51,6 +64,7 @@ casted as (
         cast(store_code as text) as store_code,
         -- Dates
         cast(ordered_on as date) as ordered_on,
+        cast(order_year as integer) as order_year,
         -- Store attributes
         cast(store_name as text) as store_name,
         cast(store_city as text) as store_city,
@@ -67,6 +81,7 @@ cleaned as (
         store_code,
         -- Dates
         ordered_on,
+        order_year,
         -- Store attributes
         regexp_replace(trim(store_name), '\s{2,}', ' ', 'g') as store_name,   -- #9
         store_city,
@@ -86,6 +101,7 @@ null_handled as (
         coalesce(nullif(store_code, ''), 'UNKNOWN') as store_code,
         -- Dates
         ordered_on,
+        order_year,
         -- Store attributes; #5: the location columns are null together on some lines
         coalesce(nullif(store_name, ''), 'Unknown') as store_name,
         coalesce(nullif(store_city, ''), 'Unknown') as store_city,

@@ -56,6 +56,10 @@ models:
       - name: ordered_on
         data_tests:
           - not_null
+      - name: order_year
+        description: >
+          The year of the source table the line comes from (liquor_sales_<year>). The
+          incremental key: a normal run replaces only the latest year.
       - name: store_name
         description: The store's name on this line, spaces squeezed. Changes over time (#5).
       - name: store_zip_code
