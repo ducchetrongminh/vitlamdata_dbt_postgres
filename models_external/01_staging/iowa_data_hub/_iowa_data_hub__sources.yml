@@ -20,6 +20,32 @@ sources:
           per item per category (item_no, category_name), not per item: an item can also sit
           under a tag category (docs/profiling/iowa_data_hub/liquor_products.md #1).
 
+      - name: liquor_sales_2012
+        description: Sales lines ordered in 2012, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2012.md.
+      - name: liquor_sales_2013
+        description: Sales lines ordered in 2013, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2013.md.
+      - name: liquor_sales_2014
+        description: Sales lines ordered in 2014, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2014.md.
+      - name: liquor_sales_2015
+        description: Sales lines ordered in 2015, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2015.md.
+      - name: liquor_sales_2016
+        description: Sales lines ordered in 2016, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2016.md.
+      - name: liquor_sales_2017
+        description: Sales lines ordered in 2017, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2017.md.
+      - name: liquor_sales_2018
+        description: Sales lines ordered in 2018, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2018.md.
+      - name: liquor_sales_2019
+        description: Sales lines ordered in 2019, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2019.md.
+      - name: liquor_sales_2020
+        description: Sales lines ordered in 2020, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2020.md.
+      - name: liquor_sales_2021
+        description: Sales lines ordered in 2021, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2021.md.
+      - name: liquor_sales_2022
+        description: Sales lines ordered in 2022, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2022.md.
+      - name: liquor_sales_2023
+        description: Sales lines ordered in 2023, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2023.md.
+      - name: liquor_sales_2024
+        description: Sales lines ordered in 2024, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2024.md.
       - name: liquor_sales_2025
         description: >
           Sales lines ordered in 2025, loaded once. One row per invoice line. The export repeats

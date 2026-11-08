@@ -39,7 +39,7 @@ models:
 
   - name: stg_iowa_data_hub__liquor_order_line
     description: >
-      Sales lines of every year in scope (2025, 2026), one row per invoice line, whole-row
+      Sales lines of every year, 2012-2026, one row per invoice line, whole-row
       repeats dropped (README Q9). Holds only the columns a model uses so far: the store's.
     columns:
       - name: order_line_id

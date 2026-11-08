@@ -2,7 +2,7 @@ models:
   - name: iowa_data_hub__dim_store
     description: >
       Licensed Iowa stores that order liquor from the state, one row per store seen on a sales
-      line in 2025-2026, plus the unknown store ('UNKNOWN'). Type 1: the latest name and the
+      line, 2012-2026, plus the unknown store ('UNKNOWN'). Type 1: the latest name and the
       latest known location (design: docs/design-external/iowa_data_hub/liquor_order.md).
       The street address is left out: the design keeps city, zip and county.
     config:

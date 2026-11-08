@@ -1,13 +1,22 @@
 -- Cleanup per docs/profiling/iowa_data_hub/liquor_sales_2026.md (issues #n), the reference
 -- for every year, and _README.md (Qn).
 -- One model for all year tables: the publisher splits one table (liquor_sales_combined) by
--- year, so every year has the same columns and grain. Add a year here when it is in scope.
+-- year, so every year has the same columns and grain. Add each new year to the list.
+-- Table, not view: deduplicating ~38M lines takes minutes, and every model reading a view
+-- would repeat it (2025-2026 alone took ~6 min across the store dimension's tests).
+{{ config(materialized='table') }}
+
+{%- set years = range(2012, 2027) %}
+
 with
 
 source as (
-    select * from {{ source('iowa_data_hub', 'liquor_sales_2025') }}
+    {%- for year in years %}
+    select * from {{ source('iowa_data_hub', 'liquor_sales_' ~ year) }}
+    {%- if not loop.last %}
     union all
-    select * from {{ source('iowa_data_hub', 'liquor_sales_2026') }}
+    {%- endif %}
+    {%- endfor %}
 ),
 
 filtered as (
