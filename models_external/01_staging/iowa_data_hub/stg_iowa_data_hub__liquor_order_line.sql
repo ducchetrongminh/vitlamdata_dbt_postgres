@@ -5,6 +5,12 @@
 -- macro iowa_data_hub_order_years.
 -- Keeps the export's whole-row repeats (README Q9): dropping them needs a sort of every
 -- line, so iowa_data_hub__int_order_line__deduplicated does it, for the models that need it.
+-- The store and vendor attributes ride on each line only because the source has no store or
+-- vendor table. They pass through as loaded: iowa_data_hub__int_store__latest_picked and
+-- iowa_data_hub__int_vendor__latest_picked clean them.
+-- Why we don't follow docs/dbt-layers-conventions.md#23-value-level-transformations
+-- (cleanup and null handling in staging): they are another entity's attributes, and each
+-- dim keeps one line per entity, so cleaning there runs on a few thousand rows, not ~38M.
 -- order_year is a constant in each part of the union, so a filter on it skips the other
 -- years' tables without reading them.
 {%- set years = iowa_data_hub_order_years() %}
@@ -76,19 +82,17 @@ cleaned as (
         ordered_on,
         order_year,
         -- Store attributes
-        regexp_replace(trim(store_name), '\s{2,}', ' ', 'g') as store_name,   -- #9
+        store_name,
         store_city,
-        case                                                -- Q12: Bettendorf zip typo
-            when store_code = '2687' and store_zip_code = '57222' then '52722'
-            else store_zip_code
-        end as store_zip_code,
+        store_zip_code,
         county_fips_code,
         county_name,
-        -- Vendor attributes; 2016 #2: the É of RÉMY lost in encoding
-        replace(regexp_replace(trim(vendor_name), '\s{2,}', ' ', 'g'), U&'\FFFD', 'É') as vendor_name  -- #9
+        -- Vendor attributes
+        vendor_name
     from casted
 ),
 
+-- Keys only: the store and vendor attributes are cleaned in their dims' intermediate models
 null_handled as (
     select
         -- Keys
@@ -98,14 +102,14 @@ null_handled as (
         -- Dates
         ordered_on,
         order_year,
-        -- Store attributes; #5: the location columns are null together on some lines
-        coalesce(nullif(store_name, ''), 'Unknown') as store_name,
-        coalesce(nullif(store_city, ''), 'Unknown') as store_city,
-        coalesce(nullif(store_zip_code, ''), 'Unknown') as store_zip_code,
-        coalesce(nullif(county_fips_code, ''), 'Unknown') as county_fips_code,
-        coalesce(nullif(county_name, ''), 'Unknown') as county_name,
+        -- Store attributes
+        store_name,
+        store_city,
+        store_zip_code,
+        county_fips_code,
+        county_name,
         -- Vendor attributes
-        coalesce(nullif(vendor_name, ''), 'Unknown') as vendor_name
+        vendor_name
     from cleaned
 )
 

@@ -71,12 +71,12 @@ models:
           The year of the source table the line comes from (liquor_sales_<year>). A
           constant in each part of the union, so filtering on it reads only that year.
       - name: store_name
-        description: The store's name on this line, spaces squeezed. Changes over time (#5).
+        description: The store's name on this line, as loaded. Changes over time (#5).
       - name: store_zip_code
-        description: 5 digits. Store 2687's typo 57222 is replaced by 52722 (README Q12).
+        description: 5 digits, as loaded. Store 2687's typo 57222 is fixed in iowa_data_hub__int_store__latest_picked (README Q12).
       - name: county_fips_code
         description: Iowa state code 19 + county code.
       - name: vendor_name
         description: >
-          The vendor's name on this line, spaces squeezed, RÉMY's lost É restored
-          (liquor_sales_2016 #2). Changes over time (liquor_sales_2025 #6).
+          The vendor's name on this line, as loaded. Changes over time (liquor_sales_2025 #6);
+          cleaned in iowa_data_hub__int_vendor__latest_picked.

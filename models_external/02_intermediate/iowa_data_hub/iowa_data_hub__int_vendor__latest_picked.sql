@@ -1,7 +1,8 @@
 -- One row per vendor, built from the sales lines: the vendor applied at the order, which can
 -- differ from the catalog's. Vendor is type 1: each vendor takes its latest line's name
 -- (docs/profiling/iowa_data_hub/liquor_sales_2025.md #6), so names from the system before
--- 2016-08-29 give way to the later ones (liquor_sales_2016.md #1).
+-- 2016-08-29 give way to the later ones (liquor_sales_2016.md #1). Cleans the name after
+-- picking, on one row per vendor: staging passes it as loaded.
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
 -- (ephemeral by default): same reason and load rules as iowa_data_hub__int_store__latest_picked,
 -- each run reads one year and merges its vendors in.
@@ -41,6 +42,28 @@ latest_picked as (
     order by vendor_code, ordered_on desc, vendor_name
 ),
 
+cleaned as (
+    select
+        -- Keys
+        vendor_code,
+        -- Name, desc; liquor_sales_2016.md #2: the É of RÉMY lost in encoding
+        replace(regexp_replace(trim(vendor_name), '\s{2,}', ' ', 'g'), U&'\FFFD', 'É') as vendor_name,  -- #9
+        -- Load tracking
+        last_order_year
+    from latest_picked
+),
+
+null_handled as (
+    select
+        -- Keys
+        vendor_code,
+        -- Name, desc
+        coalesce(nullif(vendor_name, ''), 'Unknown') as vendor_name,
+        -- Load tracking
+        last_order_year
+    from cleaned
+),
+
 unknown_vendor as (
     select
         -- Keys
@@ -52,7 +75,7 @@ unknown_vendor as (
 ),
 
 inserted_unknown as (
-    select * from latest_picked
+    select * from null_handled
     where vendor_code <> 'UNKNOWN'
     union all
     select * from unknown_vendor

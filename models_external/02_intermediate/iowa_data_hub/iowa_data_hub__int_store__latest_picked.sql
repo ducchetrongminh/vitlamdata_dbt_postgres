@@ -12,6 +12,7 @@
 -- - each later run reads the year after the latest stored one, so it catches up in one run
 --   per year (15 runs for 2012-2026);
 -- - once caught up, each run rereads the last year, the only one that reloads (README).
+-- Cleans the attributes after picking, on one row per store: staging passes them as loaded.
 -- Reads staging, not int_order_line__deduplicated: repeats cannot change a store's latest
 -- name or location, and dropping them over every year ran the database out of temp disk.
 {{ config(
@@ -53,7 +54,43 @@ latest_picked as (
         -- Load tracking
         order_year as last_order_year
     from order_line
-    order by store_code, ordered_on desc, county_fips_code = 'Unknown', store_name
+    order by store_code, ordered_on desc, county_fips_code is null, store_name
+),
+
+cleaned as (
+    select
+        -- Keys
+        store_code,
+        -- Name, desc
+        regexp_replace(trim(store_name), '\s{2,}', ' ', 'g') as store_name,   -- #9
+        -- Attributes
+        store_city,
+        case                                                -- Q12: Bettendorf zip typo
+            when store_code = '2687' and store_zip_code = '57222' then '52722'
+            else store_zip_code
+        end as store_zip_code,
+        county_fips_code,
+        county_name,
+        -- Load tracking
+        last_order_year
+    from latest_picked
+),
+
+-- #5: the location columns are null together on some lines
+null_handled as (
+    select
+        -- Keys
+        store_code,
+        -- Name, desc
+        coalesce(nullif(store_name, ''), 'Unknown') as store_name,
+        -- Attributes
+        coalesce(nullif(store_city, ''), 'Unknown') as store_city,
+        coalesce(nullif(store_zip_code, ''), 'Unknown') as store_zip_code,
+        coalesce(nullif(county_fips_code, ''), 'Unknown') as county_fips_code,
+        coalesce(nullif(county_name, ''), 'Unknown') as county_name,
+        -- Load tracking
+        last_order_year
+    from cleaned
 ),
 
 unknown_store as (
@@ -72,7 +109,7 @@ unknown_store as (
 ),
 
 inserted_unknown as (
-    select * from latest_picked
+    select * from null_handled
     where store_code <> 'UNKNOWN'
     union all
     select * from unknown_store
