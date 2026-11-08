@@ -40,3 +40,20 @@ models:
         description: >
           The latest year the store ordered in. Its max is the latest year read: the next
           run reads the year after it. Null on the unknown store.
+
+  - name: iowa_data_hub__int_vendor__latest_picked
+    description: >
+      One row per vendor seen on a sales line: its latest line's name (liquor_sales_2025 #6).
+      Plus the unknown vendor ('UNKNOWN'). Incremental, one year per run, as
+      iowa_data_hub__int_store__latest_picked.
+    config:
+      alias: int_vendor__latest_picked
+    columns:
+      - name: vendor_code
+        data_tests:
+          - unique
+          - not_null
+      - name: last_order_year
+        description: >
+          The latest year the vendor sold in. Its max is the latest year read: the next run
+          reads the year after it. Null on the unknown vendor.

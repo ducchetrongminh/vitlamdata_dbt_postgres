@@ -41,7 +41,7 @@ models:
     description: >
       Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
       kept (README Q9); iowa_data_hub__int_order_line__deduplicated drops them. Holds only
-      the columns a model uses so far: the store's.
+      the columns a model uses so far: the store's and the vendor's.
     columns:
       - name: order_line_id
         description: >
@@ -57,6 +57,12 @@ models:
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
         data_tests:
           - not_null
+      - name: vendor_code
+        description: >
+          vendor_number, left-padded to 3 digits: before 2016-08-29 it has no leading zero
+          (liquor_sales_2016 #1). 'UNKNOWN' on the few lines without one (liquor_sales_2021 #1).
+        data_tests:
+          - not_null
       - name: ordered_on
         data_tests:
           - not_null
@@ -70,3 +76,7 @@ models:
         description: 5 digits. Store 2687's typo 57222 is replaced by 52722 (README Q12).
       - name: county_fips_code
         description: Iowa state code 19 + county code.
+      - name: vendor_name
+        description: >
+          The vendor's name on this line, spaces squeezed, RÉMY's lost É restored
+          (liquor_sales_2016 #2). Changes over time (liquor_sales_2025 #6).

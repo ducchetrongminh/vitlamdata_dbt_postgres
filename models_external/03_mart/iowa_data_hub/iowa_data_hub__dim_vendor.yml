@@ -1,0 +1,24 @@
+models:
+  - name: iowa_data_hub__dim_vendor
+    description: >
+      Companies whose liquor the state sells to stores, one row per vendor seen on a sales
+      line, 2012-2026, plus the unknown vendor ('UNKNOWN'). Type 1: the name on the vendor's
+      latest line (design: docs/design-external/iowa_data_hub/liquor_order.md).
+    config:
+      alias: dim_vendor
+    columns:
+      - name: vendor_key
+        data_type: text
+        constraints:
+          - type: primary_key
+      - name: vendor_code
+        data_type: text
+        description: vendor_number, 3 digits with leading zeros; kept as text.
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: vendor_name
+        data_type: text
+        description: >
+          The latest name on the vendor's lines. A number can pass to another company under a
+          new name (e.g. 469 TY KU LLC, then DAVOS BRANDS LLC); the dim keeps only the latest.

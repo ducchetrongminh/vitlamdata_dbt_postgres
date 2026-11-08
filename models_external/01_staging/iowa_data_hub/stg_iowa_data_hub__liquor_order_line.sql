@@ -30,6 +30,7 @@ renamed as (
             else md5(source::text)
         end as order_line_id,
         store_no as store_code,
+        vendor_number as vendor_code,
         -- Dates
         ordered_on,
         order_year,
@@ -38,7 +39,9 @@ renamed as (
         store_city,
         store_zip_code,
         county_fips_code,
-        county_name
+        county_name,
+        -- Vendor attributes
+        vendor_name
     from source
 ),
 
@@ -47,6 +50,7 @@ casted as (
         -- Keys
         cast(order_line_id as text) as order_line_id,
         cast(store_code as text) as store_code,
+        cast(vendor_code as text) as vendor_code,
         -- Dates
         cast(ordered_on as date) as ordered_on,
         cast(order_year as integer) as order_year,
@@ -55,7 +59,9 @@ casted as (
         cast(store_city as text) as store_city,
         cast(store_zip_code as text) as store_zip_code,
         cast(county_fips_code as text) as county_fips_code,
-        cast(county_name as text) as county_name
+        cast(county_name as text) as county_name,
+        -- Vendor attributes
+        cast(vendor_name as text) as vendor_name
     from renamed
 ),
 
@@ -64,6 +70,7 @@ cleaned as (
         -- Keys
         order_line_id,
         store_code,
+        lpad(vendor_code, 3, '0') as vendor_code,         -- 2016 #1: 2 digits before 2016-08-29
         -- Dates
         ordered_on,
         order_year,
@@ -75,7 +82,9 @@ cleaned as (
             else store_zip_code
         end as store_zip_code,
         county_fips_code,
-        county_name
+        county_name,
+        -- Vendor attributes; 2016 #2: the É of RÉMY lost in encoding
+        replace(regexp_replace(trim(vendor_name), '\s{2,}', ' ', 'g'), U&'\FFFD', 'É') as vendor_name  -- #9
     from casted
 ),
 
@@ -84,6 +93,7 @@ null_handled as (
         -- Keys
         order_line_id,
         coalesce(nullif(store_code, ''), 'UNKNOWN') as store_code,
+        coalesce(nullif(vendor_code, ''), 'UNKNOWN') as vendor_code,  -- 2021 #1
         -- Dates
         ordered_on,
         order_year,
@@ -92,7 +102,9 @@ null_handled as (
         coalesce(nullif(store_city, ''), 'Unknown') as store_city,
         coalesce(nullif(store_zip_code, ''), 'Unknown') as store_zip_code,
         coalesce(nullif(county_fips_code, ''), 'Unknown') as county_fips_code,
-        coalesce(nullif(county_name, ''), 'Unknown') as county_name
+        coalesce(nullif(county_name, ''), 'Unknown') as county_name,
+        -- Vendor attributes
+        coalesce(nullif(vendor_name, ''), 'Unknown') as vendor_name
     from cleaned
 )
 
