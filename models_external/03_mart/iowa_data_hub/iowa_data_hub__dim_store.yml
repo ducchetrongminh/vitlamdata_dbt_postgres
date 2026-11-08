@@ -23,7 +23,7 @@ models:
         description: The latest name on the store's lines. Older names often lack the city suffix.
       - name: store_city
         data_type: text
-        description: City on the latest line. 'Unknown' while a new store's location is not entered yet, and for store 010206, which never has one.
+        description: City on the latest line. 'Unknown' when the latest line has no location (assumed cut out of the source system), and for store 010206, which never has one.
       - name: store_zip_code
         data_type: text
         description: 5 digits, on the latest line.

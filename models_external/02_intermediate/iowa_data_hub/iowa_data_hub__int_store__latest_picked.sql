@@ -2,7 +2,8 @@
 -- each store takes its latest line's name (README Q14) and location. A line can lack the
 -- location (docs/profiling/iowa_data_hub/liquor_sales_2026.md #5), but only for a while,
 -- before it is entered, so the latest line is trusted: such a store shows 'Unknown' until
--- it orders again.
+-- it orders again. The location is not taken from older lines: a store whose latest lines
+-- lack it is assumed cut out of the source system.
 -- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
 -- (ephemeral by default): it groups ~38M lines, and reading every year in one query used
 -- too much disk on the database VM. So each run reads one year (the staging view skips the
