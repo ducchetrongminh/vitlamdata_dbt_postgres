@@ -1,3 +1,5 @@
+# Adding a year: declare liquor_sales_<year> below and raise the range in
+# macros/iowa_data_hub_order_years.sql, which lists the years the order line model unions.
 sources:
   - name: iowa_data_hub
     description: >
