@@ -1,12 +1,13 @@
 -- Cleanup per docs/profiling/iowa_data_hub/liquor_sales_2026.md (issues #n), the reference
 -- for every year, and _README.md (Qn).
 -- One model for all year tables: the publisher splits one table (liquor_sales_combined) by
--- year, so every year has the same columns and grain. The years are project vars.
+-- year, so every year has the same columns and grain. The years are the declared sources
+-- (macro iowa_data_hub_order_years).
 -- Keeps the export's whole-row repeats (README Q9): dropping them needs a sort of every
 -- line, so iowa_data_hub__int_order_line__deduplicated does it, for the models that need it.
 -- order_year is a constant in each part of the union, so a filter on it skips the other
 -- years' tables without reading them.
-{%- set years = range(var('iowa_data_hub_first_order_year'), var('iowa_data_hub_last_order_year') + 1) %}
+{%- set years = iowa_data_hub_order_years() %}
 
 with
 

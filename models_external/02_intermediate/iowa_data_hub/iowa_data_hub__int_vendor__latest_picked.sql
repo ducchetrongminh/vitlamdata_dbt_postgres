@@ -22,10 +22,10 @@ order_line as (
     -- that matters.
     where order_year = least(
         (select max(last_order_year) from {{ this }}) + 1,
-        {{ var('iowa_data_hub_last_order_year') }}
+        {{ iowa_data_hub_order_years() | last }}
     )
     {% else %}
-    where order_year = {{ var('iowa_data_hub_first_order_year') }}
+    where order_year = {{ iowa_data_hub_order_years() | first }}
     {% endif %}
 ),
 
