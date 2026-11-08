@@ -1,6 +1,11 @@
 -- One row per store, built from the sales lines: there is no store table. Store is type 1:
 -- each store takes its latest name (README Q14) and its latest known location
 -- (docs/profiling/iowa_data_hub/liquor_sales_2026.md #5).
+-- Why we don't follow docs/dbt-layers-conventions.md#31-intermediate-structural-constraints
+-- (ephemeral by default): it groups ~38M lines, and as ephemeral the dimension and both of
+-- its tests would each repeat that. A table runs it once.
+{{ config(materialized='table') }}
+
 with
 
 order_line as (
