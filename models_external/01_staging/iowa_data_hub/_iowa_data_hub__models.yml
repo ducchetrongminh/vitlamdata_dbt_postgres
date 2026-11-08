@@ -44,8 +44,8 @@ models:
       the columns a model uses so far: the store's and the vendor's.
       No tests. Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
       (unique + not_null on the staging key): each test scans every year's lines, ~38M,
-      which is too heavy for the database VM. The keys are tested downstream, on
-      iowa_data_hub__int_order_line__deduplicated and the dims' intermediate models.
+      which is too heavy for the database VM. The store and vendor codes are tested in the
+      dims' intermediate models.
     columns:
       - name: order_line_id
         description: >
