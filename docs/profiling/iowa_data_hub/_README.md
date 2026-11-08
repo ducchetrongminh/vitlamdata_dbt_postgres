@@ -233,8 +233,12 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
       (`American Cordials & Liqueur` 19, `Imported Cordials & Liqueur` 16, …).
     - Decision: type 1, as Q2. Map each group code to the regular code with the same name for
       lines whose item has no later category.
+    - The map is the rows from 2016-08-29 of `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`,
+      with the 10 group codes of 2022 and `1070100` (2021). Three have no same-name twin and go
+      to the code their items carry in the catalog: `1012000` IMPORTED WHISKIES → `1012300`,
+      `1042000` IMPORTED GINS → `1042100`, `1090000` DISTILLED SPIRITS SPECIALTY → `1092100`.
 17. **Was 2022-07-18 a system change?** Likely (human). Decision: category recodes are type 1, as
-    Q16. Whether returns before it were left out stays unknown.
+    Q16; the 4 replaced codes are in the same seed. Whether returns before it were left out stays unknown.
 18. **What are the $0 lines?** Unknown. Decision: keep them as they are.
 19. **Is there a mapping from old to new category codes?** Checked: no.
     - 2,494 items sell on both sides of 2016-08-29 (2016 and Jan–Feb 2017). 2,272 of them (91%)
