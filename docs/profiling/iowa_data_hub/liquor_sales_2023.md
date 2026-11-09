@@ -37,7 +37,7 @@ No issue of its own. 2024's issues hold, with these counts:
 
 | # | Column | 2023 | Status |
 |---|---|---|---|
-| 2024 #1 | `category_code` | The 4 group codes are used all year: 1032000 on 65 lines, 1081000 on 60, 1082000 on 173, 1092000 on 62 | open |
+| 2024 #1 | `category_code` | The 4 group codes are used all year: 1032000 on 65 lines, 1081000 on 60, 1082000 on 173, 1092000 on 62 | decided |
 | 2025 #2 | `bottle_volume_ml` | as 2024 | open |
 | 2025 #3 | cost, retail | NULL all year | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,639,557 lines | open |

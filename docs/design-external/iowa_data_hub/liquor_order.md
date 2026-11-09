@@ -33,7 +33,7 @@ Why: the line is the atomic event, the finest grain the data has. Every coarser 
 |---|---|---|
 | Date | the line has one order date (`ordered_on`) | Date (bus matrix column; first real Date dimension) |
 | Store | the line has one ordering store; location (city, zip, county) is a store attribute ([2026 #5](../../profiling/iowa_data_hub/liquor_sales_2026.md#5-store-attributes-change-over-time-some-locations-missing)) | — |
-| Product | the line has one item, never missing. Category is a Product attribute, type 1: the item's latest category ([README Q2](../../profiling/iowa_data_hub/_README.md#decisions), [2026 #4](../../profiling/iowa_data_hub/liquor_sales_2026.md#4-an-items-category-changes-over-time-26-lines-have-none)); items sold only on old codes take the mapped code and keep the old name as legacy category name, type 3 (README Q21) | — |
+| Product | the line has one item, never missing. Category is a Product attribute, type 1: the item's latest category ([README Q2](../../profiling/iowa_data_hub/_README.md#decisions), [2026 #4](../../profiling/iowa_data_hub/liquor_sales_2026.md#4-an-items-category-changes-over-time-26-lines-have-none)); an item whose latest line is on a retired code (2016, 2022, 2024) takes the mapped code; the name on its latest line stays as historic category name, type 3 (README Q16, Q17, Q21) | — |
 | Vendor | the line has one vendor, the item's vendor at the time of the order; 66 items changed vendor in 2026 | — |
 | Invoice (degenerate, on the fact) | the line belongs to one invoice, with one type: order (`INV-`) or return (`RINV-`) ([2026 #7](../../profiling/iowa_data_hub/liquor_sales_2026.md#7-returns-are-rinv--lines-with-negative-quantities)) | — |
 

@@ -39,7 +39,7 @@ Only the columns that differ from 2014.
 | 3 | `bottle_volume_ml` | 7,580 ml on 1 line of 917836 `EARLY TIMES BOURBON 354`, priced like a 750 ml bottle | clean in staging: guess 750; ask | open |
 | 2014 #1 | `category_code` | `101220` on 4 lines of `CRAIGELLACHIE` | as 2014 #1 | open |
 | 2015 #3 | `bottle_volume_ml` | 0 on 1 line of 905230 `RONDIAZ DSS LEMON RUM` | as 2015 #3 | open |
-| 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | open |
+| 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
 | 2016 #3 | `store_zip_code` | `712-2` on 1,614 lines | as 2016 #3 | open |
 | 2016 #4 | county | NULL with an address on 2,660 lines | as 2016 #4 | open |
 | 2018 #2 | `sales_dollars` | $0 on 4 lines (Apr, Jul) | as 2018 #2 | open |

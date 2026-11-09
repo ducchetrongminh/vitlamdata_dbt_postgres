@@ -260,9 +260,9 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
 20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
     flag on item 3984's 2013 lines (2013 #2).
 21. **Map the old codes for items never sold again?** Yes, for old codes replaced by a different
-    code (human). A seed maps them, and staging keeps the old name as the legacy category name
-    (type 3). An old code that kept its number needs no map: the category dimension is type 1
-    by code and takes the latest name (`1031100` 100 PROOF VODKA → AMERICAN VODKAS).
+    code (human). A seed maps them, and the product dimension keeps the name on the item's
+    latest line as `historic_category_name` (type 3). An old code that kept its number needs no
+    map: a category is type 1 by code and takes the latest name (`1031100` 100 PROOF VODKA → AMERICAN VODKAS).
     - The seed is `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`. It holds 59 of
       the 92 old codes. 30 kept their number, and 3 have no later code.
     - 52 rows are mapped by items: the current code that most lines of the old code's items

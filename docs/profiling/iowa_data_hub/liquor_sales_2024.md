@@ -43,7 +43,7 @@ Only the columns that differ from 2026. Every other column is as in 2026.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `category_code` | 4 group codes ending `000` on 75 lines of 26 items, Jan–Mar 2024, each with the name of a `…100` code | clean in staging: type 1, the item's latest category; else the regular code with the same name (README Q16) | decided |
+| 1 | `category_code` | 4 group codes ending `000` on 75 lines of 26 items, Jan–Mar 2024, each with the name of a `…100` code | clean in intermediate: type 1, the item's latest category; else the regular code with the same name, in the category map seed (README Q16) | decided |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the same multi-pack items, all year | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,590,975 lines | as 2025 #4 | open |
