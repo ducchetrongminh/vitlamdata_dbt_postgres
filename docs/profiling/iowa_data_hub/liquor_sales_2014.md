@@ -33,16 +33,16 @@ Only the columns that differ from 2015.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `category_code` | `101220` (6 digits, no name) on 2 lines of 901369 `CRAIGELLACHIE`, a Scotch | clean in staging: guess `1012200` (a digit dropped); ask | open |
+| 1 | `category_code` | `101220` (6 digits, no name) on 2 lines of 901369 `CRAIGELLACHIE`, a Scotch | category map seed: `1012300` SINGLE MALT SCOTCH, by name (README Q21) | decided |
 | 2015 #3 | `bottle_volume_ml` | 0 on 7 lines of 3 items: 934962 `THREE OLIVES ORANGE VODKA` (5), 941063 `BURNETT'S PINK LEMONADE VODKA MINI` (1), 964590 `CANADIAN CLUB DOCK 57 MINI DNO` (1) | as 2015 #3 | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
 | 2016 #3 | `store_zip_code` | `712-2` on 1,780 lines | as 2016 #3 | open |
-| 2016 #4 | county | NULL with an address on 1,054 lines, all store 4247 | as 2016 #4 | open |
+| 2016 #4 | county | NULL with an address on 1,054 lines, all store 4247 | as 2016 #4 | decided |
 | 2022 #2 | `item_no` | 1,913 items, 196,372 lines (9.4%), not in the catalog, e.g. 75211 `KINKY LIQUEUR` (5,476), 73050 `RUMCHATA` (2,490) | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2026 #4 | category | NULL code on 480 lines of 11 items; NULL name with a code on 577 more. Mostly gift packs, e.g. 3657 `HERRADURA GOLD REPOSADO 6PAK` | as 2026 #4 | open |
-| 2026 #9 | text | Double spaces (sample): `store_address` 8,601, `store_name` 811, `vendor_name` 632 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `store_address` 8,601, `store_name` 811, `vendor_name` 632 | as 2026 #9 | decided |
 
 No item, store or vendor attribute changes within the year (2026 #5 and #6 do not occur).
 

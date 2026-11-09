@@ -41,12 +41,12 @@ Only the columns that differ from 2016.
 | 3 | `bottle_volume_ml` | 0 on 2 lines of 941063 `BURNETT'S PINK LEMONADE VODKA MINI`, so liters are 0 | clean in staging: take the volume from the item's other lines (a mini: 50 ml is a guess) | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
 | 2016 #3 | `store_zip_code` | `712-2` on 1,725 lines | as 2016 #3 | open |
-| 2016 #4 | county | NULL with an address on 1,119 lines, all store 4247 `FAREWAY STORES #879 / BELMOND` | as 2016 #4 | open |
+| 2016 #4 | county | NULL with an address on 1,119 lines, all store 4247 `FAREWAY STORES #879 / BELMOND` | as 2016 #4 | decided |
 | 2022 #2 | `item_no` | 1,735 items, 156,750 lines (7.2%), not in the catalog | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2026 #4 | category | NULL code on 773 lines of 20 items; NULL name with a code on 689 more. Mostly gift packs, e.g. 3657 `HERRADURA GOLD REPOSADO 6PAK` | as 2026 #4 | open |
-| 2026 #9 | text | Double spaces (sample): `store_address` 9,898, `store_name` 2,384, `vendor_name` 826 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `store_address` 9,898, `store_name` 2,384, `vendor_name` 826 | as 2026 #9 | decided |
 
 No store location is missing (2017 #2 does not occur), and no vendor is renamed.
 

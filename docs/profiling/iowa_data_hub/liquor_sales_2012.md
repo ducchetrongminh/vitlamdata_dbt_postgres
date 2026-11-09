@@ -40,7 +40,7 @@ Only the columns that differ from 2013.
 | 2018 #2 | `sales_dollars` | $0 on 3,080 lines. 3,072 are Luxco items in Feb 2012 (e.g. `PARAMOUNT SLOE GIN`): 2,451 of 8,406 Paramount lines that month | as 2018 #2, ask whether Feb 2012 Luxco lines lost their price (README Q18) | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
 | 2016 #3 | `store_zip_code` | `712-2` on 1,485 lines | as 2016 #3 | open |
-| 2016 #4 | county | NULL with an address on 3,599 lines | as 2016 #4 | open |
+| 2016 #4 | county | NULL with an address on 3,599 lines | as 2016 #4 | decided |
 | 2022 #2 | `item_no` | 1,794 items, 221,386 lines (10.6%), not in the catalog. Most are 73050 `RUMCHATA` (11,992) | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |

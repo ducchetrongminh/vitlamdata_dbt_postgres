@@ -34,7 +34,7 @@ Only the columns that differ from 2019.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `bottle_volume_ml` | 42 minis switch from a bottle's ml to the pack's total on 2018-10-01; 2019 #1 switches them back | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
+| 1 | `bottle_volume_ml` | 42 minis switch from a bottle's ml to the pack's total on 2018-10-01; 2019 #1 switches them back | clean in intermediate: type 1, the latest volume; staging recomputes liters (README Q15) | decided |
 | 2 | `sales_dollars`, `sales_bottles` | 500 lines with bottles but $0, Jan–Jul; 1 line with $359.64 but 0 bottles | accept: keep as is (README Q18) | decided |
 | 3 | store columns | Store 9936 `DASH EVENTS LLC` is in Colorado Springs, county `EL PASO`, no FIPS: 2 lines | accept: keep, flag as out of state | open |
 | 2019 #1 | `bottle_volume_ml` | Pack total for the 2025 #2 items all year, e.g. 48102 at 1,200 | as 2019 #1 | open |
@@ -45,9 +45,9 @@ Only the columns that differ from 2019.
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,355,558 lines | as 2025 #4 | open |
 | 2025 #6 | `vendor_name` | 192 spelled `MAST-JAEGERMEISTER` on 3 lines, `MAST-JAGERMEISTER` otherwise | as 2025 #6 | open |
 | 2026 #4 | category | NULL on 2,021 lines, all year, e.g. 80024 `BLUE CHAIR BAY BANANA RUM CREAM` (304) | as 2026 #4 | open |
-| 2026 #5 | store columns | Location NULL on 1,693 lines of 7 stores. 4777 has none on 248 of its 362 lines | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 1,693 lines of 7 stores. 4777 has none on 248 of its 362 lines | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 4,410 (`item_no`, `im_desc`) pairs for 3,954 items; 49 items change pack or volume, 42 of them #1 | as 2026 #6 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 8,399, `store_address` 9,877, `store_name` 2,725, `im_desc` 3 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 8,399, `store_address` 9,877, `store_name` 2,725, `im_desc` 3 | as 2026 #9 | decided |
 
 ### 1. 42 minis switch to the pack's volume on 2018-10-01
 

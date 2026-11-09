@@ -49,19 +49,19 @@ Only the columns that differ from 2026. Every other column is as in 2026.
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
 | 1 | all | The export repeats every line ordered 2025-07-29 – 2025-10-14: 516,986 extra rows | drop whole-row repeats in intermediate (README Q9) | decided |
-| 2 | `bottle_volume_ml` | 18 multi-pack items carry the pack's total ml until 2025-08-29, a bottle's ml after | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
+| 2 | `bottle_volume_ml` | 18 multi-pack items carry the pack's total ml until 2025-08-29, a bottle's ml after | clean in intermediate: type 1, the latest volume; staging recomputes liters (README Q15) | decided |
 | 3 | `state_bottle_cost`, `state_bottle_retail` | NULL before 2025-07-01, as the publisher states | accept | open |
 | 4 | `invoice_id` | Invoice + line number, unique, until 2025-08-29. From 2025-09-01 as 2026 #1 | accept: `invoice_id` is the line key before 2025-09-01 | open |
-| 5 | `category_name` | 4 names renamed from plural to singular on 2025-07-01, same code | clean in staging: key on `category_code`, take the latest name | open |
+| 5 | `category_name` | 4 names renamed from plural to singular on 2025-07-01, same code | clean in intermediate: key on `category_code`, take the latest name | decided |
 | 6 | `vendor_name` | 2 vendors renamed during the year | accept: the vendor dim takes the latest name | open |
 | 2026 #2 | cost, retail, dollars, liters, gallons | Whole numbers from 2025-11-01: all 441,822 lines in Nov–Dec, 122 zero cost, 98,147 zero liters | as 2026 #2 | open |
 | 2026 #3 | `sales_dollars` | ≠ bottles × retail on 21,885 of 835,262 priced lines in Jul–Oct (2.6%); 14,198 in Jul. Retail ≠ 1.5 × cost on 119 (Jul) and 102 (Aug) lines | as 2026 #3 | open |
 | 2026 #4 | category | 135 extra (`item_no`, `category_code`) pairs; no NULL category | as 2026 #4 | open |
-| 2026 #5 | store columns | Location NULL on 8 stores' lines, 010206 on all 1,340; zip `57222` on 232 lines; 2201 and 2248 carry two names on one day, same address | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 8 stores' lines, 010206 on all 1,340; zip `57222` on 232 lines; 2201 and 2248 carry two names on one day, same address | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 5,145 (`item_no`, `im_desc`) pairs for 5,048 items; 29 extra pack/volume pairs, 19 of them volume (#2) | as 2026 #6 | open |
 | 2026 #7 | returns | 2,401 `RINV-` lines, 4 positive; 3 `INV-` lines negative | as 2026 #7 | open |
 | 2026 #8 | `store_no` | as 2026 | as 2026 #8 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 31,808, `store_address` 6,727, `store_name` 2,189, `im_desc` 156 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 31,808, `store_address` 6,727, `store_name` 2,189, `im_desc` 156 | as 2026 #9 | decided |
 
 ### 1. The export repeats a slice of lines
 

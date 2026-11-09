@@ -43,9 +43,9 @@ No issue of its own. The later years' issues hold, with these counts:
 | 2025 #4 | `invoice_id` | Invoice + line, unique on the 2,614,365 distinct lines | open |
 | 2025 #6 | `vendor_name` | 7 renamed, e.g. 469 `TY KU LLC` → `DAVOS BRANDS LLC` on 2020-05-01, a different company under the same number | open |
 | 2026 #4 | category | NULL on 682 lines of 45 items, 2020-01-02 – 2020-05-29, e.g. 80024 `BLUE CHAIR BAY BANANA RUM CREAM` (242 lines) | open |
-| 2026 #5 | store columns | Location NULL on 135 lines of 3 stores, all with the location on other lines. Zip `57222` on 438 lines. Stores 4378 and 4411 carry each other's names on 2020-09-16. Typos: `C-STRORE`, `FOOD LAND` | open |
+| 2026 #5 | store columns | Location NULL on 135 lines of 3 stores, all with the location on other lines. Zip `57222` on 438 lines. Stores 4378 and 4411 carry each other's names on 2020-09-16. Typos: `C-STRORE`, `FOOD LAND` | decided |
 | 2026 #6 | `im_desc`, `pack` | 4,296 (`item_no`, `im_desc`) pairs for 4,176 items. 44 items change pack or volume, e.g. 100440 `SKYY VODKA 1.75L …` at 175 ml in Apr, 1,750 after | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 14,966, `store_address` 13,346, `store_name` 3,566, `im_desc` 106 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 14,966, `store_address` 13,346, `store_name` 3,566, `im_desc` 106 | decided |
 
 <details><summary>Query</summary>
 

@@ -35,7 +35,7 @@ Only the columns that differ from 2020.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `bottle_volume_ml` | 106 items switch from the pack's total ml to a bottle's ml on 2019-08-01 | clean in staging: type 1, the latest volume; recompute liters (README Q15) | decided |
+| 1 | `bottle_volume_ml` | 106 items switch from the pack's total ml to a bottle's ml on 2019-08-01 | clean in intermediate: type 1, the latest volume; staging recomputes liters (README Q15) | decided |
 | 2025 #2 | `bottle_volume_ml` | The 2025 #2 items carry the pack total all year, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2021 #1 | `vendor_number` | NULL on 1 line: `INV-23231800001`, item 984151 `99 ORANGES` | as 2021 #1 | open |
 | 2022 #1 | category, returns, stores | Old system all year: no returns, 4-digit stores only | as 2022 #1 | open |
@@ -44,9 +44,9 @@ Only the columns that differ from 2020.
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,380,345 lines | as 2025 #4 | open |
 | 2025 #6 | `vendor_name` | 163 renamed on 2019-07-01 | as 2025 #6 | open |
 | 2026 #4 | category | NULL on 2,918 lines of 70 items, all year, e.g. 84197 `99 PINEAPPLE MINI` (1,684) | as 2026 #4 | open |
-| 2026 #5 | store columns | Location NULL on 4,764 lines. 3,640 are 29 stores in Jul 2019, all with the location on other lines. Some stores change address across such a gap, e.g. 2539 `HIGHWAY 65 SOUTH` → `640 S. OAK` in Apr. Zip `57222` on 194 lines | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 4,764 lines. 3,640 are 29 stores in Jul 2019, all with the location on other lines. Some stores change address across such a gap, e.g. 2539 `HIGHWAY 65 SOUTH` → `640 S. OAK` in Apr. Zip `57222` on 194 lines | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 4,323 (`item_no`, `im_desc`) pairs for 4,008 items. 129 items change pack or volume, 106 of them #1 | as 2026 #6 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 9,883, `store_address` 10,093, `store_name` 2,702, `im_desc` 1 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 9,883, `store_address` 10,093, `store_name` 2,702, `im_desc` 1 | as 2026 #9 | decided |
 
 No line repeats (2025 #1 does not occur).
 

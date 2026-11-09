@@ -38,11 +38,11 @@ Only the columns that differ from 2017.
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
 | 1 | `invoice_id`, category, vendor | A system change on 2016-08-29: invoice format, category taxonomy, vendor number format and vendor names all change | clean in intermediate: type 1, the item takes its latest category, else the category map seed; the name on its latest line stays as historic_category_name (README Q8, Q19, Q21); keep both vendor codes (10 and 010); the old code takes the later code's name as current vendor name, type 3 | decided |
-| 2 | `vendor_name` | `R�MY COINTREAU USA`: the `É` is a replacement character on 5,749 lines | clean in staging: replace with `É` | open |
+| 2 | `vendor_name` | `R�MY COINTREAU USA`: the `É` is a replacement character on 5,749 lines | clean in intermediate: replace with `É` | decided |
 | 3 | `store_zip_code` | `712-2` on 1,336 lines of store 4307 (Dunlap) | clean in staging: take the zip from the store's other years | open |
-| 4 | `county_fips_code`, `county_name` | NULL on 68,371 lines that have an address, all before 2016-08-29 | clean in staging: take the county from the store's other lines | open |
+| 4 | `county_fips_code`, `county_name` | NULL on 68,371 lines that have an address, all before 2016-08-29 | as 2026 #5: the store takes its latest line, so a store last seen before 2016-08-29 keeps no county (Unknown) | decided |
 | 5 | `bottle_volume_ml` | Bulk buys sold as one unit: 378,000 ml (`18 CASES SMIRNOFF 1.75L/18 CASES CAPTAIN 1.75L`), 225,000 and 189,000 ml (Cedar Ridge whole casks) | accept: liters stay right; bottles count units, not bottles | open |
-| 2017 #2 | store location | NULL on 29,858 lines of about 60 stores, all from Sep 2016 | as 2017 #2 | open |
+| 2017 #2 | store location | NULL on 29,858 lines of about 60 stores, all from Sep 2016 | as 2017 #2 | decided |
 | 2018 #2 | `sales_dollars` | 526 lines with bottles but $0, and 6 with $ but 0 bottles, all from 2016-08-29 | as 2018 #2 | open |
 | 2021 #1 | `vendor_number` | NULL on 2 lines, both `RESERVOIR DISTILLERY` (2016-10-17) | as 2021 #1 | open |
 | 2022 #1 | category, returns, stores | No returns, 4-digit stores | as 2022 #1 | open |
@@ -51,7 +51,7 @@ Only the columns that differ from 2017.
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2025 #4 | `invoice_id` | Unique on all 2,279,893 lines, in both formats | as 2025 #4 | open |
 | 2026 #4 | category | NULL code on 6,388 lines, 6,381 of them after 2016-08-29, of 202 items, e.g. 10549 `BLACK VELVET TOASTED CARAMEL MINI DISCO` | as 2026 #4 | open |
-| 2026 #9 | text | Double spaces also in `category_name` (`MISCELLANEOUS  BRANDIES`) | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces also in `category_name` (`MISCELLANEOUS  BRANDIES`) | as 2026 #9 | decided |
 
 ### 1. A system change on 2016-08-29
 
