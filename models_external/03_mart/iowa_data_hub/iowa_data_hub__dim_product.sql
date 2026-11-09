@@ -12,7 +12,9 @@ final as (
         -- Name, desc
         product_name,
         -- Attributes
+        category_code,
         category_name,
+        historic_category_name,
         pack,
         inner_pack,
         bottle_volume_ml,
