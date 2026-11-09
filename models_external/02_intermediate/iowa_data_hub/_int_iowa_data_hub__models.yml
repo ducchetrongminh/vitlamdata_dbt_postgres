@@ -10,8 +10,10 @@ models:
 
   - name: iowa_data_hub__int_product__category_picked
     description: >
-      The catalog at one row per product: each item keeps one category, a real one over the
-      tag categories (liquor_products #1, README Q2). Plus the unknown product ('UNKNOWN').
+      One row per product in the catalog or on a sales line (README Q1), catalog values
+      first. One category per item: its latest line's code, mapped by
+      iowa_data_hub__legacy_category_map; else its catalog category (Q2, Q16, Q17, Q19,
+      Q21). Plus the unknown product ('UNKNOWN').
     config:
       alias: int_product__category_picked
     columns:
@@ -19,6 +21,14 @@ models:
         data_tests:
           - unique
           - not_null
+      - name: category_code
+        description: The resolved current code. 'Unknown' when neither the lines nor the catalog name give one.
+      - name: category_name
+        description: The latest name of category_code on the lines, else the catalog name in upper case.
+      - name: historic_category_name
+        description: >
+          The category name on the item's latest line (type 3, README Q21), e.g. an old
+          taxonomy name. For an item never sold, category_name.
 
   - name: iowa_data_hub__int_store__latest_picked
     description: >
