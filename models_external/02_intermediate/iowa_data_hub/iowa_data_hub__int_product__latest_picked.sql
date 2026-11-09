@@ -45,9 +45,9 @@ latest_picked as (
         pack,
         bottle_volume_ml,
         category_code,
-        category_name as historic_category_name,
+        category_name,
         -- Dates
-        ordered_on,
+        ordered_on as category_ordered_on,
         -- Load tracking
         order_year as last_order_year
     from order_line
@@ -70,9 +70,9 @@ cleaned as (
         pack,
         nullif(bottle_volume_ml, 0) as bottle_volume_ml,   -- 2015 #3: 0 on 2 lines
         category_code,
-        historic_category_name,
+        category_name,
         -- Dates
-        ordered_on,
+        category_ordered_on,
         -- Load tracking
         last_order_year
     from latest_picked
@@ -88,9 +88,9 @@ null_handled as (
         pack,
         bottle_volume_ml,
         category_code,
-        coalesce(nullif(historic_category_name, ''), 'Unknown') as historic_category_name,
+        coalesce(nullif(category_name, ''), 'Unknown') as category_name,
         -- Dates
-        ordered_on,
+        category_ordered_on,
         -- Load tracking
         last_order_year
     from cleaned

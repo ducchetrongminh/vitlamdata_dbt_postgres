@@ -101,10 +101,13 @@ models:
           - not_null
       - name: category_code
         description: The category code on the picked line, as loaded. Null when the item's lines have none.
-      - name: historic_category_name
+      - name: category_name
         description: The category name on the picked line.
-      - name: ordered_on
-        description: Order date of the picked line. Decides which window of the category map applies.
+      - name: category_ordered_on
+        description: >
+          Order date of the picked line. Chooses the category map's window: a code number
+          can mean another category before 2016-08-29. Not always the item's last order:
+          the category preference can pick an older line of the year.
       - name: last_order_year
         description: >
           The year of the picked line. Its max is the latest year read: the next run reads the
