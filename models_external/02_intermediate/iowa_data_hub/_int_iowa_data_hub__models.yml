@@ -85,3 +85,27 @@ models:
         description: >
           The latest year the code was used. Its max is the latest year read: the next run
           reads the year after it.
+
+  - name: iowa_data_hub__int_product__latest_picked
+    description: >
+      One row per item seen on a sales line, from its latest line, preferring one whose
+      category is not TEMPORARY & SPECIALTY PACKAGES (README Q1, Q2, Q15). The category code
+      is as on the line: iowa_data_hub__int_product__category_picked maps and names it.
+      Incremental, one year per run, as iowa_data_hub__int_store__latest_picked.
+    config:
+      alias: int_product__latest_picked
+    columns:
+      - name: product_code
+        data_tests:
+          - unique
+          - not_null
+      - name: category_code
+        description: The category code on the picked line, as loaded. Null when the item's lines have none.
+      - name: historic_category_name
+        description: The category name on the picked line.
+      - name: ordered_on
+        description: Order date of the picked line. Decides which window of the category map applies.
+      - name: last_order_year
+        description: >
+          The year of the picked line. Its max is the latest year read: the next run reads the
+          year after it.
