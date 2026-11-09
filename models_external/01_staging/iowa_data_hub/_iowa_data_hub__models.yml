@@ -41,7 +41,8 @@ models:
     description: >
       Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
       kept (README Q9); iowa_data_hub__int_order_line__deduplicated drops them. Holds only
-      the columns a model uses so far: the store's and the vendor's.
+      the columns a model uses so far: the store's, the vendor's, the product's and its
+      category's.
       No tests. Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
       (unique + not_null on the staging key): each test scans every year's lines, ~38M,
       which is too heavy for the database VM. The store and vendor codes are tested in the
@@ -60,6 +61,8 @@ models:
           vendor_number, as loaded: before 2016-08-29 vendors under 100 have no leading zero,
           e.g. 10, later 010 (liquor_sales_2016 #1). 'UNKNOWN' on the few lines without one
           (liquor_sales_2021 #1).
+      - name: product_code
+        description: item_no, the item's number. Digits, kept as text; joins liquor_products.item_no (README Q1).
       - name: ordered_on
       - name: order_year
         description: >
@@ -75,3 +78,20 @@ models:
         description: >
           The vendor's name on this line, as loaded. Changes over time (liquor_sales_2025 #6);
           cleaned in iowa_data_hub__int_vendor__latest_picked.
+      - name: product_name
+        description: im_desc on this line, as loaded. Changes over time (liquor_sales_2026 #6).
+      - name: pack
+        description: Bottles per case on this line. Changes over time for some items (#6).
+      - name: bottle_volume_ml
+        description: >
+          As loaded. Flips between one bottle and the whole pack for some minis (README Q15);
+          0 on 2 lines of 2015 (liquor_sales_2015 #3).
+      - name: category_code
+        description: >
+          The item's category code on this line, 7 digits, as loaded. Codes retired in 2016,
+          2022 and 2024 are mapped by seed iowa_data_hub__legacy_category_map (README Q16,
+          Q17, Q21). Null on a few lines (liquor_sales_2026 #4).
+      - name: category_name
+        description: >
+          The code's name on this line, upper case, as loaded. A code's name can change
+          (liquor_sales_2025 #5).
