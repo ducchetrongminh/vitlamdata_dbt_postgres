@@ -68,3 +68,20 @@ models:
         data_tests:
           - unique
           - not_null
+
+  - name: iowa_data_hub__int_category__latest_named
+    description: >
+      One row per category code seen on a sales line, with its latest name (liquor_sales_2025
+      #5, README Q21). Retired codes keep their row. Incremental, one year per run, as
+      iowa_data_hub__int_store__latest_picked.
+    config:
+      alias: int_category__latest_named
+    columns:
+      - name: category_code
+        data_tests:
+          - unique
+          - not_null
+      - name: last_order_year
+        description: >
+          The latest year the code was used. Its max is the latest year read: the next run
+          reads the year after it.
