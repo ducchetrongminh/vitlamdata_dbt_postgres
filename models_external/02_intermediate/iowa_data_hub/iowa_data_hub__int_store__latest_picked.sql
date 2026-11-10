@@ -67,6 +67,8 @@ cleaned as (
         store_city,
         case                                                -- Q12: Bettendorf zip typo
             when store_code = '2687' and store_zip_code = '57222' then '52722'
+            -- liquor_sales_2016 #3: Dunlap's zip; 712-2 to the store's last line, 2016-12-26
+            when store_code = '4307' and store_zip_code = '712-2' then '51529'
             else store_zip_code
         end as store_zip_code,
         county_fips_code,

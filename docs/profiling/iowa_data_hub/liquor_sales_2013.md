@@ -40,7 +40,7 @@ Only the columns that differ from 2014.
 | 2014 #1 | `category_code` | `101220` on 4 lines of `CRAIGELLACHIE` | as 2014 #1 | decided |
 | 2015 #3 | `bottle_volume_ml` | 0 on 1 line of 905230 `RONDIAZ DSS LEMON RUM` | as 2015 #3 | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
-| 2016 #3 | `store_zip_code` | `712-2` on 1,614 lines | as 2016 #3 | open |
+| 2016 #3 | `store_zip_code` | `712-2` on 1,614 lines | as 2016 #3 | decided |
 | 2016 #4 | county | NULL with an address on 2,660 lines | as 2016 #4 | decided |
 | 2018 #2 | `sales_dollars` | $0 on 4 lines (Apr, Jul) | as 2018 #2 | open |
 | 2022 #2 | `item_no` | 1,880 items, 209,971 lines (10.2%), not in the catalog. Most are 73050 `RUMCHATA` (11,297 lines), today under another number (guess) | as 2022 #2 | open |

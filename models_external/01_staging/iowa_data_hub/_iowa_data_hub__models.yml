@@ -71,7 +71,9 @@ models:
       - name: store_name
         description: The store's name on this line, as loaded. Changes over time (#5).
       - name: store_zip_code
-        description: 5 digits, as loaded. Store 2687's typo 57222 is fixed in iowa_data_hub__int_store__latest_picked (README Q12).
+        description: >
+          5 digits, as loaded. Fixed in iowa_data_hub__int_store__latest_picked: store
+          2687's typo 57222 (README Q12) and store 4307's 712-2 (liquor_sales_2016 #3).
       - name: county_fips_code
         description: Iowa state code 19 + county code.
       - name: vendor_name

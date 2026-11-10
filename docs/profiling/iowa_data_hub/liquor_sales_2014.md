@@ -36,7 +36,7 @@ Only the columns that differ from 2015.
 | 1 | `category_code` | `101220` (6 digits, no name) on 2 lines of 901369 `CRAIGELLACHIE`, a Scotch | category map seed: `1012300` SINGLE MALT SCOTCH, by name (README Q21) | decided |
 | 2015 #3 | `bottle_volume_ml` | 0 on 7 lines of 3 items: 934962 `THREE OLIVES ORANGE VODKA` (5), 941063 `BURNETT'S PINK LEMONADE VODKA MINI` (1), 964590 `CANADIAN CLUB DOCK 57 MINI DNO` (1) | as 2015 #3 | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
-| 2016 #3 | `store_zip_code` | `712-2` on 1,780 lines | as 2016 #3 | open |
+| 2016 #3 | `store_zip_code` | `712-2` on 1,780 lines | as 2016 #3 | decided |
 | 2016 #4 | county | NULL with an address on 1,054 lines, all store 4247 | as 2016 #4 | decided |
 | 2022 #2 | `item_no` | 1,913 items, 196,372 lines (9.4%), not in the catalog, e.g. 75211 `KINKY LIQUEUR` (5,476), 73050 `RUMCHATA` (2,490) | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |

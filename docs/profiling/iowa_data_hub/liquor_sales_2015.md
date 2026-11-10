@@ -40,7 +40,7 @@ Only the columns that differ from 2016.
 | 2 | `category_code` | `1501100 HIGH PROOF BEER - AMERICAN` on 6 lines of `SAM ADAMS UTOPIAS HA`; `1089290` with no name on 1 line | accept | open |
 | 3 | `bottle_volume_ml` | 0 on 2 lines of 941063 `BURNETT'S PINK LEMONADE VODKA MINI`, so liters are 0 | clean in staging: take the volume from the item's other lines (a mini: 50 ml is a guess) | open |
 | 2016 #1 | invoice, category, vendor | Old system all year | as 2016 #1 | decided |
-| 2016 #3 | `store_zip_code` | `712-2` on 1,725 lines | as 2016 #3 | open |
+| 2016 #3 | `store_zip_code` | `712-2` on 1,725 lines | as 2016 #3 | decided |
 | 2016 #4 | county | NULL with an address on 1,119 lines, all store 4247 `FAREWAY STORES #879 / BELMOND` | as 2016 #4 | decided |
 | 2022 #2 | `item_no` | 1,735 items, 156,750 lines (7.2%), not in the catalog | as 2022 #2 | open |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the 2025 #2 items, e.g. 48102 at 1,200 | as 2025 #2 | open |
