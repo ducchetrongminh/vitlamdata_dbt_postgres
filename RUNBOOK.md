@@ -245,7 +245,7 @@ Recommended. `.devcontainer/postCreate.sh` turns it on for all your sessions in
 { "remoteControlAtStartup": false }
 ```
 
-## Warehouse Terraform (`terraform/postgres/`)
+## Warehouse Terraform (`terraform/warehouse/`)
 
 Manages the `vitlamdata_dw` database on `postgres-dw`: roles, schemas, grants
 (architecture §4, §7, §9). Tables belong to dbt and dlt.
@@ -259,7 +259,7 @@ You need Terraform >= 1.11 and, for `psql`, `gcloud` and an OS Login on the VM.
 ### Validate locally
 
 ```bash
-cd terraform/postgres
+cd terraform/warehouse
 terraform init -backend=false
 terraform validate
 terraform fmt -check
@@ -269,7 +269,7 @@ terraform fmt -check
 
 ### Plan and apply (CI only)
 
-`.github/workflows/terraform.yml` plans on every PR that touches `terraform/postgres/` and
+`.github/workflows/terraform.yml` plans on every PR that touches `terraform/warehouse/` and
 posts the plan as a comment. On merge to `main` it applies, then runs
 `pii_key.sql` and `check_privileges.sql` as `postgres`. Every job runs in the
 GitHub Environment `admin`, the only one the `dbt-terraform` service account
@@ -283,7 +283,7 @@ row, and in parallel they fail with `pq: tuple concurrently updated`.
 
 Role passwords come from the secrets `dw-loader`, `dw-transformer`, `dw-ci` and
 `dw-reporter-public`. To rotate one: add a new secret version, bump
-`password_version` in `terraform/postgres/roles.tf`, open a PR and merge it.
+`password_version` in `terraform/warehouse/roles.tf`, open a PR and merge it.
 
 The PII key comes from `dw-pii-key`. `pii_key.sql` never overwrites an existing
 key. Changing the key changes every hash and needs a full refresh of all
@@ -360,7 +360,7 @@ gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- -t \
 
 ### Set a personal dev password
 
-Personal logins (`postgresql_role.dev` in `terraform/postgres/roles.tf`) have no secret.
+Personal logins (`postgresql_role.dev` in `terraform/warehouse/roles.tf`) have no secret.
 After the apply that creates yours, open the superuser psql above and run:
 
 ```
@@ -398,7 +398,7 @@ hand it runs as the superuser on the VM:
 
 ```bash
 gcloud compute ssh vitlamdata-vm-2609 --zone asia-southeast1-c -- \
-  sudo docker exec -i postgres-dw psql -U postgres -d vitlamdata_dw < terraform/postgres/check_privileges.sql
+  sudo docker exec -i postgres-dw psql -U postgres -d vitlamdata_dw < terraform/warehouse/check_privileges.sql
 ```
 
 It ends with `all privilege checks passed` and leaves nothing behind.

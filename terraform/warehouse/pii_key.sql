@@ -4,7 +4,7 @@
 -- rebuilt warehouse gets the same key back and every hash stays the same.
 -- Grants come from the default privileges on `private` (grants.tf).
 --
--- psql -v key="$(gcloud secrets versions access latest --secret=dw-pii-key)" -f terraform/postgres/pii_key.sql
+-- psql -v key="$(gcloud secrets versions access latest --secret=dw-pii-key)" -f terraform/warehouse/pii_key.sql
 \set ON_ERROR_STOP on
 
 create table if not exists private.pii_key (

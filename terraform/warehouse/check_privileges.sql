@@ -3,7 +3,7 @@
 -- needed. Everything runs in one transaction that is rolled back.
 -- Prints "all privilege checks passed" or stops at the first failure.
 --
--- psql -f terraform/postgres/check_privileges.sql
+-- psql -f terraform/warehouse/check_privileges.sql
 \set ON_ERROR_STOP on
 begin;
 
