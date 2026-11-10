@@ -93,6 +93,12 @@ jobs:
             echo "$err"; exit 1
           fi
 
+      # Drop and reload every seed first: a plain dbt seed only empties and refills the
+      # table, so a seed whose columns changed fails ("column ... does not exist"). Seeds are
+      # small. The drop cascades to views on a seed; dbt build recreates them next.
+      - name: dbt seed, full refresh
+        run: dbt seed --full-refresh
+
       - name: dbt build
         run: |
           if [ "${{ steps.state.outputs.found }}" = true ]; then
