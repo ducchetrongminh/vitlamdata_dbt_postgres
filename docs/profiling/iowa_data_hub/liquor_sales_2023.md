@@ -37,18 +37,18 @@ No issue of its own. 2024's issues hold, with these counts:
 
 | # | Column | 2023 | Status |
 |---|---|---|---|
-| 2024 #1 | `category_code` | The 4 group codes are used all year: 1032000 on 65 lines, 1081000 on 60, 1082000 on 173, 1092000 on 62 | open |
+| 2024 #1 | `category_code` | The 4 group codes are used all year: 1032000 on 65 lines, 1081000 on 60, 1082000 on 173, 1092000 on 62 | decided |
 | 2025 #2 | `bottle_volume_ml` | as 2024 | open |
 | 2025 #3 | cost, retail | NULL all year | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,639,557 lines | open |
-| 2025 #5 | `category_name` | The old plural names all year | open |
+| 2025 #5 | `category_name` | The old plural names all year | decided |
 | 2025 #6 | `vendor_name` | 785 `MAISON FERRAND USA` → `MAISON FERRAND USA / COGNAC FERRAND USA INC` on 2023-02-01 | open |
 | 2026 #4 | category | 181 extra (`item_no`, `category_code`) pairs, including 2024 #1 | open |
-| 2026 #5 | store columns | Location NULL on 1,177 lines of 9 stores, all with the location on other lines, e.g. 010183's first 696 lines on 2023-03-29 – 30. Zip `57222` on 281 lines. Typos fixed during the year: 010094 address `33501` → `3501 WEST BROADWAY`, 010154 city `FORT DODGE` → `WEBSTER CITY` in the name | open |
+| 2026 #5 | store columns | Location NULL on 1,177 lines of 9 stores, all with the location on other lines, e.g. 010183's first 696 lines on 2023-03-29 – 30. Zip `57222` on 281 lines. Typos fixed during the year: 010094 address `33501` → `3501 WEST BROADWAY`, 010154 city `FORT DODGE` → `WEBSTER CITY` in the name | decided |
 | 2026 #6 | `im_desc`, `pack` | 5,368 (`item_no`, `im_desc`) pairs for 5,231 items. 33 items change pack or volume. 23 `99 …` mini items go from pack 10 or 12 to pack 1 on 2023-05-01 | open |
 | 2026 #7 | returns | 3,681 `RINV-` lines, 6 positive; 3 `INV-` lines negative | open |
 | 2026 #8 | `store_no` | as 2026 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 23,400, `store_address` 6,939, `store_name` 1,863, `im_desc` 139 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 23,400, `store_address` 6,939, `store_name` 1,863, `im_desc` 139 | decided |
 
 <details><summary>Query</summary>
 

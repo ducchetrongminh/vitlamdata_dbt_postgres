@@ -41,9 +41,9 @@ Only the columns that differ from 2022.
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on the 2,622,712 distinct lines | as 2025 #4 | open |
 | 2025 #6 | `vendor_name` | 4 renamed: 322, 338, 479, 886 | as 2025 #6 | open |
-| 2026 #5 | store columns | Location NULL on 196 lines of 3 stores, all with the location on other lines. Zip `57222` on 421 lines. Typos: `FAIRFEILD`, `CEDAR FALL`. 2658 moves address in Feb | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 196 lines of 3 stores, all with the location on other lines. Zip `57222` on 421 lines. Typos: `FAIRFEILD`, `CEDAR FALL`. 2658 moves address in Feb | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 4,776 (`item_no`, `im_desc`) pairs for 4,472 items. Many changes add a prefix: `SOOH ` (44), `CM `, `ND `. 19 items change pack or volume | as 2026 #6 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 21,069, `store_address` 12,057, `store_name` 2,873, `im_desc` 128 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 21,069, `store_address` 12,057, `store_name` 2,873, `im_desc` 128 | as 2026 #9 | decided |
 
 ### 1. Vendor missing on 4 lines
 

@@ -150,16 +150,23 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
    | 6 one-off shapes in 2012, 2013 and 2015 | | 1,170 | still end in a 5-digit line number (2012 #2, 2013 #1, 2015 #1) |
 
    Rules for staging:
-   - `is_return` = the id starts with `R`.
+   - `invoice_type` = `Return` when the id starts with `R`, else `Order`.
    - Up to 2025-08-29, the line number is the last 5 digits and the invoice is everything before
      them. From 2025-09-01 the id has no line number.
    - The invoice number alone is not unique. The S era (up to 341595) and the INV era (from 1)
      overlap. After the 2022-07-18 system change (2022 #1), invoices 450000 – 454720 were issued a
      second time to other stores. Their Feb 2022 lines are numbered after the July lines, so
-     full ids stay unique. The invoice key is (invoice text, `store_no`, `ordered_on`).
-   - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
-     unique once whole-row repeats are dropped (Q9).
-9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in staging.
+     full ids stay unique. The invoice key is (invoice text, `store_no`): in 2012-2013 and
+     2022, adding the date splits no further. Staging joins them with the year, as a guard, into
+     `invoice_no`, e.g. `INV-450000/2667/2022`.
+   - The line key, `order_line_key`, is a bigint hash of the whole raw row in every year. Up to
+     2025-08-29 the row holds the unique `invoice_id`; after, the whole row is unique once
+     whole-row repeats are dropped (Q9).
+9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in the
+   intermediate layer (`iowa_data_hub__int_order_line__deduplicated`). Staging keeps them, since
+   collapsing rows changes the grain and needs a sort of every line. Over all years at once, that
+   sort ran the database out of temp disk. A model that repeats cannot change, like the store
+   dimension, reads staging and skips it.
    This also drops the few repeated lines that are in the publisher's own table: 7 in 2025, 14 in 2026.
    - **Why they look real.** The table minus the export's extra part matches the publisher's row
      count exactly in 2025 and 2026, so the publisher holds them too. In 2025's repeated slice,
@@ -229,8 +236,12 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
       (`American Cordials & Liqueur` 19, `Imported Cordials & Liqueur` 16, …).
     - Decision: type 1, as Q2. Map each group code to the regular code with the same name for
       lines whose item has no later category.
+    - The map is the rows from 2016-08-29 of `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`,
+      with the 10 group codes of 2022 and `1070100` (2021). Three have no same-name twin and go
+      to the code their items carry in the catalog: `1012000` IMPORTED WHISKIES → `1012300`,
+      `1042000` IMPORTED GINS → `1042100`, `1090000` DISTILLED SPIRITS SPECIALTY → `1092100`.
 17. **Was 2022-07-18 a system change?** Likely (human). Decision: category recodes are type 1, as
-    Q16. Whether returns before it were left out stays unknown.
+    Q16; the 4 replaced codes are in the same seed. Whether returns before it were left out stays unknown.
 18. **What are the $0 lines?** Unknown. Decision: keep them as they are.
 19. **Is there a mapping from old to new category codes?** Checked: no.
     - 2,494 items sell on both sides of 2016-08-29 (2016 and Jan–Feb 2017). 2,272 of them (91%)
@@ -249,12 +260,13 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
       - 23 items, 4,140 lines, are only in the catalog. They take its category.
       - 2,922 items, 502,130 lines (5.1%), have no new category anywhere. They use the code
         map (Q21).
-20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
-    flag on item 3984's 2013 lines (2013 #2).
+20. **Absolut gift set at $206 a unit?** Remove the lines (human): staging drops item 3984's 287
+    lines of 2013 (2013 #2). The price is about ten times too high, and a lone flag column on
+    the fact would describe one item in one year.
 21. **Map the old codes for items never sold again?** Yes, for old codes replaced by a different
-    code (human). A seed maps them, and staging keeps the old name as the legacy category name
-    (type 3). An old code that kept its number needs no map: the category dimension is type 1
-    by code and takes the latest name (`1031100` 100 PROOF VODKA → AMERICAN VODKAS).
+    code (human). A seed maps them, and the product dimension keeps the name on the item's
+    latest line as `historic_category_name` (type 3). An old code that kept its number needs no
+    map: a category is type 1 by code and takes the latest name (`1031100` 100 PROOF VODKA → AMERICAN VODKAS).
     - The seed is `seeds/iowa_data_hub/iowa_data_hub__legacy_category_map.csv`. It holds 59 of
       the 92 old codes. 30 kept their number, and 3 have no later code.
     - 52 rows are mapped by items: the current code that most lines of the old code's items

@@ -1,0 +1,18 @@
+with
+
+vendor as (
+    select * from {{ ref('iowa_data_hub__int_vendor__current_named') }}
+),
+
+final as (
+    select
+        -- Keys
+        {{ generate_bigint_surrogate_key(['vendor_code']) }} as vendor_key,
+        vendor_code,
+        -- Name, desc
+        vendor_name,
+        historic_vendor_name
+    from vendor
+)
+
+select * from final

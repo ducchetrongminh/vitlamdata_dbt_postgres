@@ -1,0 +1,58 @@
+# Adding a year: declare liquor_sales_<year> below and raise the range in
+# macros/iowa_data_hub_order_years.sql, which lists the years the order line model unions.
+sources:
+  - name: iowa_data_hub
+    description: >
+      Iowa liquor product catalog and sales from the Iowa Data Hub (data.iowa.gov, CC BY 4.0,
+      Iowa Alcoholic Beverages Division), loaded by ingestion/iowa_data_hub/pipeline.py. Every
+      column lands as text. Profiling record: docs/profiling/iowa_data_hub/.
+    schema: raw_iowa_data_hub
+    tables:
+      - name: _dlt_loads
+        description: dlt load log, one row per load. Used only for freshness.
+        config:
+          loaded_at_field: inserted_at
+          freshness:
+            warn_after: {count: 26, period: hour}
+            error_after: {count: 50, period: hour}
+
+      - name: liquor_products
+        description: >
+          The product catalog, the latest monthly snapshot (replaced on every load). One row
+          per item per category (item_no, category_name), not per item: an item can also sit
+          under a tag category (docs/profiling/iowa_data_hub/liquor_products.md #1).
+
+      - name: liquor_sales_2012
+        description: Sales lines ordered in 2012, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2012.md.
+      - name: liquor_sales_2013
+        description: Sales lines ordered in 2013, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2013.md.
+      - name: liquor_sales_2014
+        description: Sales lines ordered in 2014, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2014.md.
+      - name: liquor_sales_2015
+        description: Sales lines ordered in 2015, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2015.md.
+      - name: liquor_sales_2016
+        description: Sales lines ordered in 2016, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2016.md.
+      - name: liquor_sales_2017
+        description: Sales lines ordered in 2017, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2017.md.
+      - name: liquor_sales_2018
+        description: Sales lines ordered in 2018, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2018.md.
+      - name: liquor_sales_2019
+        description: Sales lines ordered in 2019, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2019.md.
+      - name: liquor_sales_2020
+        description: Sales lines ordered in 2020, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2020.md.
+      - name: liquor_sales_2021
+        description: Sales lines ordered in 2021, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2021.md.
+      - name: liquor_sales_2022
+        description: Sales lines ordered in 2022, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2022.md.
+      - name: liquor_sales_2023
+        description: Sales lines ordered in 2023, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2023.md.
+      - name: liquor_sales_2024
+        description: Sales lines ordered in 2024, loaded once, profiled in docs/profiling/iowa_data_hub/liquor_sales_2024.md.
+      - name: liquor_sales_2025
+        description: >
+          Sales lines ordered in 2025, loaded once. One row per invoice line. The export repeats
+          a slice of lines (docs/profiling/iowa_data_hub/liquor_sales_2025.md #1).
+      - name: liquor_sales_2026
+        description: >
+          Sales lines ordered in 2026, reloaded on every run. One row per invoice line, with no
+          unique key (docs/profiling/iowa_data_hub/liquor_sales_2026.md #1).

@@ -1,0 +1,80 @@
+models:
+  - name: iowa_data_hub__fact_liquor_order_line
+    description: >
+      Iowa liquor orders, one row per invoice line: one item on one store's order from the
+      state, 2012-2026. Returns are lines too, with negative bottles and dollars (design:
+      docs/design-external/iowa_data_hub/liquor_order.md). The export's whole-row repeats are
+      dropped (README Q9), and item 3984's overpriced 2013 lines are left out (Q20).
+      Amounts are USD. Why we don't follow docs/dw-naming-conventions.md#47-standard-fact-prefixes-and-suffixes
+      (_amt is in VND): this dataset has USD only.
+      Loads one year per run (see the model).
+      Why we don't follow docs/dimensional-modeling-standards.md#26-fact-column-order
+      (natural keys on the fact): the codes serve only tracing, and staging has them; leaving
+      them out saves ~15 bytes a line. The dimension keys are bigints, as on the dims (see
+      dim_store.store_key).
+    columns:
+      - name: order_line_key
+        data_type: bigint
+        description: >
+          The fact's key: a bigint hash of the whole raw row, made in staging (README Q8;
+          see stg_iowa_data_hub__liquor_order_line for why). Tests, not a primary key
+          constraint: its index served nothing but the check.
+        data_tests:
+          - unique
+          - not_null
+      - name: invoice_no
+        data_type: text
+        description: >
+          The order, a degenerate dimension (README Q8): invoice number, store and year,
+          e.g. INV-450000/2667/2022, so count(distinct invoice_no) counts orders. Invoice
+          numbers 450000-454720 were issued twice in 2022, to other stores.
+      - name: invoice_type
+        data_type: text
+        description: Order, or Return (RINV-, negative quantities; liquor_sales_2026 #7).
+      - name: store_key
+        data_type: bigint
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_store')
+                field: store_key
+      - name: product_key
+        data_type: bigint
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_product')
+                field: product_key
+      - name: vendor_key
+        data_type: bigint
+        description: The item's vendor at the time of the order, as on the line.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_vendor')
+                field: vendor_key
+      - name: order_date
+        data_type: date
+        description: The day the state billed the order, in Iowa. Indexed.
+      - name: bottle_qty
+        data_type: integer
+        description: Bottles ordered; a unit of a bulk item counts as one (liquor_sales_2016 #5).
+      - name: liter_qty
+        data_type: numeric
+        description: >
+          bottle_qty × the product's latest bottle_volume_ml / 1000 (README Q15), not the
+          line's sales_liters. NULL when the product has no volume.
+      - name: state_bottle_cost_unit_price
+        data_type: numeric
+        description: What a bottle costs the state, as billed. NULL before 2025-07-01 (liquor_sales_2025 #3).
+      - name: state_bottle_retail_unit_price
+        data_type: numeric
+        description: The state's list price for a bottle. NULL before 2025-07-01.
+      - name: order_amt
+        data_type: numeric
+        description: >
+          What the store pays the state. Not always bottles × retail: some lines keep the
+          previous month's price (README Q11). Whole dollars Nov 2025 - Jan 2026 (Q10).
+      - name: state_cost_amt
+        data_type: numeric
+        description: bottle_qty × state_bottle_cost_unit_price. NULL before 2025-07-01.

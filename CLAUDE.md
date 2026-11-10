@@ -43,6 +43,11 @@ bus matrix go in `docs/design-external/<source>/`, not `docs/design/`, and its
 conformed dimensions do not mix with VitLamData's. So its dimensions can take
 simple names (Store, Vendor). dbt model names are unique across the whole
 project, so prefix every intermediate and mart model of an external dataset
-with its source, and set `alias` to the simple table name: model
-`iowa_data_hub__dim_store`, table `dim_store`. Staging models already carry the
+with its source. Set `alias` to the simple table name on mart models only: model
+`iowa_data_hub__dim_store`, table `dim_store`. Intermediate models keep the prefixed name,
+since they share a schema across sources and simple names could collide. Put the alias in
+the model's `config()` block when it has one, else in its yml. Its models go in `models_external/`, with the same layer folders
+(`models_external/03_mart/iowa_data_hub/`); `dbt_project.yml` layer configs
+cover both folders. Its marts land in schema `mart_ext_<source>`
+(`mart_ext_iowa_data_hub`). Its seeds stay in `seeds/<source>/`. Staging models already carry the
 source (`stg_iowa_data_hub__…`).

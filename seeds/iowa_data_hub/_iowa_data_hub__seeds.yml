@@ -1,18 +1,28 @@
 seeds:
   - name: iowa_data_hub__legacy_category_map
     description: >
-      Maps a category code of the old taxonomy, used on sales lines ordered before
-      2016-08-29, to the different current code that replaced it
-      (docs/profiling/iowa_data_hub/_README.md Q19, Q21). An old code absent here kept its
-      number: the category dimension is type 1 by code and takes the latest name. Built
-      from the items sold under each old code that sell again later: the target is the
-      current code that most of those lines' items carry today, weighted by lines. Staging
-      keeps the line's old name as the legacy category name (type 3). The map is used only
-      for items with no later category; items that sell again take their own latest
-      category (type 1).
+      Maps a retired category code to the current code that replaced it, for the lines
+      ordered in the row's window (ordered_from, ordered_before). Two kinds of rows:
+      - Old taxonomy, lines before 2016-08-29 (README Q19, Q21): the code of the old system.
+        An old code absent here kept its number: it takes the code's latest name. Built from
+        the items sold under each old code that sell again later: the target is the current
+        code that most of those lines' items carry today, weighted by lines.
+      - From 2016-08-29: the codes replaced on 2022-07-18 (README Q17, liquor_sales_2022 #1)
+        and the group codes ending 000 (Q16, liquor_sales_2024 #1), each to the regular code
+        with the same name at the time. Three group codes have no such twin and go to the
+        code their items carry in the catalog (mapped_by = manual).
+      The window keeps a code apart when its number meant another category in the old system
+      (1071100 AMERICAN COCKTAILS before, COCKTAILS/RTD after). The map is used only for items
+      with no later category; items that sell again take their own latest category (type 1).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: ['legacy_category_code', 'ordered_from']
     config:
       column_types:
         legacy_category_code: text
+        ordered_from: date
+        ordered_before: date
         legacy_category_name: text
         category_code: text
         category_name: text
@@ -22,10 +32,13 @@ seeds:
         share_of_moved_lines: numeric
     columns:
       - name: legacy_category_code
-        description: Category code on a sales line ordered before 2016-08-29.
+        description: The retired category code on a sales line.
         data_tests:
-          - unique
           - not_null
+      - name: ordered_from
+        description: First order date the row applies to. Empty for old-taxonomy rows.
+      - name: ordered_before
+        description: The row applies to lines ordered before this date. Empty for rows from 2016-08-29.
       - name: legacy_category_name
         description: The code's most common name on old lines. Empty where the old lines have no name.
       - name: category_code
@@ -36,16 +49,17 @@ seeds:
         description: Latest sales name of category_code, for review. Staging takes the name from the current data.
       - name: mapped_by
         description: >
-          'items' when the target comes from items sold on both sides; 'manual' when the
-          old code's items were never sold again or the item mapping was wrong, so the target
-          is matched by name.
+          'items' when the target comes from items sold on both sides; 'name' when the target
+          is the regular code with the same name at the time (from 2016-08-29); 'manual' when
+          picked by hand: the old code's items were never sold again, the item mapping was
+          wrong, or a group code has no same-name twin.
         data_tests:
           - not_null
           - accepted_values:
               arguments:
-                values: ['items', 'manual']
+                values: ['items', 'name', 'manual']
       - name: legacy_lines
-        description: Sales lines ordered before 2016-08-29 under the old code, repeats included.
+        description: Sales lines ordered before 2016-08-29 under the old code, repeats included. Empty for rows from 2016-08-29.
       - name: moved_lines
         description: Of legacy_lines, the lines whose item has a category after 2016-08-29. Empty for manual rows.
       - name: share_of_moved_lines

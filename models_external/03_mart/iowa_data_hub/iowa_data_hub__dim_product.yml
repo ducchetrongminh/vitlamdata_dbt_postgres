@@ -1,0 +1,75 @@
+models:
+  - name: iowa_data_hub__dim_product
+    description: >
+      Iowa liquor products, one row per item in the current catalog or on a sales line,
+      2012-2026, plus the unknown product ('UNKNOWN'). Type 1: today's catalog values; an
+      item no longer listed takes its latest line's (README Q1). Category is a product
+      attribute, flattened in: the item's latest category, with retired codes mapped to the
+      current ones; historic_category_name keeps the name on its latest line, type 3 (README
+      Q2, Q16, Q17, Q19, Q21; design: docs/design-external/iowa_data_hub/liquor_order.md).
+    config:
+      alias: dim_product
+    columns:
+      - name: product_key
+        data_type: bigint
+        description: >
+          Why we don't follow docs/dimensional-modeling-standards.md#11-dimension-surrogate-keys
+          (dbt_utils.generate_surrogate_key, md5 text): macro generate_bigint_surrogate_key
+          gives a bigint, 8 bytes, not 33, which saves storage on every fact line and joins
+          faster. The dimension is small, so 64 bits leave collisions very unlikely.
+        constraints:
+          - type: primary_key
+      - name: product_code
+        data_type: text
+        description: item_no, the item's number. Digits, kept as text.
+        constraints:
+          - type: not_null
+          - type: unique
+      - name: product_name
+        data_type: text
+        description: >
+          The catalog description, mixed case; for an item no longer listed, the description
+          on its latest line, upper case. Keeps the status codes it carries (DISCO, HA, USE
+          CODE, ...).
+      - name: category_code
+        data_type: text
+        description: >
+          The item's current category code, 7 digits. A code retired in 2016, 2022 or 2024 is
+          mapped to its replacement (seed iowa_data_hub__legacy_category_map). 'Unknown' when
+          neither the lines nor the catalog give one.
+      - name: category_name
+        data_type: text
+        description: >
+          The latest name of category_code, upper case. A real category over TEMPORARY &
+          SPECIALTY PACKAGES and Iowa Spirits Manufacturers when the item has one (README Q2).
+      - name: historic_category_name
+        data_type: text
+        description: >
+          The category name on the item's latest line, e.g. an old-taxonomy name such as 100
+          PROOF VODKA (README Q21). For an item never sold, category_name.
+      - name: pack
+        data_type: integer
+        description: Bottles per case. Catalog first, else the latest line.
+      - name: inner_pack
+        data_type: integer
+        description: As loaded; meaning unknown.
+      - name: bottle_volume_ml
+        data_type: integer
+        description: Catalog first, else the latest line (README Q15). Null for non-retail items (ingredients, the magazine).
+      - name: proof
+        data_type: numeric
+      - name: age_years
+        data_type: numeric
+        description: Age in years. Null when no age is stated.
+      - name: upc
+        data_type: text
+        description: Not unique to a product; do not join on it.
+      - name: listed_date
+        data_type: date
+        description: When the item was listed. Can be in the future (listed ahead of release).
+      - name: state_bottle_cost_unit_price
+        data_type: numeric
+        description: What the state pays per bottle, current list. USD.
+      - name: state_bottle_retail_unit_price
+        data_type: numeric
+        description: What a store pays the state per bottle, current list. USD.

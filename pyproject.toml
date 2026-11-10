@@ -11,6 +11,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "sqlfluff>=4.4.0",
+    "sqlfluff-templater-dbt>=4.4.0",
 ]
 # ingestion/: dlt loads into raw_*. CI can install only these: uv sync --only-group ingestion
 ingestion = [

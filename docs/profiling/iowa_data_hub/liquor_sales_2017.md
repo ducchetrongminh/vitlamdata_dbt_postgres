@@ -35,7 +35,7 @@ Only the columns that differ from 2018.
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
 | 1 | `item_no` | `x904631` on 2 lines: a mis-keyed `904631` | clean in staging: strip the `x` | open |
-| 2 | store location | NULL on 43,477 lines (1.9%) of 49 stores; 6 stores have no location all year | clean in staging: fill from the same store in other years | open |
+| 2 | store location | NULL on 43,477 lines (1.9%) of 49 stores; 6 stores have no location all year | as 2026 #5: the store takes its latest line's location; NULL stays Unknown | decided |
 | 2018 #2 | `sales_dollars` | 833 lines with bottles but $0, all year (32–111 a month); 2 lines with $ but 0 bottles | as 2018 #2 | open |
 | 2019 #1 | `bottle_volume_ml` | No volume changes in 2017. The 2025 #2 items carry the pack total, e.g. 48102 at 1,200. Three `RETAIL READY 3PK SHIPPER` items at 31,500 ml | as 2025 #2 | open |
 | 2022 #1 | category, returns, stores | Old system all year. `1701200 HOLIDAY VAP` appears only here, 27 lines in late Oct | as 2022 #1 | open |
@@ -45,7 +45,7 @@ Only the columns that differ from 2018.
 | 2025 #6 | `vendor_name` | 192 and 255 carry another company's name on a few lines (`SIDNEY FRANK IMPORTING`, `WILSON DANIELS LTD`), likely the item's earlier importer. 294 spelled two ways | as 2025 #6 | open |
 | 2026 #4 | category | NULL on 3,130 lines of 215 items, all year, many gift packs, e.g. 100015 `FIREBALL BAG IN BOX` | as 2026 #4 | open |
 | 2026 #6 | `im_desc`, `pack` | 4,008 (`item_no`, `im_desc`) pairs for 3,901 items | as 2026 #6 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 7,642, `store_address` 9,878, `store_name` 3,094, `im_desc` 4 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 7,642, `store_address` 9,878, `store_name` 3,094, `im_desc` 4 | as 2026 #9 | decided |
 
 ### 1. One item number with a letter
 

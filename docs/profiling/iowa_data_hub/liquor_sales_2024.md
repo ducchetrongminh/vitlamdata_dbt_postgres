@@ -43,17 +43,17 @@ Only the columns that differ from 2026. Every other column is as in 2026.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `category_code` | 4 group codes ending `000` on 75 lines of 26 items, Jan–Mar 2024, each with the name of a `…100` code | clean in staging: type 1, the item's latest category; else the regular code with the same name (README Q16) | decided |
+| 1 | `category_code` | 4 group codes ending `000` on 75 lines of 26 items, Jan–Mar 2024, each with the name of a `…100` code | clean in intermediate: type 1, the item's latest category; else the regular code with the same name, in the category map seed (README Q16) | decided |
 | 2025 #2 | `bottle_volume_ml` | Pack total for the same multi-pack items, all year | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on all 2,590,975 lines | as 2025 #4 | open |
-| 2025 #5 | `category_name` | The old plural names all year | as 2025 #5 | open |
+| 2025 #5 | `category_name` | The old plural names all year | as 2025 #5 | decided |
 | 2026 #4 | category | 151 extra (`item_no`, `category_code`) pairs, including #1 | as 2026 #4 | open |
-| 2026 #5 | store columns | Location NULL on 422 lines of 7 stores: 010206 from 2024-09-04 (it has one before). Zip `57222` on 287 lines. Typos: 4265 `/ WATERLO` beside `/ WATERLOO` Jun–Dec, 010450 `WIKES` then `WILKES`. 010395 address `303` → `1303 4TH ST SW` | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 422 lines of 7 stores: 010206 from 2024-09-04 (it has one before). Zip `57222` on 287 lines. Typos: 4265 `/ WATERLO` beside `/ WATERLOO` Jun–Dec, 010450 `WIKES` then `WILKES`. 010395 address `303` → `1303 4TH ST SW` | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 5,337 (`item_no`, `im_desc`) pairs for 5,211 items. 27 items change pack or volume, mostly minis between 10 and 12 a case | as 2026 #6 | open |
 | 2026 #7 | returns | 2,977 `RINV-` lines, 9 positive; 15 `INV-` lines negative | as 2026 #7 | open |
 | 2026 #8 | `store_no` | as 2026 | as 2026 #8 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 23,136, `store_address` 5,973, `store_name` 2,026, `im_desc` 166 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 23,136, `store_address` 5,973, `store_name` 2,026, `im_desc` 166 | as 2026 #9 | decided |
 
 ### 1. Four group-level category codes
 

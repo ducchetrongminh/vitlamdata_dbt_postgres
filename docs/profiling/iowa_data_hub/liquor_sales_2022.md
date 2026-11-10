@@ -36,18 +36,18 @@ Only the columns that differ from 2023.
 
 | # | Column | Issue | Action | Status |
 |---|---|---|---|---|
-| 1 | `category_code`, `invoice_id`, `store_no` | A system change on 2022-07-18 (guess): category codes recoded, returns and 6-digit store numbers start | clean in staging: type 1, the item's latest category. Invoice numbers 450000–454720 reused (README Q8) (README Q17) | decided |
+| 1 | `category_code`, `invoice_id`, `store_no` | A system change on 2022-07-18 (guess): category codes recoded, returns and 6-digit store numbers start | clean in intermediate: type 1, the item's latest category; replaced codes in the category map seed. Invoice numbers 450000–454720 reused (README Q8) (README Q17) | decided |
 | 2 | `item_no` | 2 items, 12 lines, not in `liquor_products` | accept: build those products from the sales lines | open |
 | 2025 #1 | all | The export repeats every line from midway through 2022-11-11 to 2022-12-30: 145,222 extra rows in Nov, 249,182 in Dec | as 2025 #1 | open |
-| 2024 #1 | `category_code` | Group codes are common before #1: 1082000 carries 27,218 lines | see #1 | open |
+| 2024 #1 | `category_code` | Group codes are common before #1: 1082000 carries 27,218 lines | see #1 | decided |
 | 2025 #2 | `bottle_volume_ml` | as 2024, e.g. 48102 at 1,200 | as 2025 #2 | open |
 | 2025 #3 | cost, retail | NULL all year | as 2025 #3 | open |
 | 2025 #4 | `invoice_id` | Invoice + line, unique on the 2,564,565 distinct lines | as 2025 #4 | open |
 | 2025 #6 | `vendor_name` | 4 renamed: 079, 306, 521, 620 | as 2025 #6 | open |
-| 2026 #5 | store columns | Location NULL on 1,844 lines of 8 stores, all with the location on other lines, e.g. 010039's first 935 lines. 010081 has no zip on 22 lines on 2022-10-31. Zip `57222` on 348 lines | as 2026 #5 | open |
+| 2026 #5 | store columns | Location NULL on 1,844 lines of 8 stores, all with the location on other lines, e.g. 010039's first 935 lines. 010081 has no zip on 22 lines on 2022-10-31. Zip `57222` on 348 lines | as 2026 #5 | decided |
 | 2026 #6 | `im_desc`, `pack` | 4,859 (`item_no`, `im_desc`) pairs for 4,786 items; 11 items change pack or volume | as 2026 #6 | open |
 | 2026 #7 | returns | 1,446 `RINV-` lines, 2 positive; no negative `INV-` line | as 2026 #7 | open |
-| 2026 #9 | text | Double spaces (sample): `vendor_name` 24,658, `store_address` 8,979, `store_name` 2,176, `im_desc` 197 | as 2026 #9 | open |
+| 2026 #9 | text | Double spaces (sample): `vendor_name` 24,658, `store_address` 8,979, `store_name` 2,176, `im_desc` 197 | as 2026 #9 | decided |
 
 ### 1. A system change on 2022-07-18
 

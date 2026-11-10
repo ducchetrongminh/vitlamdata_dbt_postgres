@@ -11,7 +11,7 @@ profile: 'vitlamdata_dbt_postgres'
 # These configurations specify where dbt should look for different types of files.
 # The `model-paths` config, for example, states that models in this project can be
 # found in the "models/" directory. You probably won't need to change these!
-model-paths: ["models"]
+model-paths: ["models", "models_external"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
 seed-paths: ["seeds"]
@@ -42,3 +42,6 @@ models:
         +schema: mart_learning
       marketing:
         +schema: mart_marketing
+      iowa_data_hub:
+        +schema: mart_ext_iowa_data_hub
+
