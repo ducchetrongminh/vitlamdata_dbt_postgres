@@ -106,10 +106,21 @@ jobs:
             echo "$err"; exit 1
           fi
 
-      - name: dbt build
+      # Two passes, so both load paths of an incremental model run: a full refresh first
+      # (also rebuilds a table an earlier push left with old columns), then an incremental
+      # run of the incremental models only, on top of what the first pass loaded.
+      - name: dbt build, full refresh
         run: |
           if [ "${{ steps.state.outputs.found }}" = true ]; then
-            dbt build -s state:modified+ --defer --state prod-state
+            dbt build -s state:modified+ --defer --state prod-state --full-refresh
           else
-            dbt build
+            dbt build --full-refresh
+          fi
+
+      - name: dbt build, incremental models
+        run: |
+          if [ "${{ steps.state.outputs.found }}" = true ]; then
+            dbt build -s "state:modified+,config.materialized:incremental" --defer --state prod-state
+          else
+            dbt build -s config.materialized:incremental
           fi
