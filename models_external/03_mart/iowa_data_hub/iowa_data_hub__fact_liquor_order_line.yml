@@ -8,31 +8,26 @@ models:
       Amounts are USD. Why we don't follow docs/dw-naming-conventions.md#47-standard-fact-prefixes-and-suffixes
       (_amt is in VND): this dataset has USD only.
       Loads one year per run (see the model). No relationships tests on the dimension keys:
-      each one scans every line, ~38M, too heavy for the database VM; the primary key
-      constraint guards the grain.
-    config:
-      alias: fact_liquor_order_line
+      each one scans every line, ~38M, too heavy for the database VM.
+      Why we don't follow docs/dimensional-modeling-standards.md#26-fact-column-order
+      (natural keys on the fact): the codes serve only tracing, and staging has them; leaving
+      them out saves ~15 bytes a line.
     columns:
       - name: order_line_no
         data_type: text
         description: >
           invoice_id up to 2025-08-29, which ends in the line number; after, an md5 of the
-          whole raw row (README Q8). The primary key, as fact_order_line: a surrogate key
-          over it would add a second unique column to every line.
-        constraints:
-          - type: primary_key
+          whole raw row (README Q8). The fact's key, as fact_order_line: a surrogate key
+          over it would add a second unique column to every line. Tests, not a primary key
+          constraint: its index served nothing but the check.
+        data_tests:
+          - unique
+          - not_null
       - name: invoice_no
         data_type: text
         description: >
-          The invoice, a degenerate dimension (README Q8). Unique only with store_code and
+          The invoice, a degenerate dimension (README Q8). Unique only with the store and
           order_date: invoice numbers were reused.
-      - name: store_code
-        data_type: text
-      - name: product_code
-        data_type: text
-      - name: vendor_code
-        data_type: text
-        description: As on the line, the item's vendor at the time of the order.
       - name: invoice_type
         data_type: text
         description: Order, or Return (RINV-, negative quantities; liquor_sales_2026 #7).
@@ -42,9 +37,10 @@ models:
         data_type: text
       - name: vendor_key
         data_type: text
+        description: The item's vendor at the time of the order, as on the line.
       - name: order_date
         data_type: date
-        description: The day the state billed the order, in Iowa.
+        description: The day the state billed the order, in Iowa. Indexed.
       - name: bottle_qty
         data_type: integer
         description: Bottles ordered; a unit of a bulk item counts as one (liquor_sales_2016 #5).

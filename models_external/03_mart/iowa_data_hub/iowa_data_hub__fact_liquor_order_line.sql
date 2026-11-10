@@ -2,12 +2,16 @@
 -- (incremental filter on the max updated timestamp): the source has no updated timestamp, and
 -- one run over every year's ~38M lines needs a sort of them all to drop the repeats, which ran
 -- the database VM out of temp disk (README Q9). So each run reads one year, the one after the
--- latest in the table, and merges it in; a full refresh reads the first year.
+-- latest in the table, and replaces that year's dates (delete+insert, so a line gone from a
+-- reloaded year goes too); a full refresh reads the first year. The order_date index serves
+-- the latest-year lookup and the delete.
 {{ config(
+    alias='fact_liquor_order_line',
     materialized='incremental',
-    incremental_strategy='merge',
-    unique_key='order_line_no',
-    on_schema_change='fail'
+    incremental_strategy='delete+insert',
+    unique_key='order_date',
+    on_schema_change='fail',
+    indexes=[{'columns': ['order_date']}]
 ) }}
 
 with
@@ -33,10 +37,6 @@ final as (
         -- Keys
         order_line_no,
         invoice_no,
-        -- Foreign keys
-        store_code,
-        product_code,
-        vendor_code,
         -- Attributes
         invoice_type,
         -- Foreign keys
