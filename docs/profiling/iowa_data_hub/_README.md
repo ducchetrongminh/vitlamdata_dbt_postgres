@@ -156,7 +156,9 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
    - The invoice number alone is not unique. The S era (up to 341595) and the INV era (from 1)
      overlap. After the 2022-07-18 system change (2022 #1), invoices 450000 – 454720 were issued a
      second time to other stores. Their Feb 2022 lines are numbered after the July lines, so
-     full ids stay unique. The invoice key is (invoice text, `store_no`, `ordered_on`).
+     full ids stay unique. The invoice key is (invoice text, `store_no`): in 2012-2013 and
+     2022, adding the date splits no further. Staging joins them with the year, as a guard, into
+     `invoice_no`, e.g. `INV-450000/2667/2022`.
    - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
      unique once whole-row repeats are dropped (Q9).
 9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in the

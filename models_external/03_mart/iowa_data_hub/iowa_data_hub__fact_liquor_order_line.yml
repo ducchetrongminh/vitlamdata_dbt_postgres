@@ -27,8 +27,9 @@ models:
       - name: invoice_no
         data_type: text
         description: >
-          The invoice, a degenerate dimension (README Q8). Unique only with the store and
-          order_date: invoice numbers were reused.
+          The order, a degenerate dimension (README Q8): invoice number, store and year,
+          e.g. INV-450000/2667/2022, so count(distinct invoice_no) counts orders. Invoice
+          numbers 450000-454720 were issued twice in 2022, to other stores.
       - name: invoice_type
         data_type: text
         description: Order, or Return (RINV-, negative quantities; liquor_sales_2026 #7).

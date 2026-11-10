@@ -58,9 +58,10 @@ models:
           iowa_data_hub__int_order_line__deduplicated drops the repeats.
       - name: invoice_no
         description: >
-          invoice_id without its 5-digit line number up to 2025-08-29, the whole id after
-          (README Q8). Unique only with store_code and order_date: invoice numbers were
-          reused.
+          The order: invoice_id without its 5-digit line number up to 2025-08-29, the whole
+          id after (README Q8), then the store and year, e.g. INV-450000/2667/2022.
+          Invoice numbers 450000-454720 were issued twice in 2022, to other stores, so the
+          number alone can name two orders.
       - name: store_code
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
       - name: vendor_code

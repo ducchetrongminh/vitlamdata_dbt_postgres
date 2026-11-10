@@ -109,11 +109,18 @@ decoded as (
     select
         *,
         -- README Q8: up to 2025-08-29 the id ends in a 5-digit line number; after, it is the
-        -- invoice alone. The invoice is unique only with store and date.
-        case
-            when order_date <= '2025-08-29' then left(invoice_id, -5)
-            else invoice_id
-        end as invoice_no,
+        -- invoice alone. An invoice number can belong to two orders, at two stores
+        -- (450000-454720, 2022), so the store joins it: one invoice_no is one order. The year
+        -- guards against a number coming back for the same store in another year.
+        concat_ws(
+            '/',
+            case
+                when order_date <= '2025-08-29' then left(invoice_id, -5)
+                else invoice_id
+            end,
+            store_code,
+            order_year
+        ) as invoice_no,
         case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type  -- Q8, 2026 #7
     from casted
 ),
