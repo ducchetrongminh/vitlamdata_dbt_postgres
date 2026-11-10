@@ -8,6 +8,13 @@ models:
     config:
       alias: int_order_line__deduplicated
 
+  - name: iowa_data_hub__int_order_line__joined_to_product
+    description: >
+      One row per invoice line, with liter_qty from the product's latest bottle volume
+      (README Q15). No tests, for the reason on iowa_data_hub__int_order_line__deduplicated.
+    config:
+      alias: int_order_line__joined_to_product
+
   - name: iowa_data_hub__int_product__category_picked
     description: >
       One row per product in the catalog or on a sales line (README Q1), catalog values

@@ -148,10 +148,19 @@ null_handled as (
         invoice_type,
         -- Measures
         bottle_qty,
-        order_amt,
         state_bottle_cost_unit_price,
-        state_bottle_retail_unit_price
+        state_bottle_retail_unit_price,
+        order_amt
     from decoded
+),
+
+-- Design "Facts": the state's cost of the bottles, NULL before 2025-07-01 like the cost
+-- (liquor_sales_2025 #3)
+derived as (
+    select
+        *,
+        bottle_qty * state_bottle_cost_unit_price as state_cost_amt
+    from null_handled
 )
 
-select * from null_handled
+select * from derived

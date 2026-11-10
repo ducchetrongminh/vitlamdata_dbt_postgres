@@ -123,3 +123,7 @@ models:
         description: state_bottle_cost. NULL before 2025-07-01 (liquor_sales_2025 #3).
       - name: state_bottle_retail_unit_price
         description: state_bottle_retail, the list price. NULL before 2025-07-01 (liquor_sales_2025 #3).
+      - name: state_cost_amt
+        description: >
+          bottle_qty × state_bottle_cost_unit_price, what the bottles cost the state. NULL
+          before 2025-07-01, with the cost (liquor_sales_2025 #3).
