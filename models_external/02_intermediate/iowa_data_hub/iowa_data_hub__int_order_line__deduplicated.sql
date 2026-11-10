@@ -7,13 +7,13 @@ order_line as (
     select * from {{ ref('stg_iowa_data_hub__liquor_order_line') }}
 ),
 
--- order_line_id stands for the whole row: invoice_id up to 2025-08-29, unique on distinct
+-- order_line_no stands for the whole row: invoice_id up to 2025-08-29, unique on distinct
 -- rows (Q8), then an md5 of the row. order_year leads the distinct on, so a filter on it
 -- still reaches staging and skips the other years' tables.
 deduplicated as (
-    select distinct on (order_year, order_line_id) *
+    select distinct on (order_year, order_line_no) *
     from order_line
-    order by order_year, order_line_id
+    order by order_year, order_line_no
 )
 
 select * from deduplicated

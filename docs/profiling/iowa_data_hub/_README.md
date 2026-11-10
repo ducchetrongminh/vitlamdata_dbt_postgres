@@ -150,7 +150,7 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
    | 6 one-off shapes in 2012, 2013 and 2015 | | 1,170 | still end in a 5-digit line number (2012 #2, 2013 #1, 2015 #1) |
 
    Rules for staging:
-   - `is_return` = the id starts with `R`.
+   - `invoice_type` = `Return` when the id starts with `R`, else `Order`.
    - Up to 2025-08-29, the line number is the last 5 digits and the invoice is everything before
      them. From 2025-09-01 the id has no line number.
    - The invoice number alone is not unique. The S era (up to 341595) and the INV era (from 1)

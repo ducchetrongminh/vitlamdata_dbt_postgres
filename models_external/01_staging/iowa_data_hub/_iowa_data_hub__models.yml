@@ -50,7 +50,7 @@ models:
       which is too heavy for the database VM. The store and vendor codes are tested in the
       dims' intermediate models.
     columns:
-      - name: order_line_id
+      - name: order_line_no
         description: >
           invoice_id up to 2025-08-29, when it still ends in the line number; after, an md5 of
           the whole raw row (README Q8). Not unique here: a repeated line repeats its id,
@@ -104,12 +104,14 @@ models:
         description: >
           The code's name on this line, upper case, as loaded. A code's name can change
           (liquor_sales_2025 #5).
-      - name: is_return
-        description: The id starts with RINV- (README Q8). Returns carry negative quantities (liquor_sales_2026 #7).
+      - name: invoice_type
+        description: >
+          'Return' when the id starts with RINV- (README Q8), else 'Order'. Returns carry
+          negative quantities (liquor_sales_2026 #7).
       - name: is_suspect_price
         description: >
-          Item 3984 ABSOLUT W/4-50MLS in 2013, billed at $206 a unit, kept as is and flagged
-          (README Q20, liquor_sales_2013 #2).
+          'Suspect Price' on item 3984 ABSOLUT W/4-50MLS in 2013, billed at $206 a unit, kept
+          as is and flagged (README Q20, liquor_sales_2013 #2); else 'Not Suspect Price'.
       - name: bottle_qty
         description: sales_bottles. Negative on returns (liquor_sales_2026 #7).
       - name: order_amt

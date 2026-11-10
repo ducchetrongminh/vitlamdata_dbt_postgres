@@ -35,7 +35,7 @@ renamed as (
         case
             when ordered_on <= '2025-08-29' then invoice_id
             else md5(source::text)
-        end as order_line_id,
+        end as order_line_no,
         invoice_id,
         store_no as store_code,
         vendor_number as vendor_code,
@@ -68,7 +68,7 @@ renamed as (
 casted as (
     select
         -- Keys
-        cast(order_line_id as text) as order_line_id,
+        cast(order_line_no as text) as order_line_no,
         cast(invoice_id as text) as invoice_id,
         cast(store_code as text) as store_code,
         cast(vendor_code as text) as vendor_code,
@@ -98,10 +98,10 @@ casted as (
     from renamed
 ),
 
-cleaned as (
+decoded as (
     select
         -- Keys
-        order_line_id,
+        order_line_no,
         -- README Q8: up to 2025-08-29 the id ends in a 5-digit line number; after, it is the
         -- invoice alone. The invoice is unique only with store and date.
         case
@@ -128,9 +128,12 @@ cleaned as (
         bottle_volume_ml,
         category_code,
         category_name,
-        -- Flags
-        invoice_id like 'R%' as is_return,                       -- Q8, 2026 #7
-        product_code = '3984' and order_year = 2013 as is_suspect_price,   -- Q20, 2013 #2
+        -- Attributes
+        case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type,  -- Q8, 2026 #7
+        case                                                -- Q20, 2013 #2
+            when product_code = '3984' and order_year = 2013 then 'Suspect Price'
+            else 'Not Suspect Price'
+        end as is_suspect_price,
         -- Measures
         bottle_qty,
         order_amt,
@@ -143,7 +146,7 @@ cleaned as (
 null_handled as (
     select
         -- Keys
-        order_line_id,
+        order_line_no,
         invoice_no,
         coalesce(nullif(store_code, ''), 'UNKNOWN') as store_code,
         coalesce(nullif(vendor_code, ''), 'UNKNOWN') as vendor_code,  -- 2021 #1
@@ -165,15 +168,15 @@ null_handled as (
         bottle_volume_ml,
         category_code,
         category_name,
-        -- Flags
-        is_return,
+        -- Attributes
+        invoice_type,
         is_suspect_price,
         -- Measures
         bottle_qty,
         order_amt,
         state_bottle_cost_unit_price,
         state_bottle_retail_unit_price
-    from cleaned
+    from decoded
 )
 
 select * from null_handled
