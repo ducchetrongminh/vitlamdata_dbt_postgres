@@ -36,6 +36,7 @@ renamed as (
             when ordered_on <= '2025-08-29' then invoice_id
             else md5(source::text)
         end as order_line_id,
+        invoice_id,
         store_no as store_code,
         vendor_number as vendor_code,
         item_no as product_code,
@@ -55,7 +56,12 @@ renamed as (
         pack,
         bottle_volume_ml,
         category_code,
-        category_name
+        category_name,
+        -- Measures
+        sales_bottles as bottle_qty,
+        sales_dollars as order_amt,
+        state_bottle_cost as state_bottle_cost_unit_price,
+        state_bottle_retail as state_bottle_retail_unit_price
     from source
 ),
 
@@ -63,6 +69,7 @@ casted as (
     select
         -- Keys
         cast(order_line_id as text) as order_line_id,
+        cast(invoice_id as text) as invoice_id,
         cast(store_code as text) as store_code,
         cast(vendor_code as text) as vendor_code,
         cast(product_code as text) as product_code,
@@ -82,7 +89,12 @@ casted as (
         cast(pack as integer) as pack,
         cast(bottle_volume_ml as integer) as bottle_volume_ml,
         cast(category_code as text) as category_code,
-        cast(category_name as text) as category_name
+        cast(category_name as text) as category_name,
+        -- Measures
+        cast(bottle_qty as integer) as bottle_qty,
+        cast(order_amt as numeric) as order_amt,
+        cast(state_bottle_cost_unit_price as numeric) as state_bottle_cost_unit_price,
+        cast(state_bottle_retail_unit_price as numeric) as state_bottle_retail_unit_price
     from renamed
 ),
 
@@ -90,6 +102,12 @@ cleaned as (
     select
         -- Keys
         order_line_id,
+        -- README Q8: up to 2025-08-29 the id ends in a 5-digit line number; after, it is the
+        -- invoice alone. The invoice is unique only with store and date.
+        case
+            when ordered_on <= '2025-08-29' then left(invoice_id, -5)
+            else invoice_id
+        end as invoice_no,
         store_code,
         vendor_code,
         product_code,
@@ -109,7 +127,15 @@ cleaned as (
         pack,
         bottle_volume_ml,
         category_code,
-        category_name
+        category_name,
+        -- Flags
+        invoice_id like 'R%' as is_return,                       -- Q8, 2026 #7
+        product_code = '3984' and order_year = 2013 as is_suspect_price,   -- Q20, 2013 #2
+        -- Measures
+        bottle_qty,
+        order_amt,
+        state_bottle_cost_unit_price,
+        state_bottle_retail_unit_price
     from casted
 ),
 
@@ -118,6 +144,7 @@ null_handled as (
     select
         -- Keys
         order_line_id,
+        invoice_no,
         coalesce(nullif(store_code, ''), 'UNKNOWN') as store_code,
         coalesce(nullif(vendor_code, ''), 'UNKNOWN') as vendor_code,  -- 2021 #1
         coalesce(nullif(product_code, ''), 'UNKNOWN') as product_code,
@@ -137,7 +164,15 @@ null_handled as (
         pack,
         bottle_volume_ml,
         category_code,
-        category_name
+        category_name,
+        -- Flags
+        is_return,
+        is_suspect_price,
+        -- Measures
+        bottle_qty,
+        order_amt,
+        state_bottle_cost_unit_price,
+        state_bottle_retail_unit_price
     from cleaned
 )
 

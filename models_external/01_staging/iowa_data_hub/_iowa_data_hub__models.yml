@@ -41,8 +41,10 @@ models:
     description: >
       Sales lines of every year, 2012-2026, cleaned, with the export's whole-row repeats
       kept (README Q9); iowa_data_hub__int_order_line__deduplicated drops them. Holds only
-      the columns a model uses so far: the store's, the vendor's, the product's and its
-      category's.
+      the columns a model uses so far: the line's invoice, flags and measures, and the store's,
+      the vendor's, the product's and its category's attributes. sales_liters and
+      sales_gallons are left out: the fact recomputes liters from the product's latest volume
+      (README Q15), and gallons is dropped.
       No tests. Why we don't follow docs/dbt-layers-conventions.md#21-staging-structural-constraints
       (unique + not_null on the staging key): each test scans every year's lines, ~38M,
       which is too heavy for the database VM. The store and vendor codes are tested in the
@@ -54,6 +56,11 @@ models:
           the whole raw row (README Q8). Not unique here: a repeated line repeats its id,
           equal to its original in every column, until
           iowa_data_hub__int_order_line__deduplicated drops the repeats.
+      - name: invoice_no
+        description: >
+          invoice_id without its 5-digit line number up to 2025-08-29, the whole id after
+          (README Q8). Unique only with store_code and ordered_on: invoice numbers were
+          reused.
       - name: store_code
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
       - name: vendor_code
@@ -97,3 +104,19 @@ models:
         description: >
           The code's name on this line, upper case, as loaded. A code's name can change
           (liquor_sales_2025 #5).
+      - name: is_return
+        description: The id starts with RINV- (README Q8). Returns carry negative quantities (liquor_sales_2026 #7).
+      - name: is_suspect_price
+        description: >
+          Item 3984 ABSOLUT W/4-50MLS in 2013, billed at $206 a unit, kept as is and flagged
+          (README Q20, liquor_sales_2013 #2).
+      - name: bottle_qty
+        description: sales_bottles. Negative on returns (liquor_sales_2026 #7).
+      - name: order_amt
+        description: >
+          sales_dollars, what the store pays the state, in USD. Not always bottles × retail
+          (README Q11); whole dollars Nov 2025 - Jan 2026 (Q10).
+      - name: state_bottle_cost_unit_price
+        description: state_bottle_cost. NULL before 2025-07-01 (liquor_sales_2025 #3).
+      - name: state_bottle_retail_unit_price
+        description: state_bottle_retail, the list price. NULL before 2025-07-01 (liquor_sales_2025 #3).
