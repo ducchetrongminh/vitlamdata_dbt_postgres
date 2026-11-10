@@ -54,7 +54,7 @@ latest_picked as (
         -- Load tracking
         order_year as last_order_year
     from order_line
-    order by store_code, ordered_on desc, county_fips_code is null, store_name
+    order by store_code, order_date desc, county_fips_code is null, store_name
 ),
 
 cleaned as (

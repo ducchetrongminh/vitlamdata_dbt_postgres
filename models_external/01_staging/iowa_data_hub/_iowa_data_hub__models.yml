@@ -59,7 +59,7 @@ models:
       - name: invoice_no
         description: >
           invoice_id without its 5-digit line number up to 2025-08-29, the whole id after
-          (README Q8). Unique only with store_code and ordered_on: invoice numbers were
+          (README Q8). Unique only with store_code and order_date: invoice numbers were
           reused.
       - name: store_code
         description: store_no. 4 digits, or 6 starting 010; kept as text (#8).
@@ -70,7 +70,12 @@ models:
           (liquor_sales_2021 #1).
       - name: product_code
         description: item_no, the item's number. Digits, kept as text; joins liquor_products.item_no (README Q1).
-      - name: ordered_on
+      - name: order_date
+        description: >
+          ordered_on, the day the state billed the order, in Iowa. Why we don't follow
+          docs/dw-naming-conventions.md#46-date-and-time-suffixes (no suffix means Vietnam
+          time): the source has a date only, with no time to convert, and every Iowa date is
+          local.
       - name: order_year
         description: >
           The year of the source table the line comes from (liquor_sales_<year>). A

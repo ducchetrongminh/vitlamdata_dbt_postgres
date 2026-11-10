@@ -48,7 +48,7 @@ renamed as (
         vendor_number as vendor_code,
         item_no as product_code,
         -- Dates
-        ordered_on,
+        ordered_on as order_date,
         order_year,
         -- Store attributes
         store_name,
@@ -81,7 +81,7 @@ casted as (
         cast(vendor_code as text) as vendor_code,
         cast(product_code as text) as product_code,
         -- Dates
-        cast(ordered_on as date) as ordered_on,
+        cast(order_date as date) as order_date,
         cast(order_year as integer) as order_year,
         -- Store attributes
         cast(store_name as text) as store_name,
@@ -111,7 +111,7 @@ decoded as (
         -- README Q8: up to 2025-08-29 the id ends in a 5-digit line number; after, it is the
         -- invoice alone. The invoice is unique only with store and date.
         case
-            when ordered_on <= '2025-08-29' then left(invoice_id, -5)
+            when order_date <= '2025-08-29' then left(invoice_id, -5)
             else invoice_id
         end as invoice_no,
         case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type  -- Q8, 2026 #7
@@ -128,7 +128,7 @@ null_handled as (
         coalesce(nullif(vendor_code, ''), 'UNKNOWN') as vendor_code,  -- 2021 #1
         coalesce(nullif(product_code, ''), 'UNKNOWN') as product_code,
         -- Dates
-        ordered_on,
+        order_date,
         order_year,
         -- Store attributes
         store_name,

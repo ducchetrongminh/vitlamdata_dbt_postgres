@@ -47,7 +47,7 @@ latest_picked as (
         category_code,
         category_name,
         -- Dates
-        ordered_on as category_ordered_on,
+        order_date as category_ordered_on,
         -- Load tracking
         order_year as last_order_year
     from order_line
@@ -56,7 +56,7 @@ latest_picked as (
         product_code,
         coalesce(category_name = 'TEMPORARY & SPECIALTY PACKAGES', false),
         category_code is null,
-        ordered_on desc,
+        order_date desc,
         product_name
 ),
 

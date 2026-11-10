@@ -40,7 +40,7 @@ latest_picked as (
         -- Load tracking
         order_year as last_order_year
     from order_line
-    order by vendor_code, ordered_on desc, vendor_name
+    order by vendor_code, order_date desc, vendor_name
 ),
 
 cleaned as (

@@ -41,7 +41,7 @@ latest_named as (
         order_year as last_order_year
     from order_line
     where category_code is not null
-    order by category_code, ordered_on desc, category_name
+    order by category_code, order_date desc, category_name
 ),
 
 null_handled as (
