@@ -4,8 +4,9 @@ locals {
   # Each raw schema gets a *_staging twin for dlt's merge loads (§3).
   raw_schemas = ["raw_wordpress", "raw_metabase", "raw_sheets", "raw_iowa_data_hub"]
 
-  # One mart_<domain> schema per folder in models/03_mart (dbt_project.yml).
-  mart_schemas = ["mart_learning", "mart_marketing"]
+  # One mart_<domain> schema per folder in models/03_mart, and one mart_ext_<source> per
+  # external dataset in models_external/03_mart (dbt_project.yml).
+  mart_schemas = ["mart_learning", "mart_marketing", "mart_ext_iowa_data_hub"]
 
   # schema => owner.
   schemas = merge(
