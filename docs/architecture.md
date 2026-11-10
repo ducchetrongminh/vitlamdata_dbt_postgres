@@ -172,7 +172,9 @@ Host and port are `localhost:5433`, the local end of the SSH tunnel.
 ### Packages and lint
 
 - `dbt_utils` only, added when the first macro needs it.
-- `sqlfluff` with the jinja templater and the postgres dialect.
+- `sqlfluff` with the dbt templater and the postgres dialect. The dbt templater renders models
+  as dbt does, packages included, but needs a database connection: lint runs with the tunnel
+  open, and in CI inside the build job.
 
 ## 6. PII
 
@@ -272,7 +274,7 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 | `ingest.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | tunnel → `python -m ingestion.<source>.pipeline` for each source as `loader` (`REFRESH=drop_data` on `full_refresh`) |
 | `dbt-build.yml` | `workflow_call`; `workflow_dispatch` with a `full_refresh` input | `dbt source freshness` → `dbt build --target prod` (`--full-refresh` on `full_refresh`) → upload `manifest.json` → `dbt docs generate --static` → publish to GitHub Pages |
 | `deploy.yml` | push to `main` touching dbt paths | calls `dbt-build.yml` with `slim`: no freshness check → download manifest → `dbt build -s state:modified+ --state prod-state --target prod` (full build when no manifest) → upload manifest → docs |
-| `ci.yml` | `pull_request` | `lint`: `sqlfluff lint` on the PR's changed `.sql` files, no secrets. `build`: same-repo guard → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci` into `ci_pr_<n>_*`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
+| `ci.yml` | `pull_request` | `build`: same-repo guard → `sqlfluff lint` on the PR's changed `.sql` files (dbt templater) → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci --full-refresh` into `ci_pr_<n>_*`, then the incremental models again without `--full-refresh`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
 | `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>` and `ci_pr_<n>_*` (regex, exact PR number) |
 | `terraform.yml` | PR touching `terraform/` → plan + PR comment; push to `main` → apply | env `admin`; after apply, write `private.pii_key` |
 

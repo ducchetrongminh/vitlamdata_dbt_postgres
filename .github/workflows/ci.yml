@@ -1,10 +1,10 @@
 name: ci
 
-# Per-PR checks (docs/architecture.md §8).
-# lint: sqlfluff on the .sql files this PR changes. No secrets, so fork PRs run it too.
-# build: same-repo PRs only. Slim build of the changed models and their children into
-# ci_pr_<n>_*, reading the rest from prod (--defer). The schemas stay for review;
-# ci-cleanup.yml drops them when the PR closes.
+# Per-PR checks (docs/architecture.md §8), same-repo PRs only.
+# build: sqlfluff on the .sql files this PR changes, then a slim build of the changed models
+# and their children into ci_pr_<n>_*, reading the rest from prod (--defer). sqlfluff uses the
+# dbt templater, which needs the database, so it runs here, not in a job without secrets.
+# The schemas stay for review; ci-cleanup.yml drops them when the PR closes.
 on:
   pull_request:
 
@@ -13,38 +13,6 @@ permissions:
   id-token: write # WIF, build job only
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      # Depth 2: the PR merge commit and its first parent, the base branch tip.
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-
-      # Only changed files: the existing models still fail lint (issue #8).
-      # macros/ is skipped: macro files are not models and do not lint cleanly.
-      - name: Changed .sql files
-        id: files
-        run: |
-          files="$(git diff --name-only --diff-filter=AMR HEAD^1 HEAD -- '*.sql' ':!macros/')"
-          echo "$files"
-          { echo "list<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
-
-      - uses: astral-sh/setup-uv@v6
-        if: steps.files.outputs.list != ''
-        with:
-          activate-environment: true
-
-      # sqlfluff only (dev group): the jinja templater needs no dbt and no database.
-      - if: steps.files.outputs.list != ''
-        run: uv sync --frozen --only-group dev
-
-      - name: sqlfluff lint
-        if: steps.files.outputs.list != ''
-        env:
-          FILES: ${{ steps.files.outputs.list }}
-        run: echo "$FILES" | xargs sqlfluff lint
-
   build:
     # Fork PRs get no OIDC token, so they could never reach the database (§8).
     if: github.event.pull_request.head.repo.full_name == github.repository
@@ -61,7 +29,10 @@ jobs:
       DBT_TARGET: ci
       DBT_PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
+      # Depth 2: the PR merge commit and its first parent, the base branch tip.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - uses: google-github-actions/auth@v2
         with:
@@ -88,9 +59,25 @@ jobs:
         with:
           activate-environment: true
 
-      - run: uv sync --frozen --no-default-groups
+      # dev group: sqlfluff and its dbt templater.
+      - run: uv sync --frozen --no-default-groups --group dev
 
       - run: dbt deps
+
+      # Only changed files: the existing models still fail lint (issue #8).
+      # macros/ is skipped: macro files are not models and do not lint cleanly.
+      - name: Changed .sql files
+        id: files
+        run: |
+          files="$(git diff --name-only --diff-filter=AMR HEAD^1 HEAD -- '*.sql' ':!macros/')"
+          echo "$files"
+          { echo "list<<EOF"; echo "$files"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+
+      - name: sqlfluff lint
+        if: steps.files.outputs.list != ''
+        env:
+          FILES: ${{ steps.files.outputs.list }}
+        run: echo "$FILES" | xargs sqlfluff lint
 
       # dbt-build.yml uploads it after each successful prod build. Missing (before the
       # first one): build everything. Any other error fails the job.

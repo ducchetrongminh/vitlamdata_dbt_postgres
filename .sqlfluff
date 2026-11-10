@@ -1,5 +1,5 @@
 [sqlfluff]
-templater = jinja
+templater = dbt
 dialect = postgres
 max_line_length = 100
 # AM03: asks for asc on every order by column once one has desc; asc is the default.
@@ -8,10 +8,12 @@ max_line_length = 100
 # (docs/dbt-layers-conventions.md, Column order).
 exclude_rules = AM03, AM04, ST06
 
-# Jinja, not the dbt templater: lint needs no database (the CI lint job has no secrets).
-[sqlfluff:templater:jinja]
-apply_dbt_builtins = True
-load_macros_from_path = macros
+# dbt templater: renders each model through dbt, packages included, as a build would. It
+# needs a database connection (is_incremental() looks the table up), so CI lints in the
+# build job.
+[sqlfluff:templater:dbt]
+project_dir = .
+profiles_dir = .
 
 # Jinja blocks ({% if is_incremental() %}) add no indent, as dbt models write them.
 [sqlfluff:indentation]
