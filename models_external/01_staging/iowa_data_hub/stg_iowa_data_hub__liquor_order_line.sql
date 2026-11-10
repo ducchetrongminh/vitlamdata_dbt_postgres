@@ -122,7 +122,8 @@ decoded as (
             store_code,
             order_year
         ) as invoice_no,
-        case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type  -- Q8, 2026 #7
+        -- Q8, 2026 #7
+        case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type
     from casted
 ),
 
