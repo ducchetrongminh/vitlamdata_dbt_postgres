@@ -7,8 +7,7 @@ models:
       dropped (README Q9), and item 3984's overpriced 2013 lines are left out (Q20).
       Amounts are USD. Why we don't follow docs/dw-naming-conventions.md#47-standard-fact-prefixes-and-suffixes
       (_amt is in VND): this dataset has USD only.
-      Loads one year per run (see the model). No relationships tests on the dimension keys:
-      each one scans every line, ~38M, too heavy for the database VM.
+      Loads one year per run (see the model).
       Why we don't follow docs/dimensional-modeling-standards.md#26-fact-column-order
       (natural keys on the fact): the codes serve only tracing, and staging has them; leaving
       them out saves ~15 bytes a line. The dimension keys are bigints, as on the dims (see
@@ -34,11 +33,26 @@ models:
         description: Order, or Return (RINV-, negative quantities; liquor_sales_2026 #7).
       - name: store_key
         data_type: bigint
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_store')
+                field: store_key
       - name: product_key
         data_type: bigint
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_product')
+                field: product_key
       - name: vendor_key
         data_type: bigint
         description: The item's vendor at the time of the order, as on the line.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('iowa_data_hub__dim_vendor')
+                field: vendor_key
       - name: order_date
         data_type: date
         description: The day the state billed the order, in Iowa. Indexed.
