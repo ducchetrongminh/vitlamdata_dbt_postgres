@@ -31,7 +31,7 @@ order_line as (
     -- misses any reload after the last run; rerun it with --full-refresh and catch up if
     -- that matters.
     where order_year = least(
-        (select max(last_order_year) from {{ this }}) + 1,
+        (select max(this_run.last_order_year) from {{ this }} as this_run) + 1,
         {{ iowa_data_hub_order_years() | last }}
     )
     {% else %}

@@ -24,7 +24,7 @@ order_line as (
     -- that matters. Each year table holds only its year's dates, so the latest date's year
     -- is the latest year loaded.
     where order_year = least(
-        (select extract(year from max(order_date))::integer from {{ this }}) + 1,
+        (select extract(year from max(this_run.order_date))::integer from {{ this }} as this_run) + 1,
         {{ iowa_data_hub_order_years() | last }}
     )
     {% else %}
