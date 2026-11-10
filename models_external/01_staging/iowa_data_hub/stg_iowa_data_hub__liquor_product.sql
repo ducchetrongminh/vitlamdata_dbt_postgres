@@ -43,8 +43,10 @@ casted as (
         cast(state_bottle_cost_unit_price as numeric) as state_bottle_cost_unit_price,
         cast(state_bottle_retail_unit_price as numeric) as state_bottle_retail_unit_price,
         -- age stated in the description, e.g. 'Laphroaig 10YR', 'Juan in a Million 116 month'
-        cast((regexp_match(product_name, '(\d+)\s*-?\s*(?:yr|yrs|year|years|yo)\M', 'i'))[1] as numeric)
-            as stated_years,
+        cast(
+            (regexp_match(product_name, '(\d+)\s*-?\s*(?:yr|yrs|year|years|yo)\M', 'i'))[1]
+            as numeric
+        ) as stated_years,
         cast((regexp_match(product_name, '(\d+)\s*-?\s*months?\M', 'i'))[1] as numeric)
             as stated_months
     from renamed

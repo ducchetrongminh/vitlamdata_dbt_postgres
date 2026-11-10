@@ -112,8 +112,11 @@ category_named as (
         -- Attributes
         joined.category_code,
         coalesce(category.category_name, joined.catalog_category_name) as category_name,
-        coalesce(joined.historic_category_name, category.category_name, joined.catalog_category_name)
-            as historic_category_name,
+        coalesce(
+            joined.historic_category_name,
+            category.category_name,
+            joined.catalog_category_name
+        ) as historic_category_name,
         joined.pack,
         joined.inner_pack,
         joined.bottle_volume_ml,

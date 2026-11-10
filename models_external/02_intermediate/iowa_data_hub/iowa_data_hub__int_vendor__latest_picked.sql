@@ -47,8 +47,8 @@ cleaned as (
     select
         -- Keys
         vendor_code,
-        -- Name, desc; liquor_sales_2016.md #2: the É of RÉMY lost in encoding
-        replace(regexp_replace(trim(vendor_name), '\s{2,}', ' ', 'g'), U&'\FFFD', 'É') as vendor_name,  -- #9
+        -- Name, desc; #9: squeeze spaces; liquor_sales_2016.md #2: the É of RÉMY lost in encoding
+        replace(regexp_replace(trim(vendor_name), '\s{2,}', ' ', 'g'), U&'\FFFD', 'É') as vendor_name,
         -- Load tracking
         last_order_year
     from latest_picked
