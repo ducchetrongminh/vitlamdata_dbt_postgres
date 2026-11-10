@@ -257,8 +257,9 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
       - 23 items, 4,140 lines, are only in the catalog. They take its category.
       - 2,922 items, 502,130 lines (5.1%), have no new category anywhere. They use the code
         map (Q21).
-20. **Absolut gift set at $206 a unit?** Leave it and flag it: staging keeps the amount and sets a
-    flag on item 3984's 2013 lines (2013 #2).
+20. **Absolut gift set at $206 a unit?** Remove the lines (human): staging drops item 3984's 287
+    lines of 2013 (2013 #2). The price is about ten times too high, and a lone flag column on
+    the fact would describe one item in one year.
 21. **Map the old codes for items never sold again?** Yes, for old codes replaced by a different
     code (human). A seed maps them, and the product dimension keeps the name on the item's
     latest line as `historic_category_name` (type 3). An old code that kept its number needs no

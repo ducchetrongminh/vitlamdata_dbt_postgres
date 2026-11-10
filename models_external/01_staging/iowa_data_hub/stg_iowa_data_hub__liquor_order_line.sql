@@ -27,6 +27,13 @@ source as (
     {%- endfor %}
 ),
 
+-- README Q20, liquor_sales_2013 #2: item 3984's 2013 lines are billed about ten times its
+-- price, $820,193 in all, so they are dropped
+filtered as (
+    select * from source
+    where item_no is distinct from '3984' or order_year <> 2013
+),
+
 renamed as (
     select
         -- Keys
@@ -34,7 +41,7 @@ renamed as (
         -- the whole row tells lines apart
         case
             when ordered_on <= '2025-08-29' then invoice_id
-            else md5(source::text)
+            else md5(filtered::text)
         end as order_line_no,
         invoice_id,
         store_no as store_code,
@@ -62,7 +69,7 @@ renamed as (
         sales_dollars as order_amt,
         state_bottle_cost as state_bottle_cost_unit_price,
         state_bottle_retail as state_bottle_retail_unit_price
-    from source
+    from filtered
 ),
 
 casted as (
@@ -107,11 +114,7 @@ decoded as (
             when ordered_on <= '2025-08-29' then left(invoice_id, -5)
             else invoice_id
         end as invoice_no,
-        case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type,  -- Q8, 2026 #7
-        case                                                -- Q20, 2013 #2
-            when product_code = '3984' and order_year = 2013 then 'Suspect Price'
-            else 'Not Suspect Price'
-        end as is_suspect_price
+        case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type  -- Q8, 2026 #7
     from casted
 ),
 
@@ -143,7 +146,6 @@ null_handled as (
         category_name,
         -- Attributes
         invoice_type,
-        is_suspect_price,
         -- Measures
         bottle_qty,
         order_amt,

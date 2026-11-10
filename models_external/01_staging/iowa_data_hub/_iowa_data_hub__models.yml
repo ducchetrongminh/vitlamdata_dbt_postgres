@@ -108,10 +108,6 @@ models:
         description: >
           'Return' when the id starts with RINV- (README Q8), else 'Order'. Returns carry
           negative quantities (liquor_sales_2026 #7).
-      - name: is_suspect_price
-        description: >
-          'Suspect Price' on item 3984 ABSOLUT W/4-50MLS in 2013, billed at $206 a unit, kept
-          as is and flagged (README Q20, liquor_sales_2013 #2); else 'Not Suspect Price'.
       - name: bottle_qty
         description: sales_bottles. Negative on returns (liquor_sales_2026 #7).
       - name: order_amt
