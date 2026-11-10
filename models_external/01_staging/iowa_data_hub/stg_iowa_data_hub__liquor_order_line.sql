@@ -100,45 +100,18 @@ casted as (
 
 decoded as (
     select
-        -- Keys
-        order_line_no,
+        *,
         -- README Q8: up to 2025-08-29 the id ends in a 5-digit line number; after, it is the
         -- invoice alone. The invoice is unique only with store and date.
         case
             when ordered_on <= '2025-08-29' then left(invoice_id, -5)
             else invoice_id
         end as invoice_no,
-        store_code,
-        vendor_code,
-        product_code,
-        -- Dates
-        ordered_on,
-        order_year,
-        -- Store attributes
-        store_name,
-        store_city,
-        store_zip_code,
-        county_fips_code,
-        county_name,
-        -- Vendor attributes
-        vendor_name,
-        -- Product attributes
-        product_name,
-        pack,
-        bottle_volume_ml,
-        category_code,
-        category_name,
-        -- Attributes
         case when invoice_id like 'R%' then 'Return' else 'Order' end as invoice_type,  -- Q8, 2026 #7
         case                                                -- Q20, 2013 #2
             when product_code = '3984' and order_year = 2013 then 'Suspect Price'
             else 'Not Suspect Price'
-        end as is_suspect_price,
-        -- Measures
-        bottle_qty,
-        order_amt,
-        state_bottle_cost_unit_price,
-        state_bottle_retail_unit_price
+        end as is_suspect_price
     from casted
 ),
 
