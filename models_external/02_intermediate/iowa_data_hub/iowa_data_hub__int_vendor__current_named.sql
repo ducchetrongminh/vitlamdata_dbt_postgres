@@ -22,8 +22,9 @@ current_named as (
         vendor.vendor_name as historic_vendor_name
     from vendor
     left join vendor as later_code
-        on length(vendor.vendor_code) < 3   -- lpad also cuts longer codes ('UNKNOWN' to 'UNK')
-        and later_code.vendor_code = lpad(vendor.vendor_code, 3, '0')
+        on
+            length(vendor.vendor_code) < 3   -- lpad also cuts longer codes ('UNKNOWN' to 'UNK')
+            and later_code.vendor_code = lpad(vendor.vendor_code, 3, '0')
 )
 
 select * from current_named

@@ -63,11 +63,16 @@ sold_mapped as (
         coalesce(category_map.category_code, sold_product.category_code) as mapped_category_code
     from sold_product
     left join category_map
-        on sold_product.category_code = category_map.legacy_category_code
-        and (category_map.ordered_from is null
-            or sold_product.category_ordered_on >= category_map.ordered_from)
-        and (category_map.ordered_before is null
-            or sold_product.category_ordered_on < category_map.ordered_before)
+        on
+            sold_product.category_code = category_map.legacy_category_code
+            and (
+                category_map.ordered_from is null
+                or sold_product.category_ordered_on >= category_map.ordered_from
+            )
+            and (
+                category_map.ordered_before is null
+                or sold_product.category_ordered_on < category_map.ordered_before
+            )
 ),
 
 joined as (
@@ -78,9 +83,12 @@ joined as (
         coalesce(catalog_picked.product_name, sold_mapped.product_name) as product_name,
         -- Category
         case
-            when catalog_picked.product_code is not null
-                and (sold_mapped.product_code is null
-                    or sold_mapped.category_ordered_on < '2016-08-29')
+            when
+                catalog_picked.product_code is not null
+                and (
+                    sold_mapped.product_code is null
+                    or sold_mapped.category_ordered_on < '2016-08-29'
+                )
                 then category_by_name.category_code
             else sold_mapped.mapped_category_code
         end as category_code,

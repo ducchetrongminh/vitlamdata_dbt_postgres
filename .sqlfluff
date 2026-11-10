@@ -12,3 +12,7 @@ exclude_rules = AM03, AM04, ST06
 [sqlfluff:templater:jinja]
 apply_dbt_builtins = True
 load_macros_from_path = macros
+
+# Jinja blocks ({% if is_incremental() %}) add no indent, as dbt models write them.
+[sqlfluff:indentation]
+template_blocks_indent = False
