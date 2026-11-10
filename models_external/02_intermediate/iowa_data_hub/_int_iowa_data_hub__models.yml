@@ -5,15 +5,11 @@ models:
       whole-row repeats dropped (README Q9). No tests: the model is ephemeral, so each test
       reruns the dedupe, a sort of every year's ~38M lines, which ran the database VM out of
       temp disk.
-    config:
-      alias: int_order_line__deduplicated
 
   - name: iowa_data_hub__int_order_line__joined_to_product
     description: >
       One row per invoice line, with liter_qty from the product's latest bottle volume
       (README Q15). No tests, for the reason on iowa_data_hub__int_order_line__deduplicated.
-    config:
-      alias: int_order_line__joined_to_product
 
   - name: iowa_data_hub__int_product__category_picked
     description: >
@@ -21,8 +17,6 @@ models:
       first. One category per item: its latest line's code, mapped by
       iowa_data_hub__legacy_category_map; else its catalog category (Q2, Q16, Q17, Q19,
       Q21). Plus the unknown product ('UNKNOWN').
-    config:
-      alias: int_product__category_picked
     columns:
       - name: product_code
         data_tests:
@@ -43,8 +37,6 @@ models:
       location (README Q14, liquor_sales_2026 #5). Plus the unknown store ('UNKNOWN').
       Incremental, one year per run: a first build reads the first year, each run the
       next, until the last year, which every run then rereads.
-    config:
-      alias: int_store__latest_picked
     columns:
       - name: store_code
         data_tests:
@@ -61,8 +53,6 @@ models:
       its latest line's name (liquor_sales_2025 #6).
       Plus the unknown vendor ('UNKNOWN'). Incremental, one year per run, as
       iowa_data_hub__int_store__latest_picked.
-    config:
-      alias: int_vendor__latest_picked
     columns:
       - name: vendor_code
         data_tests:
@@ -78,8 +68,6 @@ models:
       iowa_data_hub__int_vendor__latest_picked with today's name as vendor_name: a code of
       the old system (10) takes the name of its later code (010) (liquor_sales_2016 #1). Each
       code's own name moves to historic_vendor_name. Plus the unknown vendor.
-    config:
-      alias: int_vendor__current_named
     columns:
       - name: vendor_code
         data_tests:
@@ -91,8 +79,6 @@ models:
       One row per category code seen on a sales line, with its latest name (liquor_sales_2025
       #5, README Q21). Retired codes keep their row. Incremental, one year per run, as
       iowa_data_hub__int_store__latest_picked.
-    config:
-      alias: int_category__latest_named
     columns:
       - name: category_code
         data_tests:
@@ -109,8 +95,6 @@ models:
       category is not TEMPORARY & SPECIALTY PACKAGES (README Q1, Q2, Q15). The category code
       is as on the line: iowa_data_hub__int_product__category_picked maps and names it.
       Incremental, one year per run, as iowa_data_hub__int_store__latest_picked.
-    config:
-      alias: int_product__latest_picked
     columns:
       - name: product_code
         data_tests:
