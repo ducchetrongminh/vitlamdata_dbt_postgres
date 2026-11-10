@@ -35,7 +35,7 @@ order_line as (
 final as (
     select
         -- Keys
-        order_line_no,
+        order_line_key,
         invoice_no,
         -- Attributes
         invoice_type,

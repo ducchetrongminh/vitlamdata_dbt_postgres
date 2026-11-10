@@ -37,12 +37,13 @@ filtered as (
 renamed as (
     select
         -- Keys
-        -- Q8: invoice_id holds the line number up to 2025-08-29; after, only a hash of
-        -- the whole row tells lines apart
-        case
-            when ordered_on <= '2025-08-29' then invoice_id
-            else md5(filtered::text)
-        end as order_line_no,
+        -- Q8: a hash of the whole raw row, one rule for every year. Up to 2025-08-29 the
+        -- row holds invoice_id, which ends in the line number; after, only the whole row
+        -- tells lines apart.
+        -- Why we don't follow docs/dimensional-modeling-standards.md#11-dimension-surrogate-keys
+        -- (the key is made in the mart, over natural key columns): the line's natural key is
+        -- the whole raw row, which only staging sees, and the dedup needs it before the mart.
+        {{ generate_bigint_surrogate_key(['filtered::text']) }} as order_line_key,
         invoice_id,
         store_no as store_code,
         vendor_number as vendor_code,
@@ -75,7 +76,7 @@ renamed as (
 casted as (
     select
         -- Keys
-        cast(order_line_no as text) as order_line_no,
+        cast(order_line_key as bigint) as order_line_key,
         cast(invoice_id as text) as invoice_id,
         cast(store_code as text) as store_code,
         cast(vendor_code as text) as vendor_code,
@@ -129,7 +130,7 @@ decoded as (
 null_handled as (
     select
         -- Keys
-        order_line_no,
+        order_line_key,
         invoice_no,
         coalesce(nullif(store_code, ''), 'UNKNOWN') as store_code,
         coalesce(nullif(vendor_code, ''), 'UNKNOWN') as vendor_code,  -- 2021 #1

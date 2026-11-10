@@ -7,13 +7,14 @@ order_line as (
     select * from {{ ref('stg_iowa_data_hub__liquor_order_line') }}
 ),
 
--- order_line_no stands for the whole row: invoice_id up to 2025-08-29, unique on distinct
--- rows (Q8), then an md5 of the row. order_year leads the distinct on, so a filter on it
--- still reaches staging and skips the other years' tables.
+-- order_line_key is a hash of the whole raw row (Q8), so repeats share it. order_year leads
+-- the distinct on, so a filter on it still reaches staging and skips the other years' tables.
+-- shortcut: two different lines with the same 64-bit key would lose one here, odds about 1
+-- in 25,000 over ~38M lines; dedupe on more columns if a line count ever falls short.
 deduplicated as (
-    select distinct on (order_year, order_line_no) *
+    select distinct on (order_year, order_line_key) *
     from order_line
-    order by order_year, order_line_no
+    order by order_year, order_line_key
 )
 
 select * from deduplicated

@@ -50,12 +50,13 @@ models:
       which is too heavy for the database VM. The store and vendor codes are tested in the
       dims' intermediate models.
     columns:
-      - name: order_line_no
+      - name: order_line_key
         description: >
-          invoice_id up to 2025-08-29, when it still ends in the line number; after, an md5 of
-          the whole raw row (README Q8). Not unique here: a repeated line repeats its id,
-          equal to its original in every column, until
-          iowa_data_hub__int_order_line__deduplicated drops the repeats.
+          generate_bigint_surrogate_key over the whole raw row (README Q8): up to 2025-08-29
+          the row holds invoice_id, which ends in the line number; after, only the whole row
+          tells lines apart. Not unique here: a repeated line repeats its key, equal to its
+          original in every column, until iowa_data_hub__int_order_line__deduplicated drops
+          the repeats.
       - name: invoice_no
         description: >
           The order: invoice_id without its 5-digit line number up to 2025-08-29, the whole

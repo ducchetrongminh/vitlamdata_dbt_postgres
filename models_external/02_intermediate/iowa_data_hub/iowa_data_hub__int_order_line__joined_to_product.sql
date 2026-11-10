@@ -14,7 +14,7 @@ product as (
 joined as (
     select
         -- Keys
-        order_line.order_line_no,
+        order_line.order_line_key,
         order_line.invoice_no,
         order_line.store_code,
         order_line.product_code,

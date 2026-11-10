@@ -14,12 +14,11 @@ models:
       them out saves ~15 bytes a line. The dimension keys are bigints, as on the dims (see
       dim_store.store_key).
     columns:
-      - name: order_line_no
-        data_type: text
+      - name: order_line_key
+        data_type: bigint
         description: >
-          invoice_id up to 2025-08-29, which ends in the line number; after, an md5 of the
-          whole raw row (README Q8). The fact's key, as fact_order_line: a surrogate key
-          over it would add a second unique column to every line. Tests, not a primary key
+          The fact's key: a bigint hash of the whole raw row, made in staging (README Q8;
+          see stg_iowa_data_hub__liquor_order_line for why). Tests, not a primary key
           constraint: its index served nothing but the check.
         data_tests:
           - unique

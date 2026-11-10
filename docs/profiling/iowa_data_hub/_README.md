@@ -159,8 +159,9 @@ takes each item's latest value, with exceptions noted below. Lines keep their ow
      full ids stay unique. The invoice key is (invoice text, `store_no`): in 2012-2013 and
      2022, adding the date splits no further. Staging joins them with the year, as a guard, into
      `invoice_no`, e.g. `INV-450000/2667/2022`.
-   - The line key is `invoice_id` up to 2025-08-29. After that it is a hash of all columns,
-     unique once whole-row repeats are dropped (Q9).
+   - The line key, `order_line_key`, is a bigint hash of the whole raw row in every year. Up to
+     2025-08-29 the row holds the unique `invoice_id`; after, the whole row is unique once
+     whole-row repeats are dropped (Q9).
 9. **Fix export repeats in the loader?** Not necessary. Decision: drop whole-row repeats in the
    intermediate layer (`iowa_data_hub__int_order_line__deduplicated`). Staging keeps them, since
    collapsing rows changes the grain and needs a sort of every line. Over all years at once, that
