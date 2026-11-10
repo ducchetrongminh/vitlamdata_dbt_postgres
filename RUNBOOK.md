@@ -289,6 +289,26 @@ The PII key comes from `dw-pii-key`. `pii_key.sql` never overwrites an existing
 key. Changing the key changes every hash and needs a full refresh of all
 incremental models (architecture §6).
 
+### Metabase Terraform (`terraform/metabase/`)
+
+Manages Metabase through its API with the `flovouin/metabase` provider: the
+warehouse connection, collections, groups and permissions. It has its own state
+(GCS prefix `metabase`) and its own workflow, `terraform-metabase.yml`, with the
+same plan-on-PR, apply-on-merge flow. Validate it the same way, from
+`terraform/metabase`.
+
+It logs in with an admin API key from the secret `metabase-api-key`. To rotate
+it, create a new key in **Admin → Settings → Authentication → API keys** (group
+Administrators), add it as a new secret version, then delete the old key:
+
+```bash
+printf %s "<key>" | gcloud secrets versions add metabase-api-key --data-file=-
+```
+
+The Metabase API is unversioned and changes between releases. Before upgrading
+Metabase, check the provider's compatibility table and bump the provider pin in
+`terraform/metabase/main.tf` if needed.
+
 ### Read a plan comment
 
 Each push to the PR adds a comment titled with its short commit SHA. Read the
