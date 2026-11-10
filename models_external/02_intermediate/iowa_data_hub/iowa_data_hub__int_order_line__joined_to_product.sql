@@ -33,7 +33,7 @@ joined as (
         order_line.state_cost_amt
     from order_line
     left join product
-        on product.product_code = order_line.product_code
+        on order_line.product_code = product.product_code
 )
 
 select * from joined

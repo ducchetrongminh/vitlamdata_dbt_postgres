@@ -63,7 +63,7 @@ sold_mapped as (
         coalesce(category_map.category_code, sold_product.category_code) as mapped_category_code
     from sold_product
     left join category_map
-        on category_map.legacy_category_code = sold_product.category_code
+        on sold_product.category_code = category_map.legacy_category_code
         and (category_map.ordered_from is null
             or sold_product.category_ordered_on >= category_map.ordered_from)
         and (category_map.ordered_before is null
@@ -98,7 +98,7 @@ joined as (
         catalog_picked.state_bottle_retail_unit_price
     from catalog_picked
     full outer join sold_mapped
-        on sold_mapped.product_code = catalog_picked.product_code
+        on catalog_picked.product_code = sold_mapped.product_code
     left join category_by_name
         on category_by_name.category_name = upper(catalog_picked.category_name)
 ),
@@ -125,7 +125,7 @@ category_named as (
         joined.state_bottle_retail_unit_price
     from joined
     left join category
-        on category.category_code = joined.category_code
+        on joined.category_code = category.category_code
 ),
 
 null_handled as (
