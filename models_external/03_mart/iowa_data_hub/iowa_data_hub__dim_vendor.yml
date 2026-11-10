@@ -11,7 +11,12 @@ models:
       alias: dim_vendor
     columns:
       - name: vendor_key
-        data_type: text
+        data_type: bigint
+        description: >
+          Why we don't follow docs/dimensional-modeling-standards.md#11-dimension-surrogate-keys
+          (dbt_utils.generate_surrogate_key, md5 text): macro generate_bigint_surrogate_key
+          gives a bigint, 8 bytes, not 33, which saves storage on every fact line and joins
+          faster. The dimension is small, so 64 bits leave collisions very unlikely.
         constraints:
           - type: primary_key
       - name: vendor_code

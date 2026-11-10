@@ -40,9 +40,9 @@ final as (
         -- Attributes
         invoice_type,
         -- Foreign keys
-        {{ dbt_utils.generate_surrogate_key(['store_code']) }} as store_key,
-        {{ dbt_utils.generate_surrogate_key(['product_code']) }} as product_key,
-        {{ dbt_utils.generate_surrogate_key(['vendor_code']) }} as vendor_key,
+        {{ generate_bigint_surrogate_key(['store_code']) }} as store_key,
+        {{ generate_bigint_surrogate_key(['product_code']) }} as product_key,
+        {{ generate_bigint_surrogate_key(['vendor_code']) }} as vendor_key,
         -- Dates
         order_date,
         -- Measures

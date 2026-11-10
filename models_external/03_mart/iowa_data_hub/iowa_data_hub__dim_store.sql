@@ -7,7 +7,7 @@ store as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['store_code']) }} as store_key,
+        {{ generate_bigint_surrogate_key(['store_code']) }} as store_key,
         store_code,
         -- Name, desc
         store_name,

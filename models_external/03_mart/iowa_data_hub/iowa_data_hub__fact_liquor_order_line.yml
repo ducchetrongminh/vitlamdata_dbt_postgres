@@ -11,7 +11,8 @@ models:
       each one scans every line, ~38M, too heavy for the database VM.
       Why we don't follow docs/dimensional-modeling-standards.md#26-fact-column-order
       (natural keys on the fact): the codes serve only tracing, and staging has them; leaving
-      them out saves ~15 bytes a line.
+      them out saves ~15 bytes a line. The dimension keys are bigints, as on the dims (see
+      dim_store.store_key).
     columns:
       - name: order_line_no
         data_type: text
@@ -32,11 +33,11 @@ models:
         data_type: text
         description: Order, or Return (RINV-, negative quantities; liquor_sales_2026 #7).
       - name: store_key
-        data_type: text
+        data_type: bigint
       - name: product_key
-        data_type: text
+        data_type: bigint
       - name: vendor_key
-        data_type: text
+        data_type: bigint
         description: The item's vendor at the time of the order, as on the line.
       - name: order_date
         data_type: date

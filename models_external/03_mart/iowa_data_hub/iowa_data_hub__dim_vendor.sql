@@ -7,7 +7,7 @@ vendor as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['vendor_code']) }} as vendor_key,
+        {{ generate_bigint_surrogate_key(['vendor_code']) }} as vendor_key,
         vendor_code,
         -- Name, desc
         vendor_name,

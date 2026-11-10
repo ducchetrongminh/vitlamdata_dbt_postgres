@@ -7,7 +7,7 @@ product as (
 final as (
     select
         -- Keys
-        {{ dbt_utils.generate_surrogate_key(['product_code']) }} as product_key,
+        {{ generate_bigint_surrogate_key(['product_code']) }} as product_key,
         product_code,
         -- Name, desc
         product_name,
