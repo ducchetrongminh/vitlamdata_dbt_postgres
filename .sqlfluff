@@ -1,6 +1,10 @@
 [sqlfluff]
 templater = jinja
 dialect = postgres
+max_line_length = 100
+# AM03: asks for asc on every order by column once one has desc; asc is the default.
+# AM04: flags select *, which the conventions use on purpose (import CTEs, decoded).
+exclude_rules = AM03, AM04
 
 # Jinja, not the dbt templater: lint needs no database (the CI lint job has no secrets).
 [sqlfluff:templater:jinja]
