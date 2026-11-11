@@ -30,41 +30,27 @@ locals {
 
   # Collection access. Values: write (curate), read (view), none (no access).
   # Rows are the keys in collections.tf, plus Metabase's root collection.
+  # A managed collection with no row takes its parent's row, or its
+  # grandparent's: so sql_course's row covers every season and test under it.
+  # Add a row for a sub-collection to give it its own access.
   collection_access = {
     root           = { all_users = "read", learners = "read", vit_lam_data = "write" }
     learners       = { all_users = "write", learners = "write", vit_lam_data = "write" }
     sql_thuc_chien = { all_users = "read", learners = "read", vit_lam_data = "write" }
-
-    sql_course = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_a      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_a_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_b      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_b_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_c      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_c_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_d      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_d_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_e      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_e_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_f      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_f_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_g      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_g_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_h      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_h_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_i      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_i_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_j      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_k      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_k_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_l      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_m      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_n      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_o      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_o_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_p      = { all_users = "read", learners = "read", vit_lam_data = "read" }
-    sql_q      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_course     = { all_users = "read", learners = "read", vit_lam_data = "read" }
   }
+
+  # shortcut: inheritance looks up two levels only (enough for course > season
+  # > test). Add a level here if a deeper collection is ever managed. A
+  # collection with no row in reach fails the plan instead of being skipped.
+  collection_key_by_id = { for key, c in local.collections : c.id => key }
+  collection_access_inherited = merge({ root = local.collection_access.root }, {
+    for key, c in local.collections : key => try(
+      local.collection_access[key],
+      local.collection_access[local.collection_key_by_id[c.parent]],
+      local.collection_access[local.collection_key_by_id[local.collections[local.collection_key_by_id[c.parent]].parent]],
+    )
+  })
 
   # The matrices as one entry per cell, keyed "<group>/<row>".
   database_permissions = merge([
@@ -74,7 +60,7 @@ locals {
   ]...)
 
   collection_permissions = merge([
-    for collection, row in local.collection_access : {
+    for collection, row in local.collection_access_inherited : {
       for group, permission in row : "${group}/${collection}" => { group = group, collection = collection, permission = permission }
     }
   ]...)
