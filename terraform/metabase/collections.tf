@@ -60,3 +60,9 @@ resource "metabase_collection" "this" {
     prevent_destroy = true
   }
 }
+
+# Demo: a new collection created by Terraform, at the root. Its own resource,
+# without prevent_destroy, so deleting this block removes it again.
+resource "metabase_collection" "vit_test_2" {
+  name = "Vit Test 2 from terraform"
+}
