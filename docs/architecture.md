@@ -129,7 +129,8 @@ snapshots/<source>/              snap_<source>__<table>.yml
 macros/generate_schema_name.sql
 macros/hash_pii.sql
 tests/assert_no_pii_in_marts.sql
-terraform/
+terraform/warehouse/             warehouse roles, schemas, grants
+terraform/metabase/              Metabase connection, collections, groups, permissions
 profiles.yml
 ```
 
@@ -277,7 +278,8 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 | `deploy.yml` | push to `main` touching dbt paths | calls `dbt-build.yml` with `slim`: no freshness check → download manifest → `dbt build -s state:modified+ --state prod-state --target prod` (full build when no manifest) → upload manifest → docs |
 | `ci.yml` | `pull_request` | `build`: same-repo guard → `sqlfluff lint` on the PR's changed `.sql` files (dbt templater) → download manifest → `dbt build -s state:modified+ --defer --state prod-state --target ci --full-refresh` into `ci_pr_<n>_*`, then the incremental models and their children again without `--full-refresh`. Falls back to a full build when no manifest exists. **Schemas are kept** for review |
 | `ci-cleanup.yml` | `pull_request: closed` (merged or not) | same-repo guard → drop `ci_pr_<n>` and `ci_pr_<n>_*` (regex, exact PR number) |
-| `terraform.yml` | PR touching `terraform/` → plan + PR comment; push to `main` → apply | env `admin`; after apply, write `private.pii_key` |
+| `terraform.yml` | PR touching `terraform/warehouse/` → plan + PR comment; push to `main` → apply | env `admin`; after apply, write `private.pii_key` |
+| `terraform-metabase.yml` | PR touching `terraform/metabase/` → plan + PR comment; push to `main` → apply | env `admin`; no tunnel, uses the public Metabase API |
 
 - The jobs that write prod (`ingest`, `build`, `deploy`) share `concurrency: prod`, so they never overlap.
 - Every DB job carries `if: github.event.pull_request.head.repo.full_name == github.repository`
@@ -293,7 +295,7 @@ Fork PRs receive no OIDC token, so they can never reach a database.
 
 ## 9. Infrastructure as code (this repo)
 
-`terraform/` uses the `cyrilgdn/postgresql` provider, logged in as the `postgres-dw`
+`terraform/warehouse/` uses the `cyrilgdn/postgresql` provider, logged in as the `postgres-dw`
 superuser through the tunnel.
 
 - **State:** `gs://vitlamdata_dbt_postgres`, prefix `warehouse`. The bucket is this repo's
@@ -309,6 +311,15 @@ superuser through the tunnel.
   Apply runs automatically on merge, so this is the only guard against an accidental
   `DROP`. Removing one of these resources takes two steps on purpose: delete the
   `prevent_destroy` line, then delete the resource.
+
+`terraform/metabase/` uses the `flovouin/metabase` provider, logged in through the public
+API with an admin API key.
+
+- **State:** same bucket, prefix `metabase`. A separate root module, so a Metabase outage or
+  API break never blocks a warehouse apply.
+- **API key:** read from the secret `metabase-api-key` as an ephemeral value, never in state.
+- **Resources:** the warehouse connection, collections, groups, and data and collection
+  permissions. Not cards or dashboards.
 
 **Not here:** VM, network, GCP service accounts, WIF, Secret Manager secrets and IAM. These
 stay in infras `gcp/`. The app Postgres and MariaDB users also stay in infras.
