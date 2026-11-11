@@ -1,13 +1,11 @@
 # Database connections in Metabase. Deleting one also deletes every question and
 # dashboard built on it, hence prevent_destroy.
 #
-# `details` must list every attribute Metabase returns, exactly: a missing one
-# shows as a change, and the update would drop it in Metabase.
-#
-# password = "**MetabasePass**" is Metabase's own placeholder for a stored
-# password, not a secret. Sent back, it tells Metabase to keep the stored one,
-# so these connections need no password here. To set a real one, move
-# `password` into custom_details.sensitive_details_json_wo.
+# Passwords are not managed here. On update, Metabase merges the sent details
+# into the stored ones (warehouses_rest/api.clj, upsert-sensitive-fields), so an
+# attribute left out of `details`, like `password`, keeps its stored value. To
+# set a password from code, send it through
+# custom_details.sensitive_details_json_wo.
 #
 # Not managed: "Sample Database" (id 6), Metabase's built-in demo.
 locals {
@@ -18,7 +16,6 @@ locals {
     "advanced-options"      = false
     "destination-database"  = false
     "host"                  = "postgres-dw"
-    "password"              = "**MetabasePass**"
     "port"                  = 5432
     "schema-filters-type"   = "all"
     "ssl"                   = false
@@ -45,7 +42,6 @@ locals {
         "additional-options" = "readOnly=true"
         "dbname"             = "metabase_db"
         "host"               = "postgres"
-        "password"           = "**MetabasePass**"
         "port"               = 5432
         "ssl"                = false
         "tunnel-enabled"     = false
