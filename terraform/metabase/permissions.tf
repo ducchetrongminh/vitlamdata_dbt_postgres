@@ -1,14 +1,13 @@
-# Who can see what, one (group, database) or (group, collection) pair per
-# resource. Only the pairs listed here are managed: the provider's graph
-# resources would also take over every collection learners create, so they are
-# not used.
+# Who can see what, as two matrices like Metabase's Admin > Permissions page:
+# one row per database or collection, one column per group. Edit a cell to
+# change access. Every cell is one resource, and only the cells listed here
+# are managed. The provider's graph resources are not used: they would also
+# take over every collection learners create.
 #
 # A user gets the highest access of all their groups, and everyone is in
-# All Users. So a group's own grant only matters where it is above All Users'.
-#
-# Administrators (2) always have full access and are not listed.
+# all_users. Administrators (2) always have full access and are not listed.
 locals {
-  # Group key => Metabase group id. All Users (1) is built in, not a resource.
+  # Column => Metabase group id. All Users (1) is built in, not a resource.
   # Plain ids, not resource references: import blocks need them before apply.
   permission_group_ids = {
     all_users    = 1
@@ -16,38 +15,69 @@ locals {
     vit_lam_data = local.groups.vit_lam_data.id
   }
 
-  # Data access. Every group can see all data; create_queries is what differs.
-  # Database 4 is Metabase's own app database: no group may query it, so it is
-  # only seen through questions admins save. `download` is left unmanaged:
-  # download permissions are a paid feature.
-  database_create_queries = {
-    sales_normalized = "query-builder-and-native"
-    sales            = "query-builder-and-native"
-    metabase_app     = "no"
-    duck_data        = "query-builder-and-native"
+  # Data access: "Create queries", per database. Values:
+  #   query-builder-and-native  query builder and SQL
+  #   query-builder             query builder only
+  #   no                        only through saved questions
+  # "View data" is "unrestricted" for every cell: the only free-plan value.
+  # Download permissions are a paid feature and are not managed.
+  database_access = {
+    sales_normalized = { all_users = "query-builder-and-native", learners = "query-builder-and-native", vit_lam_data = "query-builder-and-native" }
+    sales            = { all_users = "query-builder-and-native", learners = "query-builder-and-native", vit_lam_data = "query-builder-and-native" }
+    metabase_app     = { all_users = "no", learners = "no", vit_lam_data = "no" }
+    duck_data        = { all_users = "query-builder-and-native", learners = "query-builder-and-native", vit_lam_data = "query-builder-and-native" }
   }
 
-  database_permissions = {
-    for pair in setproduct(keys(local.permission_group_ids), keys(local.database_create_queries)) :
-    "${pair[0]}/${pair[1]}" => { group = pair[0], database = pair[1] }
-  }
-
-  # Collection access: each group's level on root and every managed
-  # collection, with exceptions listed by collection key.
+  # Collection access. Values: write (curate), read (view), none (no access).
+  # Rows are the keys in collections.tf, plus Metabase's root collection.
   collection_access = {
-    all_users    = { default = "read", write = ["learners"] }
-    learners     = { default = "read", write = ["learners"] }
-    vit_lam_data = { default = "read", write = ["root", "learners", "sql_thuc_chien"] }
+    root           = { all_users = "read", learners = "read", vit_lam_data = "write" }
+    learners       = { all_users = "write", learners = "write", vit_lam_data = "write" }
+    sql_thuc_chien = { all_users = "read", learners = "read", vit_lam_data = "write" }
+
+    sql_course = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_a      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_a_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_b      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_b_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_c      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_c_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_d      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_d_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_e      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_e_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_f      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_f_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_g      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_g_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_h      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_h_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_i      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_i_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_j      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_k      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_k_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_l      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_m      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_n      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_o      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_o_test = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_p      = { all_users = "read", learners = "read", vit_lam_data = "read" }
+    sql_q      = { all_users = "read", learners = "read", vit_lam_data = "read" }
   }
 
-  collection_permissions = {
-    for pair in setproduct(keys(local.collection_access), concat(["root"], keys(local.collections))) :
-    "${pair[0]}/${pair[1]}" => {
-      group      = pair[0]
-      collection = pair[1]
-      permission = contains(local.collection_access[pair[0]].write, pair[1]) ? "write" : local.collection_access[pair[0]].default
+  # The matrices as one entry per cell, keyed "<group>/<row>".
+  database_permissions = merge([
+    for database, row in local.database_access : {
+      for group, create_queries in row : "${group}/${database}" => { group = group, database = database, create_queries = create_queries }
     }
-  }
+  ]...)
+
+  collection_permissions = merge([
+    for collection, row in local.collection_access : {
+      for group, permission in row : "${group}/${collection}" => { group = group, collection = collection, permission = permission }
+    }
+  ]...)
 }
 
 resource "metabase_database_permission" "this" {
@@ -56,7 +86,7 @@ resource "metabase_database_permission" "this" {
   group          = local.permission_group_ids[each.value.group]
   database       = metabase_database.this[each.value.database].id
   view_data      = "unrestricted"
-  create_queries = local.database_create_queries[each.value.database]
+  create_queries = each.value.create_queries
 }
 
 resource "metabase_collection_permission" "this" {
