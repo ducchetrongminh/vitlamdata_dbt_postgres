@@ -305,6 +305,15 @@ Administrators), add it as a new secret version, then delete the old key:
 printf %s "<key>" | gcloud secrets versions add metabase-api-key --data-file=-
 ```
 
+Do not cancel a running Metabase Terraform job. A killed run leaves its state
+lock behind, and every later run then fails with `Error acquiring the state
+lock`. If that happens, check that no Metabase run is in progress, then remove
+the lock:
+
+```bash
+gcloud storage rm gs://vitlamdata_dbt_postgres/metabase/default.tflock
+```
+
 The Metabase API is unversioned and changes between releases. Before upgrading
 Metabase, check the provider's compatibility table and bump the provider pin in
 `terraform/metabase/main.tf` if needed.

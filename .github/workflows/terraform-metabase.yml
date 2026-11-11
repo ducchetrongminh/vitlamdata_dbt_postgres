@@ -35,6 +35,12 @@ jobs:
     if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     environment: admin
+    # One plan per PR at a time: a plan takes minutes and holds the state lock,
+    # so overlapping runs time out waiting for it. Never cancel a running one:
+    # a killed run leaves its lock behind (RUNBOOK.md, Metabase Terraform).
+    concurrency:
+      group: terraform-metabase-plan-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
     permissions:
       contents: read
       id-token: write
