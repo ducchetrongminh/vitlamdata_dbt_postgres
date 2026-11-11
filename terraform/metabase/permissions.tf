@@ -8,7 +8,7 @@
 # all_users. Administrators (2) always have full access and are not listed.
 locals {
   # Column => Metabase group id. All Users (1) is built in, not a resource.
-  # Plain ids, not resource references: import blocks need them before apply.
+  # Plain ids, the same as in groups.tf and the Metabase admin URLs.
   permission_group_ids = {
     all_users    = 1
     learners     = local.groups.learners.id
@@ -81,20 +81,4 @@ resource "metabase_collection_permission" "this" {
   group      = local.permission_group_ids[each.value.group]
   collection = each.value.collection == "root" ? "root" : metabase_collection.this[each.value.collection].id
   permission = each.value.permission
-}
-
-# shortcut: one-time adoption of the existing permissions. Delete these blocks
-# after the apply that imports them.
-import {
-  for_each = local.database_permissions
-
-  to = metabase_database_permission.this[each.key]
-  id = "${local.permission_group_ids[each.value.group]}/${local.databases[each.value.database].id}"
-}
-
-import {
-  for_each = local.collection_permissions
-
-  to = metabase_collection_permission.this[each.key]
-  id = "${local.permission_group_ids[each.value.group]}/${each.value.collection == "root" ? "root" : local.collections[each.value.collection].id}"
 }

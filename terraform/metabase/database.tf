@@ -56,15 +56,6 @@ locals {
   }
 }
 
-# shortcut: one-time adoption of the existing connections. Delete these blocks
-# after the apply that imports them.
-import {
-  for_each = local.databases
-
-  to = metabase_database.this[each.key]
-  id = tostring(each.value.id)
-}
-
 resource "metabase_database" "this" {
   for_each = local.databases
 

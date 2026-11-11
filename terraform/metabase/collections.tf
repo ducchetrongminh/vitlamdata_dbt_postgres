@@ -49,15 +49,6 @@ locals {
   }
 }
 
-# shortcut: one-time adoption of the existing collections. Delete these blocks
-# after the apply that imports them.
-import {
-  for_each = local.collections
-
-  to = metabase_collection.this[each.key]
-  id = tostring(each.value.id)
-}
-
 resource "metabase_collection" "this" {
   for_each = local.collections
 
