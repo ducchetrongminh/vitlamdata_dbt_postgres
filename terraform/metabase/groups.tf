@@ -10,15 +10,6 @@ locals {
   }
 }
 
-# shortcut: one-time adoption of the existing groups. Delete these blocks after
-# the apply that imports them.
-import {
-  for_each = local.groups
-
-  to = metabase_permissions_group.this[each.key]
-  id = tostring(each.value.id)
-}
-
 resource "metabase_permissions_group" "this" {
   for_each = local.groups
 
